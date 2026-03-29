@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Local secrets (never commit real credentials)
+src/main/resources/application-local.properties
+.env
+.env.local

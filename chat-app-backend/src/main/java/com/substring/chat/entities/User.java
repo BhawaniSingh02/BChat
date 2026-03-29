@@ -9,27 +9,27 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
-@Document(collection = "rooms")
+@Document(collection = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Room {
+public class User {
 
     @Id
     private String id;
 
     @Indexed(unique = true)
-    private String roomId;
+    private String username;
 
-    private String name;
-    private String description;
-    private String createdBy;
-    private List<String> members = new ArrayList<>();
-    private List<String> pinnedMessages = new ArrayList<>();
+    @Indexed(unique = true)
+    private String email;
+
+    private String passwordHash;
+    private String avatarUrl;
+    private String displayName;
+    private String bio;
     private LocalDateTime createdAt;
-    private LocalDateTime lastMessageAt;
+    private LocalDateTime lastSeen;
 }
