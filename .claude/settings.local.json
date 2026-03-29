@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(xargs ls:*)",
-      "Bash(find '/c/Users/bhoni/OneDrive/Desktop/Chat App' -type f -name *.java -exec wc -l {} +)"
-    ]
-  }
-}
