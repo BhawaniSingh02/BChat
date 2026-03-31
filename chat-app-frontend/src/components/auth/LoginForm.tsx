@@ -28,7 +28,7 @@ export default function LoginForm() {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-green-600 via-green-700 to-teal-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm md:max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden md:flex">
+      <div className="w-full md:max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden md:flex">
 
         {/* Left panel — desktop only */}
         <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-green-500 to-green-700 flex-col items-center justify-center p-10 text-white">
