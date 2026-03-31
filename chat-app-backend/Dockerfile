@@ -1,8 +1,8 @@
-# Build stage
-FROM gradle:8.13-jdk24 AS build
+# Build stage - use JDK 24 with the project's own Gradle wrapper
+FROM eclipse-temurin:24-jdk AS build
 WORKDIR /app
 COPY . .
-RUN gradle build -x test --no-daemon
+RUN ./gradlew build -x test --no-daemon
 
 # Run stage
 FROM eclipse-temurin:24-jre
