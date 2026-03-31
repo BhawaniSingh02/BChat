@@ -30,6 +30,8 @@ import java.util.Map;
 @Slf4j
 public class ChatController {
 
+    private static final String DM_PREFIX = "dm:";
+
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageRepository messageRepository;
     private final RoomRepository roomRepository;
@@ -44,6 +46,16 @@ public class ChatController {
             log.warn("Rate limit exceeded for user: {}", principal.getName());
             return;
         }
+
+        // Membership check — reject silently if the room doesn't exist or user isn't a member
+        Room room = roomRepository.findByRoomId(roomId);
+        if (room == null || !room.getMembers().contains(principal.getName())) {
+            log.warn("User {} attempted to send message to room {} without membership", principal.getName(), roomId);
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/errors",
+                    Map.of("error", "You are not a member of this room"));
+            return;
+        }
+
         Message message = new Message();
         message.setRoomId(roomId);
         message.setSender(principal.getName());
@@ -54,12 +66,8 @@ public class ChatController {
         message.setTimestamp(LocalDateTime.now());
 
         Message saved = messageRepository.save(message);
-
-        Room room = roomRepository.findByRoomId(roomId);
-        if (room != null) {
-            room.setLastMessageAt(saved.getTimestamp());
-            roomRepository.save(room);
-        }
+        room.setLastMessageAt(saved.getTimestamp());
+        roomRepository.save(room);
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId, MessageResponse.from(saved));
     }
@@ -112,7 +120,7 @@ public class ChatController {
                                    Principal principal) {
         conversationRepository.findById(conversationId).ifPresent(conv -> {
             Message message = new Message();
-            message.setRoomId("dm:" + conversationId);
+            message.setRoomId(DM_PREFIX + conversationId);
             message.setSender(principal.getName());
             message.setSenderName(principal.getName());
             message.setContent(request.getContent());
@@ -141,7 +149,11 @@ public class ChatController {
                                @Payload EditMessageWsRequest request,
                                Principal principal) {
         messageRepository.findById(request.getMessageId()).ifPresent(message -> {
-            if (!message.getSender().equals(principal.getName())) return;
+            if (!message.getSender().equals(principal.getName())) {
+                messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/errors",
+                        Map.of("error", "Cannot edit another user's message"));
+                return;
+            }
             message.setContent(request.getContent());
             message.setEdited(true);
             message.setEditedAt(java.time.LocalDateTime.now());
@@ -160,7 +172,11 @@ public class ChatController {
                                   @Payload DeleteMessageWsRequest request,
                                   Principal principal) {
         messageRepository.findById(request.getMessageId()).ifPresent(message -> {
-            if (!message.getSender().equals(principal.getName())) return;
+            if (!message.getSender().equals(principal.getName())) {
+                messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/errors",
+                        Map.of("error", "Cannot delete another user's message"));
+                return;
+            }
             message.setDeleted(true);
             message.setContent("[This message was deleted]");
             messageRepository.save(message);
@@ -210,7 +226,7 @@ public class ChatController {
             if (!conv.getParticipants().contains(principal.getName())) return;
             messageRepository.findById(request.getMessageId()).ifPresent(message -> {
                 if (!message.getSender().equals(principal.getName())) return;
-                if (!("dm:" + conversationId).equals(message.getRoomId())) return;
+                if (!(DM_PREFIX + conversationId).equals(message.getRoomId())) return;
                 message.setContent(request.getContent());
                 message.setEdited(true);
                 message.setEditedAt(java.time.LocalDateTime.now());
@@ -236,7 +252,7 @@ public class ChatController {
             if (!conv.getParticipants().contains(principal.getName())) return;
             messageRepository.findById(request.getMessageId()).ifPresent(message -> {
                 if (!message.getSender().equals(principal.getName())) return;
-                if (!("dm:" + conversationId).equals(message.getRoomId())) return;
+                if (!(DM_PREFIX + conversationId).equals(message.getRoomId())) return;
                 message.setDeleted(true);
                 message.setContent("[This message was deleted]");
                 messageRepository.save(message);
@@ -260,7 +276,7 @@ public class ChatController {
         conversationRepository.findById(conversationId).ifPresent(conv -> {
             if (!conv.getParticipants().contains(principal.getName())) return;
             messageRepository.findById(request.getMessageId()).ifPresent(message -> {
-                if (!("dm:" + conversationId).equals(message.getRoomId())) return;
+                if (!(DM_PREFIX + conversationId).equals(message.getRoomId())) return;
                 Map<String, List<String>> reactions = message.getReactions();
                 if (reactions == null) {
                     reactions = new HashMap<>();

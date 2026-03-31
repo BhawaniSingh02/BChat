@@ -33,8 +33,14 @@ public class WebSocketEventListener {
         presenceService.setOnline(username);
         log.debug("User connected: {}", username);
 
-        messagingTemplate.convertAndSend("/topic/presence",
-                new PresenceEvent(username, true));
+        // Only broadcast if user's onlinePrivacy is not NOBODY
+        boolean broadcastable = userRepository.findByUsername(username)
+                .map(u -> !"NOBODY".equals(u.getOnlinePrivacy()))
+                .orElse(true);
+        if (broadcastable) {
+            messagingTemplate.convertAndSend("/topic/presence",
+                    new PresenceEvent(username, true));
+        }
     }
 
     @EventListener
@@ -47,12 +53,15 @@ public class WebSocketEventListener {
         presenceService.setOffline(username);
         log.debug("User disconnected: {}", username);
 
-        userRepository.findByUsername(username).ifPresent(user -> {
+        boolean broadcastable = userRepository.findByUsername(username).map(user -> {
             user.setLastSeen(LocalDateTime.now());
             userRepository.save(user);
-        });
+            return !"NOBODY".equals(user.getOnlinePrivacy());
+        }).orElse(true);
 
-        messagingTemplate.convertAndSend("/topic/presence",
-                new PresenceEvent(username, false));
+        if (broadcastable) {
+            messagingTemplate.convertAndSend("/topic/presence",
+                    new PresenceEvent(username, false));
+        }
     }
 }

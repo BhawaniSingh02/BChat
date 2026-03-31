@@ -37,14 +37,15 @@ export default function ChatPage() {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        await Promise.all([fetchMyRooms(), fetchAllRooms(), fetchConversations(), fetchOnlineUsers()])
-      } catch {
+      const results = await Promise.allSettled([
+        fetchMyRooms(), fetchAllRooms(), fetchConversations(), fetchOnlineUsers(),
+      ])
+      if (results.some((r) => r.status === 'rejected')) {
         setApiError('Could not connect to server. Make sure the backend is running on port 8080.')
       }
     }
     load()
-  }, [])
+  }, [fetchMyRooms, fetchAllRooms, fetchConversations, fetchOnlineUsers])
 
   // Auto-select first room when rooms load and nothing is selected
   useEffect(() => {
@@ -91,8 +92,8 @@ export default function ChatPage() {
   const handleLeaveRoom = async () => {
     if (activeRoomId) { await leaveRoom(activeRoomId); setActiveRoom(null); setMobileSidebarOpen(true) }
   }
-  const handleSendDM = (content: string) => {
-    if (activeDMId) sendDM(activeDMId, content)
+  const handleSendDM = (content: string, fileUrl?: string, messageType?: string) => {
+    if (activeDMId) sendDM(activeDMId, content, fileUrl, messageType)
   }
   const handleEditMessage = (messageId: string, newContent: string) => {
     if (activeRoomId) editMessage(activeRoomId, messageId, newContent)
@@ -152,7 +153,7 @@ export default function ChatPage() {
       `}>
         {/* API Error Banner */}
         {apiError && (
-          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-3" role="alert">
+          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-3" role="alert" aria-live="assertive">
             <span className="text-red-500 text-lg">⚠️</span>
             <p className="text-sm text-red-700 flex-1">{apiError}</p>
             <button

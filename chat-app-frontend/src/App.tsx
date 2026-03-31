@@ -19,10 +19,18 @@ function RedirectIfAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe)
+  const logout = useAuthStore((s) => s.logout)
 
   useEffect(() => {
     fetchMe()
-  }, [])
+  }, [fetchMe])
+
+  // Handle 401 responses dispatched from the axios interceptor (outside React context)
+  useEffect(() => {
+    const handleUnauthorized = () => logout()
+    window.addEventListener('auth:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized)
+  }, [logout])
 
   return (
     <BrowserRouter>

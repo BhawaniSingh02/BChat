@@ -1,6 +1,7 @@
 import type { DirectConversation } from '../../types'
 import Avatar from '../ui/Avatar'
 import { formatRelative } from '../../utils/date'
+import { useUserCacheStore } from '../../store/userCacheStore'
 
 interface DMConversationCardProps {
   conversation: DirectConversation
@@ -20,6 +21,7 @@ export default function DMConversationCard({
   onClick,
 }: DMConversationCardProps) {
   const otherUser = conversation.participants.find((p) => p !== currentUsername) ?? '?'
+  const avatarUrl = useUserCacheStore((s) => s.cache[otherUser]?.avatarUrl)
 
   return (
     <button
@@ -30,7 +32,7 @@ export default function DMConversationCard({
       aria-current={active ? 'page' : undefined}
       data-testid="dm-card"
     >
-      <Avatar name={otherUser} size="md" online={online} />
+      <Avatar name={otherUser} size="md" online={online} src={avatarUrl} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <span className="font-medium text-gray-900 text-sm truncate">{otherUser}</span>

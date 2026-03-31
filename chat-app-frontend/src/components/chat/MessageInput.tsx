@@ -2,8 +2,15 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { MessageType } from '../../types'
 import { uploadApi } from '../../api/upload'
 
-const ACCEPTED_TYPES = 'image/jpeg,image/png,image/gif,image/webp,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-const MAX_SIZE_MB = 10
+const ACCEPTED_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf', 'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'video/mp4', 'video/webm', 'video/quicktime',
+].join(',')
+const MAX_SIZE_IMAGE_DOC_MB = 10
+const MAX_SIZE_VIDEO_MB = 50
 const EMOJI_CATEGORIES = [
   { label: 'Smileys', emojis: ['😀','😂','🤣','😊','😍','🥰','😎','🤔','😅','😭','😱','😤','😢','🥺','😏','😜','🤩','😇','🤗','😬'] },
   { label: 'Gestures', emojis: ['👍','👎','👏','🙌','🤝','🙏','💪','✌️','🤞','👋','🤙','💅','👀','🫶','❤️'] },
@@ -70,22 +77,14 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder }
 
   const handleSend = () => {
     const trimmed = value.trim()
-    if ((!trimmed && !pendingFile) || disabled || uploadProgress !== null) return
+    // File sends are handled immediately in handleFileUploadComplete; only handle plain text here
+    if (!trimmed || disabled || uploadProgress !== null) return
 
-    if (pendingFile) {
-      // File was already uploaded; URL is stored in pendingFile
-      onSend(trimmed || pendingFile.name, undefined, undefined)
-      // Actually we need the URL — store it differently
-      // This path shouldn't happen; file send is handled in handleFileUploadComplete
-    }
-
-    if (trimmed) {
-      onSend(trimmed)
-      setValue('')
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-      isTypingRef.current = false
-      onTyping?.(false)
-    }
+    onSend(trimmed)
+    setValue('')
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    isTypingRef.current = false
+    onTyping?.(false)
   }
 
   const handleFileUploadComplete = useCallback((url: string, messageType: MessageType, filename: string) => {
@@ -108,13 +107,15 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder }
 
     setUploadError(null)
 
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setUploadError(`File too large. Maximum size is ${MAX_SIZE_MB} MB.`)
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+    const messageType: MessageType = isImage ? 'IMAGE' : isVideo ? 'VIDEO' : 'FILE'
+    const maxMb = isVideo ? MAX_SIZE_VIDEO_MB : MAX_SIZE_IMAGE_DOC_MB
+
+    if (file.size > maxMb * 1024 * 1024) {
+      setUploadError(`File too large. Maximum size for ${isVideo ? 'videos' : 'images and documents'} is ${maxMb} MB.`)
       return
     }
-
-    const isImage = file.type.startsWith('image/')
-    const messageType: MessageType = isImage ? 'IMAGE' : 'FILE'
 
     // Show preview for images
     if (isImage) {
@@ -132,8 +133,8 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder }
     try {
       const result = await uploadApi.uploadFile(file, (pct) => setUploadProgress(pct))
       handleFileUploadComplete(result.url, result.messageType as MessageType, file.name)
-    } catch {
-      setUploadError('Upload failed. Please try again.')
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
       setPendingFile(null)
       setUploadProgress(null)
     }

@@ -3,6 +3,7 @@ import type { Message } from '../../types'
 import MessageBubble from './MessageBubble'
 import Avatar from '../ui/Avatar'
 import { formatDate, isSameDay } from '../../utils/date'
+import { useUserCacheStore } from '../../store/userCacheStore'
 
 interface MessageListProps {
   messages: Message[]
@@ -57,6 +58,16 @@ function withinGroup(a: string, b: string): boolean {
 
 export default function MessageList({ messages, currentUsername, typingUsers, isAdmin, pinnedMessageIds, onEditMessage, onDeleteMessage, onReactMessage, onViewProfile, onPinMessage, onUnpinMessage }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const prefetch = useUserCacheStore((s) => s.prefetch)
+  const cache = useUserCacheStore((s) => s.cache)
+
+  // Prefetch avatars for all unique senders whenever messages change
+  useEffect(() => {
+    const senders = messages
+      .filter((m) => m.sender !== currentUsername)
+      .map((m) => m.sender)
+    prefetch(senders)
+  }, [messages, currentUsername, prefetch])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -105,7 +116,9 @@ export default function MessageList({ messages, currentUsername, typingUsers, is
               {!isMine && (
                 <div className="flex-shrink-0 w-8">
                   {isLastInGroup ? (
-                    <button onClick={() => onViewProfile?.(message.sender)} className="focus:outline-none" aria-label={`View ${message.senderName}'s profile`}><Avatar name={message.senderName} size="sm" /></button>
+                    <button onClick={() => onViewProfile?.(message.sender)} className="focus:outline-none" aria-label={`View ${message.senderName}'s profile`}>
+                      <Avatar name={message.senderName} size="sm" src={cache[message.sender]?.avatarUrl} />
+                    </button>
                   ) : (
                     <div className="w-8" />
                   )}

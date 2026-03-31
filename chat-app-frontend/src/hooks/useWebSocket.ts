@@ -2,6 +2,22 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import type { Message, PresenceEvent, TypingEvent } from '../types'
+
+/** Runtime guard — ensures WS frame body contains the minimum fields of a Message */
+function isValidMessage(value: unknown): value is Message {
+  if (!value || typeof value !== 'object') return false
+  const m = value as Record<string, unknown>
+  return typeof m.id === 'string' && typeof m.roomId === 'string' && typeof m.sender === 'string'
+}
+
+function parseMessage(body: string): Message | null {
+  try {
+    const parsed: unknown = JSON.parse(body)
+    return isValidMessage(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
 import { useChatStore } from '../store/chatStore'
 import { useRoomStore } from '../store/roomStore'
 import { usePresenceStore } from '../store/presenceStore'
@@ -48,7 +64,8 @@ export function useWebSocket(token: string | null) {
 
         // User-specific DM delivery — handles new messages, edits, deletes and reactions
         stompClient.subscribe('/user/queue/messages', (frame) => {
-          const message: Message = JSON.parse(frame.body)
+          const message = parseMessage(frame.body)
+          if (!message) { console.warn('Invalid DM message frame received:', frame.body); return }
           upsertDMMessage(message)
           // Only increment unread for brand-new messages (not edits/deletes/reactions)
           if (message.roomId.startsWith('dm:') && !message.edited && !message.deleted) {
@@ -61,8 +78,10 @@ export function useWebSocket(token: string | null) {
 
         // Global presence updates
         stompClient.subscribe('/topic/presence', (frame) => {
-          const event: PresenceEvent = JSON.parse(frame.body)
-          applyPresenceEvent(event)
+          try {
+            const event: PresenceEvent = JSON.parse(frame.body)
+            if (typeof event?.username === 'string') applyPresenceEvent(event)
+          } catch { /* ignore malformed presence frames */ }
         })
       },
       onDisconnect: () => {
@@ -93,7 +112,8 @@ export function useWebSocket(token: string | null) {
     subscribedRooms.current.add(roomId)
 
     client.subscribe(`/topic/room/${roomId}`, (frame) => {
-      const message: Message = JSON.parse(frame.body)
+      const message = parseMessage(frame.body)
+      if (!message) { console.warn('Invalid room message frame received:', frame.body); return }
       upsertRoomMessage(message)
       if (!message.deleted) updateRoomLastMessage(roomId, message.timestamp)
       if (message.roomId !== activeRoomIdRef.current) {
@@ -107,8 +127,8 @@ export function useWebSocket(token: string | null) {
     })
 
     client.subscribe(`/topic/room/${roomId}/read`, (frame) => {
-      const message: Message = JSON.parse(frame.body)
-      updateReadBy(message)
+      const message = parseMessage(frame.body)
+      if (message) updateReadBy(message)
     })
   }, [upsertRoomMessage, setTyping, updateReadBy, updateRoomLastMessage, incrementUnread])
 
@@ -133,10 +153,10 @@ export function useWebSocket(token: string | null) {
     })
   }, [])
 
-  const sendDM = useCallback((conversationId: string, content: string) => {
+  const sendDM = useCallback((conversationId: string, content: string, fileUrl?: string, messageType = 'TEXT') => {
     clientRef.current?.publish({
       destination: `/app/dm.send/${conversationId}`,
-      body: JSON.stringify({ content, messageType: 'TEXT' }),
+      body: JSON.stringify({ content, fileUrl, messageType }),
     })
   }, [])
 

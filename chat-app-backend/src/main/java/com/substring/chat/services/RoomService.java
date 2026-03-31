@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -115,7 +116,7 @@ public class RoomService {
             throw new RoomNotFoundException(roomId);
         }
         Message message = messageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found: " + messageId));
+                .orElseThrow(() -> new MessageNotFoundException(messageId));
         if (!message.getReadBy().contains(username)) {
             message.getReadBy().add(username);
             messageRepository.save(message);
@@ -193,6 +194,12 @@ public class RoomService {
         if (!room.getMembers().contains(requestingUsername)) {
             throw new org.springframework.security.access.AccessDeniedException("Must be a member to pin messages");
         }
+        // Validate the message actually belongs to this room
+        messageRepository.findById(messageId).ifPresent(msg -> {
+            if (!roomId.equals(msg.getRoomId())) {
+                throw new IllegalArgumentException("Message does not belong to room: " + roomId);
+            }
+        });
         if (room.getPinnedMessages() == null) room.setPinnedMessages(new ArrayList<>());
         if (!room.getPinnedMessages().contains(messageId)) {
             if (room.getPinnedMessages().size() >= 3) {
@@ -223,14 +230,20 @@ public class RoomService {
         if (room == null) {
             throw new RoomNotFoundException(roomId);
         }
-        return room.getMembers().stream()
-                .map(username -> userRepository.findByUsername(username)
-                        .map(UserResponse::from)
-                        .orElseGet(() -> {
-                            UserResponse r = new UserResponse();
-                            r.setUsername(username);
-                            return r;
-                        }))
+        // Single batch query instead of N+1 per-username lookups
+        List<String> memberUsernames = room.getMembers();
+        Map<String, com.substring.chat.entities.User> found = userRepository.findByUsernameIn(memberUsernames)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.substring.chat.entities.User::getUsername, u -> u));
+        return memberUsernames.stream()
+                .map(username -> {
+                    com.substring.chat.entities.User u = found.get(username);
+                    if (u != null) return UserResponse.from(u);
+                    UserResponse r = new UserResponse();
+                    r.setUsername(username);
+                    return r;
+                })
                 .toList();
     }
 }

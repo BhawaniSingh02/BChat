@@ -1,7 +1,17 @@
 import { create } from 'zustand'
-import type { User } from '../types'
+import type { User, UpdateProfileRequest, ChangePasswordRequest } from '../types'
 import { authApi } from '../api/auth'
 import { usersApi } from '../api/users'
+import { useUserCacheStore } from './userCacheStore'
+
+interface ApiError {
+  response?: { data?: { detail?: string; message?: string } }
+}
+
+function extractErrorMessage(err: unknown, fallback: string): string {
+  const e = err as ApiError
+  return e?.response?.data?.detail ?? e?.response?.data?.message ?? fallback
+}
 
 interface AuthState {
   user: User | null
@@ -12,7 +22,10 @@ interface AuthState {
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void
   fetchMe: () => Promise<void>
-  updateProfile: (data: import('../types').UpdateProfileRequest) => Promise<void>
+  updateProfile: (data: UpdateProfileRequest) => Promise<void>
+  uploadAvatar: (file: File) => Promise<void>
+  removeAvatar: () => Promise<void>
+  changePassword: (data: ChangePasswordRequest) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -27,13 +40,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       const data = await authApi.login({ username, password })
       localStorage.setItem('token', data.token)
       set({ token: data.token, isLoading: false })
-      // fetch full user profile
       const user = await authApi.me()
       set({ user })
+      useUserCacheStore.getState().seed(user)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        ?? 'Login failed'
-      set({ error: msg, isLoading: false })
+      set({ error: extractErrorMessage(err, 'Login failed'), isLoading: false })
       throw err
     }
   },
@@ -46,10 +57,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ token: data.token, isLoading: false })
       const user = await authApi.me()
       set({ user })
+      useUserCacheStore.getState().seed(user)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        ?? 'Registration failed'
-      set({ error: msg, isLoading: false })
+      set({ error: extractErrorMessage(err, 'Registration failed'), isLoading: false })
       throw err
     }
   },
@@ -65,6 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const user = await authApi.me()
       set({ user, token })
+      useUserCacheStore.getState().seed(user)
     } catch {
       localStorage.removeItem('token')
       set({ user: null, token: null })
@@ -74,5 +85,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   updateProfile: async (data) => {
     const updated = await usersApi.updateProfile(data)
     set({ user: updated })
+    useUserCacheStore.getState().seed(updated)
+  },
+
+  uploadAvatar: async (file) => {
+    const updated = await usersApi.uploadAvatar(file)
+    set({ user: updated })
+    useUserCacheStore.getState().seed(updated)
+  },
+
+  removeAvatar: async () => {
+    const updated = await usersApi.removeAvatar()
+    set({ user: updated })
+    useUserCacheStore.getState().seed(updated)
+  },
+
+  changePassword: async (data) => {
+    await usersApi.changePassword(data)
   },
 }))

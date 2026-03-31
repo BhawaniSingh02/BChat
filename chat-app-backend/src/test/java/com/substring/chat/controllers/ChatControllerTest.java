@@ -69,6 +69,38 @@ class ChatControllerTest {
         dmMessage.setTimestamp(LocalDateTime.now());
     }
 
+    // ── sendMessage ──────────────────────────────────────────────────────────
+
+    @Test
+    void sendMessage_rejectsWhenUserNotMember() {
+        com.substring.chat.entities.Room room = new com.substring.chat.entities.Room();
+        room.setRoomId("general");
+        room.setMembers(List.of("bob")); // alice is NOT a member
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+
+        com.substring.chat.dto.request.SendMessageRequest request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Hello");
+
+        chatController.sendMessage("general", request, principal);
+
+        verify(messageRepository, never()).save(any());
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/errors"), any());
+    }
+
+    @Test
+    void sendMessage_rejectsWhenRoomNotFound() {
+        when(roomRepository.findByRoomId("nonexistent")).thenReturn(null);
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+
+        com.substring.chat.dto.request.SendMessageRequest request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Hello");
+
+        chatController.sendMessage("nonexistent", request, principal);
+
+        verify(messageRepository, never()).save(any());
+    }
+
     // ── react to message ──────────────────────────────────────────────────────
 
     @Test

@@ -4,7 +4,11 @@ export interface User {
   email: string
   displayName?: string
   bio?: string
+  statusMessage?: string
   avatarUrl?: string
+  lastSeenPrivacy?: 'EVERYONE' | 'NOBODY' | 'CONTACTS'
+  onlinePrivacy?: 'EVERYONE' | 'NOBODY'
+  profilePhotoPrivacy?: 'EVERYONE' | 'NOBODY' | 'CONTACTS'
   createdAt: string
   lastSeen: string
 }
@@ -34,7 +38,7 @@ export interface UpdateRoomRequest {
   description?: string
 }
 
-export type MessageType = 'TEXT' | 'IMAGE' | 'FILE'
+export type MessageType = 'TEXT' | 'IMAGE' | 'FILE' | 'VIDEO'
 
 export interface Message {
   id: string
@@ -99,4 +103,13 @@ export interface RegisterRequest {
 export interface UpdateProfileRequest {
   displayName?: string
   bio?: string
+  statusMessage?: string
+  lastSeenPrivacy?: 'EVERYONE' | 'NOBODY' | 'CONTACTS'
+  onlinePrivacy?: 'EVERYONE' | 'NOBODY'
+  profilePhotoPrivacy?: 'EVERYONE' | 'NOBODY' | 'CONTACTS'
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
 }

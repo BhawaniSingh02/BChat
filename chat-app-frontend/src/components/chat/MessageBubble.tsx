@@ -1,8 +1,39 @@
-import { useState, useRef, useEffect } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import type { Message } from '../../types'
 import { formatTime } from '../../utils/date'
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉']
+
+const CLOUDINARY_ORIGINS = ['https://res.cloudinary.com', 'https://res-console.cloudinary.com']
+
+// In development, local files are served from the API server (e.g. http://localhost:8080).
+// Derive the trusted local origin from VITE_API_BASE_URL so it works for any hostname/port.
+function getLocalApiOrigin(): string {
+  try {
+    const base = import.meta.env.VITE_API_BASE_URL as string | undefined
+    return base ? new URL(base).origin : ''
+  } catch {
+    return ''
+  }
+}
+const LOCAL_API_ORIGIN = getLocalApiOrigin()
+
+const IS_DEV = import.meta.env.DEV
+
+/** Only render file URLs from trusted origins (Cloudinary CDN or own API server) */
+function isTrustedUrl(url: string | undefined): boolean {
+  if (!url) return false
+  try {
+    const { origin, hostname } = new URL(url)
+    if (CLOUDINARY_ORIGINS.some((o) => origin === o || origin.endsWith('.cloudinary.com'))) return true
+    if (LOCAL_API_ORIGIN && origin === LOCAL_API_ORIGIN) return true
+    // In dev mode, trust localhost regardless of port
+    if (IS_DEV && hostname === 'localhost') return true
+    return false
+  } catch {
+    return false
+  }
+}
 
 interface MessageBubbleProps {
   message: Message
@@ -38,7 +69,7 @@ function ReadTicks({ readBy, sender, isMine }: { readBy: string[]; sender: strin
   )
 }
 
-export default function MessageBubble({ message, isMine, isGrouped = false, showSender, currentUsername, isAdmin, isPinned, onEdit, onDelete, onReact, onPin, onUnpin }: MessageBubbleProps) {
+function MessageBubble({ message, isMine, isGrouped = false, showSender, currentUsername, isAdmin, isPinned, onEdit, onDelete, onReact, onPin, onUnpin }: MessageBubbleProps) {
   const [hovered, setHovered] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
@@ -217,14 +248,23 @@ export default function MessageBubble({ message, isMine, isGrouped = false, show
                 aria-label="Edit message input"
                 data-testid="edit-message-input"
               />
-            ) : message.messageType === 'IMAGE' && message.fileUrl ? (
+            ) : message.messageType === 'IMAGE' && isTrustedUrl(message.fileUrl) ? (
               <img
                 src={message.fileUrl}
                 alt="shared"
                 className="rounded-xl max-w-full mb-1 max-h-64 object-cover"
                 loading="lazy"
               />
-            ) : message.messageType === 'FILE' && message.fileUrl ? (
+            ) : message.messageType === 'VIDEO' && isTrustedUrl(message.fileUrl) ? (
+              <video
+                src={message.fileUrl}
+                controls
+                controlsList="nodownload"
+                className="rounded-xl max-w-full mb-1 max-h-64"
+                preload="metadata"
+                data-testid="message-video"
+              />
+            ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (
               <a
                 href={message.fileUrl}
                 target="_blank"
@@ -261,7 +301,7 @@ export default function MessageBubble({ message, isMine, isGrouped = false, show
                       : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                     }
                   `}
-                  aria-label={`${emoji} ${users.length}`}
+                  aria-label={`React with ${emoji}, ${users.length} ${users.length === 1 ? 'reaction' : 'reactions'}`}
                   data-testid={`reaction-pill-${emoji}`}
                 >
                   <span>{emoji}</span>
@@ -280,3 +320,5 @@ export default function MessageBubble({ message, isMine, isGrouped = false, show
     </div>
   )
 }
+
+export default memo(MessageBubble)

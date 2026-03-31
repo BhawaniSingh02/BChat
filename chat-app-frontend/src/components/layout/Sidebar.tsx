@@ -232,7 +232,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
             data-testid="profile-footer-btn"
             aria-label="Open profile"
           >
-            <Avatar name={user.username} size="sm" online />
+            <Avatar name={user.username} size="sm" online src={user.avatarUrl ?? undefined} />
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-semibold text-gray-900 truncate">
                 {user.displayName || user.username}

@@ -3,12 +3,12 @@ package com.substring.chat.config;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConditionalOnProperty(name = "cloudinary.cloud-name")
+@ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${cloudinary.cloud-name:}')")
 public class CloudinaryConfig {
 
     @Value("${cloudinary.cloud-name}")

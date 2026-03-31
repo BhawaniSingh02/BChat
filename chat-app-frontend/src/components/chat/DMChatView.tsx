@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react'
-import type { DirectConversation } from '../../types'
+import type { DirectConversation, MessageType } from '../../types'
 import { useDMStore } from '../../store/dmStore'
 import { usePresenceStore } from '../../store/presenceStore'
+import { useUserCacheStore } from '../../store/userCacheStore'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import Avatar from '../ui/Avatar'
@@ -9,7 +10,7 @@ import Avatar from '../ui/Avatar'
 interface DMChatViewProps {
   conversation: DirectConversation
   currentUsername: string
-  onSend: (content: string) => void
+  onSend: (content: string, fileUrl?: string, messageType?: MessageType) => void
   onViewProfile?: (username: string) => void
   onEditMessage?: (messageId: string, newContent: string) => void
   onDeleteMessage?: (messageId: string) => void
@@ -26,10 +27,13 @@ export default function DMChatView({ conversation, currentUsername, onSend, onVi
 
   const otherUser = conversation.participants.find((p) => p !== currentUsername) ?? '?'
   const online = isOnline(otherUser)
+  const fetchUser = useUserCacheStore((s) => s.fetchUser)
+  const cache = useUserCacheStore((s) => s.cache)
 
   useEffect(() => {
     fetchMessages(conversation.id)
-  }, [conversation.id])
+    fetchUser(otherUser)
+  }, [conversation.id, otherUser])
 
   return (
     <div className="flex flex-col h-full">
@@ -51,7 +55,7 @@ export default function DMChatView({ conversation, currentUsername, onSend, onVi
           className="focus:outline-none flex-shrink-0"
           aria-label={`View ${otherUser}'s profile`}
         >
-          <Avatar name={otherUser} size="md" online={online} />
+          <Avatar name={otherUser} size="md" online={online} src={cache[otherUser]?.avatarUrl} />
         </button>
         <div className="flex-1 min-w-0">
           <button

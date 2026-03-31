@@ -337,8 +337,7 @@ class RoomServiceTest {
         bob.setLastSeen(LocalDateTime.now());
 
         when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
-        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
+        when(userRepository.findByUsernameIn(List.of("alice", "bob"))).thenReturn(List.of(alice, bob));
 
         List<UserResponse> result = roomService.getRoomMembers("general");
 
@@ -468,6 +467,20 @@ class RoomServiceTest {
     }
 
     @Test
+    void pinMessage_throwsWhenMessageBelongsToDifferentRoom() {
+        when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
+
+        Message otherMsg = new Message();
+        otherMsg.setId("msg-other");
+        otherMsg.setRoomId("other-room");
+        when(messageRepository.findById("msg-other")).thenReturn(Optional.of(otherMsg));
+
+        assertThatThrownBy(() -> roomService.pinMessage("general", "msg-other", "alice"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("does not belong to room");
+    }
+
+    @Test
     void pinMessage_throwsWhenNotMember() {
         when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
 
@@ -508,8 +521,8 @@ class RoomServiceTest {
         alice.setLastSeen(LocalDateTime.now());
 
         when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
-        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+        // "ghost" is not returned by the batch query — should still appear with username-only fallback
+        when(userRepository.findByUsernameIn(List.of("alice", "ghost"))).thenReturn(List.of(alice));
 
         List<UserResponse> result = roomService.getRoomMembers("general");
 

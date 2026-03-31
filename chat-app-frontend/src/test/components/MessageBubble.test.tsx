@@ -62,22 +62,67 @@ describe('MessageBubble', () => {
     expect(screen.getByLabelText('Read')).toBeInTheDocument()
   })
 
-  it('renders image for IMAGE message type', () => {
+  it('renders image for IMAGE message type with trusted Cloudinary URL', () => {
     const imageMsg: Message = {
       ...baseMessage,
       messageType: 'IMAGE',
-      fileUrl: 'https://example.com/img.jpg',
+      fileUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
       content: '',
     }
     render(<MessageBubble message={imageMsg} isMine={false} />)
     expect(screen.getByRole('img', { name: 'shared' })).toBeInTheDocument()
   })
 
-  it('renders download link for FILE message type', () => {
+  it('renders video for VIDEO message type with trusted Cloudinary URL', () => {
+    const videoMsg: Message = {
+      ...baseMessage,
+      messageType: 'VIDEO',
+      fileUrl: 'https://res.cloudinary.com/demo/video/upload/clip.mp4',
+      content: '',
+    }
+    render(<MessageBubble message={videoMsg} isMine={false} />)
+    expect(screen.getByTestId('message-video')).toBeInTheDocument()
+  })
+
+  it('does not render video for VIDEO message type with untrusted URL', () => {
+    const videoMsg: Message = {
+      ...baseMessage,
+      messageType: 'VIDEO',
+      fileUrl: 'https://evil.com/tracker.mp4',
+      content: '',
+    }
+    render(<MessageBubble message={videoMsg} isMine={false} />)
+    expect(screen.queryByTestId('message-video')).not.toBeInTheDocument()
+  })
+
+  it('does not render image for IMAGE message type with untrusted URL', () => {
+    const imageMsg: Message = {
+      ...baseMessage,
+      messageType: 'IMAGE',
+      fileUrl: 'https://evil.com/tracker.jpg',
+      content: '',
+    }
+    render(<MessageBubble message={imageMsg} isMine={false} />)
+    expect(screen.queryByRole('img', { name: 'shared' })).not.toBeInTheDocument()
+  })
+
+  it('renders image for IMAGE message type with local API URL (dev fallback)', () => {
+    const imageMsg: Message = {
+      ...baseMessage,
+      messageType: 'IMAGE',
+      fileUrl: 'http://localhost:8080/api/v1/files/uuid_photo.jpg',
+      content: '',
+    }
+    render(<MessageBubble message={imageMsg} isMine={false} />)
+    // In test/dev mode import.meta.env.DEV is true, so localhost is trusted
+    expect(screen.getByRole('img', { name: 'shared' })).toBeInTheDocument()
+  })
+
+  it('renders download link for FILE message type with trusted Cloudinary URL', () => {
     const fileMsg: Message = {
       ...baseMessage,
       messageType: 'FILE',
-      fileUrl: 'https://example.com/doc.pdf',
+      fileUrl: 'https://res.cloudinary.com/demo/raw/upload/doc.pdf',
       content: '',
     }
     render(<MessageBubble message={fileMsg} isMine={false} />)

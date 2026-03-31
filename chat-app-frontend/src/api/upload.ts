@@ -21,5 +21,10 @@ export const uploadApi = {
         },
       })
       .then((r) => r.data)
+      .catch((err) => {
+        const serverError = (err?.response?.data as { error?: string })?.error
+        if (serverError) throw new Error(serverError)
+        throw err
+      })
   },
 }

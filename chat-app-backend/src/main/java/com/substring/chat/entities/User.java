@@ -30,6 +30,10 @@ public class User {
     private String avatarUrl;
     private String displayName;
     private String bio;
+    private String statusMessage;
+    private String lastSeenPrivacy;   // EVERYONE | NOBODY | CONTACTS
+    private String onlinePrivacy;     // EVERYONE | NOBODY
+    private String profilePhotoPrivacy; // EVERYONE | NOBODY | CONTACTS
     private LocalDateTime createdAt;
     private LocalDateTime lastSeen;
 }

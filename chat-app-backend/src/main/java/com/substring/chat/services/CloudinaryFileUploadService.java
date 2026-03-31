@@ -27,14 +27,17 @@ public class CloudinaryFileUploadService implements FileUploadService {
                 "unique_filename", true
         );
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) cloudinary.uploader().upload(file.getBytes(), options);
+        Object raw = cloudinary.uploader().upload(file.getBytes(), options);
+        if (!(raw instanceof Map<?, ?> resultMap)) {
+            throw new IllegalStateException("Unexpected response type from Cloudinary: " + (raw == null ? "null" : raw.getClass()));
+        }
+        String secureUrl = resultMap.get("secure_url") instanceof String s ? s : null;
+        String publicId = resultMap.get("public_id") instanceof String s ? s : null;
+        String resourceType = resultMap.get("resource_type") instanceof String s ? s : null;
+        if (secureUrl == null) {
+            throw new IllegalStateException("Cloudinary response missing secure_url");
+        }
 
-        return new UploadResult(
-                (String) result.get("secure_url"),
-                (String) result.get("public_id"),
-                (String) result.get("resource_type"),
-                file.getSize()
-        );
+        return new UploadResult(secureUrl, publicId, resourceType, file.getSize());
     }
 }

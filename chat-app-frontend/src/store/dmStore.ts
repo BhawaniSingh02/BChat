@@ -19,10 +19,6 @@ interface DMState {
   resetDMUnread: (conversationId: string) => void
 }
 
-function dmRoomId(conversationId: string) {
-  return `dm:${conversationId}`
-}
-
 export const useDMStore = create<DMState>((set, get) => ({
   conversations: [],
   messages: {},
@@ -74,6 +70,8 @@ export const useDMStore = create<DMState>((set, get) => ({
   upsertDMMessage: (message) => {
     if (!message.roomId.startsWith('dm:')) return
     const conversationId = message.roomId.slice(3)
+    // Check before set() whether this is a new message or an update to an existing one
+    const isNew = !(get().messages[conversationId] ?? []).some((m) => m.id === message.id)
     set((s) => {
       const existing = s.messages[conversationId] ?? []
       const idx = existing.findIndex((m) => m.id === message.id)
@@ -82,7 +80,8 @@ export const useDMStore = create<DMState>((set, get) => ({
         : [...existing, message]
       return { messages: { ...s.messages, [conversationId]: updated } }
     })
-    if (!message.deleted) get().updateLastMessage(conversationId, message.timestamp)
+    // Only bump lastMessageAt for genuinely new messages — not edits, deletes, or reactions
+    if (isNew && !message.edited && !message.deleted) get().updateLastMessage(conversationId, message.timestamp)
   },
 
   setActiveDM: (id) => set({ activeDMId: id }),
