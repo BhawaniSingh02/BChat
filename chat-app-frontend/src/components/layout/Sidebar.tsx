@@ -78,10 +78,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
       {/* Header */}
       <div className="px-4 py-3 bg-[#075e54] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <span className="text-white text-base">💬</span>
-          </div>
-          <h1 className="text-lg font-bold text-white tracking-tight">BChat</h1>
+          <h1 className="text-lg font-bold text-white tracking-tight">Baaat</h1>
         </div>
         <div className="flex items-center gap-1">
           <button

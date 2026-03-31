@@ -28,7 +28,7 @@ export default function LoginForm() {
           <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
             <span className="text-5xl">💬</span>
           </div>
-          <h1 className="text-3xl font-bold mb-3">BChat</h1>
+          <h1 className="text-3xl font-bold mb-3">Baaat</h1>
           <p className="text-green-100 text-center text-sm leading-relaxed">
             Real-time messaging for teams and communities. Stay connected.
           </p>
@@ -53,7 +53,7 @@ export default function LoginForm() {
               <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <span className="text-white text-2xl">💬</span>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">BChat</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Baaat</h1>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Welcome back</h2>

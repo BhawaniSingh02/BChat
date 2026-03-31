@@ -29,9 +29,9 @@ export default function RegisterForm() {
           <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
             <span className="text-5xl">💬</span>
           </div>
-          <h1 className="text-3xl font-bold mb-3">BChat</h1>
+          <h1 className="text-3xl font-bold mb-3">Baaat</h1>
           <p className="text-green-100 text-center text-sm leading-relaxed">
-            Join thousands of users already chatting on BChat.
+            Join thousands of users already chatting on Baaat.
           </p>
           <div className="mt-8 space-y-3 w-full">
             {[
@@ -54,11 +54,11 @@ export default function RegisterForm() {
               <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <span className="text-white text-2xl">💬</span>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">BChat</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Baaat</h1>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Create account</h2>
-            <p className="text-gray-500 text-sm mb-7">Join BChat today — it's free</p>
+            <p className="text-gray-500 text-sm mb-7">Join Baaat today — it's free</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (

@@ -216,7 +216,7 @@ export default function ChatPage() {
               <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
                 <span className="text-white text-4xl">💬</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to BChat</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Baaat</h2>
               <p className="text-gray-500 mb-8 text-sm leading-relaxed">
                 Connect with others in chat rooms or through direct messages.
                 {myRooms.length === 0 && ' Create your first room or browse existing ones to get started.'}

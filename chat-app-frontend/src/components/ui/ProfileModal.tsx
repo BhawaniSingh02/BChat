@@ -327,7 +327,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   type="text"
                   value={statusMessage}
                   onChange={(e) => setStatusMessage(e.target.value)}
-                  placeholder="Hey there! I am using BChat"
+                  placeholder="Hey there! I am using Baaat"
                   maxLength={139}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
                   data-testid="status-input"
