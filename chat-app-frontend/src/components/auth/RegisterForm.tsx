@@ -29,7 +29,7 @@ export default function RegisterForm() {
           <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
             <span className="text-5xl">💬</span>
           </div>
-          <h1 className="text-3xl font-bold mb-3">Baaat</h1>
+          <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, letterSpacing: '-0.02em' }} className="text-3xl mb-3">Baaat</h1>
           <p className="text-green-100 text-center text-sm leading-relaxed">
             Join thousands of users already chatting on Baaat.
           </p>
@@ -54,7 +54,7 @@ export default function RegisterForm() {
               <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <span className="text-white text-2xl">💬</span>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">Baaat</h1>
+              <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, letterSpacing: '-0.02em' }} className="text-2xl text-gray-900">Baaat</h1>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Create account</h2>
