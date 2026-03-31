@@ -83,7 +83,7 @@ describe('ProfileModal', () => {
   })
 
   it('falls back to username when no displayName', () => {
-    const { rerender } = render(<ProfileModal open onClose={onClose} />)
+    const { rerender: _rerender } = render(<ProfileModal open onClose={onClose} />)
     // We can't change the mock user mid-test easily, so just verify the element exists
     expect(screen.getByTestId('profile-display-name')).toBeInTheDocument()
   })

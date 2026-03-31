@@ -413,21 +413,21 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                 label="Last Seen"
                 value={lastSeenPrivacy}
                 options={['EVERYONE', 'NOBODY', 'CONTACTS']}
-                onChange={setLastSeenPrivacy}
+                onChange={(v: string) => setLastSeenPrivacy(v as 'EVERYONE' | 'NOBODY' | 'CONTACTS')}
                 testId="last-seen-privacy"
               />
               <PrivacySelect
                 label="Online Status"
                 value={onlinePrivacy}
                 options={['EVERYONE', 'NOBODY']}
-                onChange={setOnlinePrivacy}
+                onChange={(v: string) => setOnlinePrivacy(v as 'EVERYONE' | 'NOBODY' | 'CONTACTS')}
                 testId="online-privacy"
               />
               <PrivacySelect
                 label="Profile Photo"
                 value={profilePhotoPrivacy}
                 options={['EVERYONE', 'NOBODY', 'CONTACTS']}
-                onChange={setProfilePhotoPrivacy}
+                onChange={(v: string) => setProfilePhotoPrivacy(v as 'EVERYONE' | 'NOBODY' | 'CONTACTS')}
                 testId="profile-photo-privacy"
               />
 

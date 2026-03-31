@@ -53,8 +53,8 @@ describe('UserSearchModal', () => {
 
   it('renders search results', async () => {
     vi.mocked(usersApi.search).mockResolvedValue([
-      { id: '1', username: 'bob', email: 'bob@test.com' },
-      { id: '2', username: 'charlie', email: 'charlie@test.com' },
+      { id: '1', username: 'bob', email: 'bob@test.com', createdAt: '2024-01-01T00:00:00Z', lastSeen: '2024-01-01T00:00:00Z' },
+      { id: '2', username: 'charlie', email: 'charlie@test.com', createdAt: '2024-01-01T00:00:00Z', lastSeen: '2024-01-01T00:00:00Z' },
     ])
     render(<UserSearchModal {...defaultProps} />)
     await userEvent.type(screen.getByLabelText('Search users'), 'b')
@@ -63,8 +63,8 @@ describe('UserSearchModal', () => {
 
   it('filters out current user from results', async () => {
     vi.mocked(usersApi.search).mockResolvedValue([
-      { id: '1', username: 'alice', email: 'alice@test.com' },
-      { id: '2', username: 'bob', email: 'bob@test.com' },
+      { id: '1', username: 'alice', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', lastSeen: '2024-01-01T00:00:00Z' },
+      { id: '2', username: 'bob', email: 'bob@test.com', createdAt: '2024-01-01T00:00:00Z', lastSeen: '2024-01-01T00:00:00Z' },
     ])
     render(<UserSearchModal {...defaultProps} />)
     await userEvent.type(screen.getByLabelText('Search users'), 'a')
@@ -76,7 +76,7 @@ describe('UserSearchModal', () => {
     const onSelectUser = vi.fn()
     const onClose = vi.fn()
     vi.mocked(usersApi.search).mockResolvedValue([
-      { id: '2', username: 'bob', email: 'bob@test.com' },
+      { id: '2', username: 'bob', email: 'bob@test.com', createdAt: '2024-01-01T00:00:00Z', lastSeen: '2024-01-01T00:00:00Z' },
     ])
     render(<UserSearchModal {...defaultProps} onSelectUser={onSelectUser} onClose={onClose} />)
     await userEvent.type(screen.getByLabelText('Search users'), 'b')

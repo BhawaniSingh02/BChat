@@ -22,7 +22,7 @@ vi.mock('../../api/users', () => ({
 }))
 
 // Mock authStore — default: not logged in as the viewed user
-const mockAuthUser = vi.fn(() => null)
+const mockAuthUser = vi.fn((): User | null => null)
 vi.mock('../../store/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => {
     const state = {
