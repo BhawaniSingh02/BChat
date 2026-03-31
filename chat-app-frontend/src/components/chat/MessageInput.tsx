@@ -16,7 +16,6 @@ const EMOJI_CATEGORIES = [
   { label: 'Gestures', emojis: ['👍','👎','👏','🙌','🤝','🙏','💪','✌️','🤞','👋','🤙','💅','👀','🫶','❤️'] },
   { label: 'Objects', emojis: ['🔥','💯','✅','🎉','🎊','💡','⭐','🌟','💎','🚀','🏆','🎯','📌','💬','🔔'] },
 ]
-const COMMON_EMOJIS = EMOJI_CATEGORIES.flatMap((c) => c.emojis)
 
 interface MessageInputProps {
   onSend: (content: string, fileUrl?: string, messageType?: MessageType) => void

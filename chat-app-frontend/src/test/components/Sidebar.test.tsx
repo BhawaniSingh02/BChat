@@ -53,11 +53,6 @@ vi.mock('../../store/presenceStore', () => ({
 
 import Sidebar from '../../components/layout/Sidebar'
 
-const _makeRoom = (id: string): Room => ({
-  id, roomId: id, name: `Room ${id}`, description: '', createdBy: 'alice',
-  members: ['alice'], memberCount: 1, createdAt: '2026-03-28T10:00:00',
-})
-
 const makeConv = (id: string): DirectConversation => ({
   id, participants: ['alice', 'bob'], createdAt: '2026-03-28T10:00:00',
 })

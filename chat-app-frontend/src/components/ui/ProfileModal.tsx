@@ -31,9 +31,9 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
   const [statusMessage, setStatusMessage] = useState(user?.statusMessage ?? '')
 
   // Privacy tab state
-  const [lastSeenPrivacy, setLastSeenPrivacy] = useState(user?.lastSeenPrivacy ?? 'EVERYONE')
-  const [onlinePrivacy, setOnlinePrivacy] = useState(user?.onlinePrivacy ?? 'EVERYONE')
-  const [profilePhotoPrivacy, setProfilePhotoPrivacy] = useState(user?.profilePhotoPrivacy ?? 'EVERYONE')
+  const [lastSeenPrivacy, setLastSeenPrivacy] = useState<'EVERYONE' | 'NOBODY' | 'CONTACTS'>(user?.lastSeenPrivacy ?? 'EVERYONE')
+  const [onlinePrivacy, setOnlinePrivacy] = useState<'EVERYONE' | 'NOBODY' | 'CONTACTS'>(user?.onlinePrivacy ?? 'EVERYONE')
+  const [profilePhotoPrivacy, setProfilePhotoPrivacy] = useState<'EVERYONE' | 'NOBODY' | 'CONTACTS'>(user?.profilePhotoPrivacy ?? 'EVERYONE')
 
   // Password tab state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -96,7 +96,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
     } catch (err: unknown) {
       const e2 = err as { response?: { data?: { detail?: string; message?: string } } }
       flashError(e2?.response?.data?.detail ?? e2?.response?.data?.message ?? 'Failed to upload photo')
-      setAvatarPreview(user.avatarUrl ?? null)
+      setAvatarPreview(user?.avatarUrl ?? null)
     }
   }
 

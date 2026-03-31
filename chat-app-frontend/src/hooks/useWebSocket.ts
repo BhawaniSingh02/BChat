@@ -36,7 +36,6 @@ export function useWebSocket(token: string | null) {
   const updateRoomLastMessage = useRoomStore((s) => s.updateRoomLastMessage)
   const activeRoomId = useRoomStore((s) => s.activeRoomId)
   const applyPresenceEvent = usePresenceStore((s) => s.applyEvent)
-  const _addDMMessage = useDMStore((s) => s.addMessage)
   const upsertDMMessage = useDMStore((s) => s.upsertDMMessage)
   const incrementDMUnread = useDMStore((s) => s.incrementDMUnread)
   const activeDMId = useDMStore((s) => s.activeDMId)
