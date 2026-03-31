@@ -2,7 +2,7 @@
 FROM eclipse-temurin:24-jdk AS build
 WORKDIR /app
 COPY . .
-RUN ./gradlew build -x test --no-daemon
+RUN chmod +x gradlew && ./gradlew build -x test --no-daemon
 
 # Run stage
 FROM eclipse-temurin:24-jre
