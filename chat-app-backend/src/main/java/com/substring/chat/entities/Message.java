@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,9 +35,9 @@ public class Message {
     private MessageType messageType = MessageType.TEXT;
     private String fileUrl;
     private List<String> readBy = new ArrayList<>();
-    private LocalDateTime timestamp;
+    private Instant timestamp;
     private boolean edited = false;
-    private LocalDateTime editedAt;
+    private Instant editedAt;
     private boolean deleted = false;
     private Map<String, List<String>> reactions = new HashMap<>(); // emoji -> list of usernames
 
@@ -47,7 +47,7 @@ public class Message {
         this.roomId = roomId;
         this.content = content;
         this.messageType = MessageType.TEXT;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = Instant.now();
     }
 
     public enum MessageType {

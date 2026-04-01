@@ -13,7 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +36,8 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setCreatedAt(LocalDateTime.now());
-        user.setLastSeen(LocalDateTime.now());
+        user.setCreatedAt(Instant.now());
+        user.setLastSeen(Instant.now());
 
         User saved = userRepository.save(user);
         String token = jwtTokenProvider.generateToken(saved.getUsername());
@@ -52,7 +52,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found after authentication"));
 
-        user.setLastSeen(LocalDateTime.now());
+        user.setLastSeen(Instant.now());
         userRepository.save(user);
 
         String token = jwtTokenProvider.generateToken(user.getUsername());

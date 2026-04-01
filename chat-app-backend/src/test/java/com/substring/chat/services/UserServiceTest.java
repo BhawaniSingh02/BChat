@@ -15,7 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,15 +50,15 @@ class UserServiceTest {
         alice.setUsername("alice");
         alice.setEmail("alice@example.com");
         alice.setPasswordHash("$2a$10$hashed");
-        alice.setCreatedAt(LocalDateTime.now());
-        alice.setLastSeen(LocalDateTime.now());
+        alice.setCreatedAt(Instant.now());
+        alice.setLastSeen(Instant.now());
 
         bob = new User();
         bob.setId("id-bob");
         bob.setUsername("bob");
         bob.setEmail("bob@example.com");
-        bob.setCreatedAt(LocalDateTime.now());
-        bob.setLastSeen(LocalDateTime.now());
+        bob.setCreatedAt(Instant.now());
+        bob.setLastSeen(Instant.now());
     }
 
     // ── getUserByUsername ────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ class UserServiceTest {
 
     @Test
     void getPublicProfile_hidesLastSeenWhenPrivacyIsNobody() {
-        alice.setLastSeen(LocalDateTime.now());
+        alice.setLastSeen(Instant.now());
         alice.setLastSeenPrivacy("NOBODY");
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
 
@@ -149,7 +149,7 @@ class UserServiceTest {
 
     @Test
     void getPublicProfile_showsLastSeenWhenPrivacyIsEveryone() {
-        LocalDateTime lastSeen = LocalDateTime.now().minusHours(1);
+        Instant lastSeen = Instant.now().minusSeconds(3600);
         alice.setLastSeen(lastSeen);
         alice.setLastSeenPrivacy("EVERYONE");
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));

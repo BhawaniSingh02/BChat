@@ -315,7 +315,7 @@ class RoomControllerIntegrationTest {
         msg.setSenderName(ownerUsername);
         msg.setContent("Original content");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(java.time.LocalDateTime.now());
+        msg.setTimestamp(java.time.Instant.now());
         msg.setReadBy(new java.util.ArrayList<>());
         return messageRepository.save(msg).getId();
     }

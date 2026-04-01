@@ -5,7 +5,7 @@ import com.substring.chat.entities.Message.MessageType;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,9 +22,9 @@ public class MessageResponse {
     private MessageType messageType;
     private String fileUrl;
     private List<String> readBy;
-    private LocalDateTime timestamp;
+    private Instant timestamp;
     private boolean edited;
-    private LocalDateTime editedAt;
+    private Instant editedAt;
     private boolean deleted;
     private Map<String, List<String>> reactions;
 

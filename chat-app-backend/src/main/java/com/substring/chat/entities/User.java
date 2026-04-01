@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Document(collection = "users")
 @Getter
@@ -34,6 +34,6 @@ public class User {
     private String lastSeenPrivacy;   // EVERYONE | NOBODY | CONTACTS
     private String onlinePrivacy;     // EVERYONE | NOBODY
     private String profilePhotoPrivacy; // EVERYONE | NOBODY | CONTACTS
-    private LocalDateTime createdAt;
-    private LocalDateTime lastSeen;
+    private Instant createdAt;
+    private Instant lastSeen;
 }

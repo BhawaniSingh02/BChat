@@ -18,7 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class RoomService {
         room.setCreatedBy(createdBy);
         room.setMembers(new ArrayList<>());
         room.getMembers().add(createdBy);
-        room.setCreatedAt(LocalDateTime.now());
+        room.setCreatedAt(Instant.now());
 
         Room saved = roomRepository.save(room);
         return RoomResponse.from(saved);
@@ -135,7 +135,7 @@ public class RoomService {
         }
         message.setContent(content);
         message.setEdited(true);
-        message.setEditedAt(LocalDateTime.now());
+        message.setEditedAt(Instant.now());
         messageRepository.save(message);
         return MessageResponse.from(message);
     }

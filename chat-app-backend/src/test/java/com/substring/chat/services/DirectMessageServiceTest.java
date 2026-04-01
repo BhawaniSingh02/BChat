@@ -20,7 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +55,7 @@ class DirectMessageServiceTest {
         participants.add("alice");
         participants.add("bob");
         existingConversation.setParticipants(participants);
-        existingConversation.setCreatedAt(LocalDateTime.now());
+        existingConversation.setCreatedAt(Instant.now());
     }
 
     @Test
@@ -82,7 +82,7 @@ class DirectMessageServiceTest {
         participants.add("alice");
         participants.add("charlie");
         newConv.setParticipants(participants);
-        newConv.setCreatedAt(LocalDateTime.now());
+        newConv.setCreatedAt(Instant.now());
         when(conversationRepository.save(any(DirectConversation.class))).thenReturn(newConv);
 
         DirectConversationResponse response = directMessageService.getOrCreateConversation("alice", "charlie");
@@ -121,7 +121,7 @@ class DirectMessageServiceTest {
         saved.setSender("alice");
         saved.setContent("Hello Bob!");
         saved.setMessageType(Message.MessageType.TEXT);
-        saved.setTimestamp(LocalDateTime.now());
+        saved.setTimestamp(Instant.now());
         saved.setReadBy(new ArrayList<>());
         when(messageRepository.save(any(Message.class))).thenReturn(saved);
         when(conversationRepository.save(any(DirectConversation.class))).thenReturn(existingConversation);
@@ -185,7 +185,7 @@ class DirectMessageServiceTest {
         msg.setSender("alice");
         msg.setContent("hi");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         Page<Message> page = new PageImpl<>(List.of(msg));
         when(messageRepository.findByRoomIdOrderByTimestampDesc(eq("dm:conv-1"), any(Pageable.class)))

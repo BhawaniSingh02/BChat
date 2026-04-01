@@ -15,7 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -40,7 +40,7 @@ public class DirectMessageService {
                     participants.add(currentUser);
                     participants.add(otherUser);
                     conv.setParticipants(participants);
-                    conv.setCreatedAt(LocalDateTime.now());
+                    conv.setCreatedAt(Instant.now());
                     return DirectConversationResponse.from(conversationRepository.save(conv));
                 });
     }
@@ -81,7 +81,7 @@ public class DirectMessageService {
         message.setContent(request.getContent());
         message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
         message.setFileUrl(request.getFileUrl());
-        message.setTimestamp(LocalDateTime.now());
+        message.setTimestamp(Instant.now());
 
         Message saved = messageRepository.save(message);
 

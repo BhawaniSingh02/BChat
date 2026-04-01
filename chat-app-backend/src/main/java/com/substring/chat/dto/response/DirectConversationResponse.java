@@ -4,7 +4,7 @@ import com.substring.chat.entities.DirectConversation;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Getter
@@ -13,8 +13,8 @@ public class DirectConversationResponse {
 
     private String id;
     private List<String> participants;
-    private LocalDateTime createdAt;
-    private LocalDateTime lastMessageAt;
+    private Instant createdAt;
+    private Instant lastMessageAt;
 
     public static DirectConversationResponse from(DirectConversation conv) {
         DirectConversationResponse response = new DirectConversationResponse();

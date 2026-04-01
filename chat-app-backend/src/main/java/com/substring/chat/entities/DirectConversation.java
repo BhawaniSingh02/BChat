@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Document(collection = "direct_conversations")
@@ -24,6 +24,6 @@ public class DirectConversation {
 
     private List<String> participants; // exactly two usernames
 
-    private LocalDateTime createdAt;
-    private LocalDateTime lastMessageAt;
+    private Instant createdAt;
+    private Instant lastMessageAt;
 }

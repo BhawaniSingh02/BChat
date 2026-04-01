@@ -19,7 +19,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,7 +63,7 @@ public class ChatController {
         message.setContent(request.getContent());
         message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
         message.setFileUrl(request.getFileUrl());
-        message.setTimestamp(LocalDateTime.now());
+        message.setTimestamp(Instant.now());
 
         Message saved = messageRepository.save(message);
         room.setLastMessageAt(saved.getTimestamp());
@@ -126,7 +126,7 @@ public class ChatController {
             message.setContent(request.getContent());
             message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
             message.setFileUrl(request.getFileUrl());
-            message.setTimestamp(LocalDateTime.now());
+            message.setTimestamp(Instant.now());
             Message saved = messageRepository.save(message);
 
             conv.setLastMessageAt(saved.getTimestamp());
@@ -156,7 +156,7 @@ public class ChatController {
             }
             message.setContent(request.getContent());
             message.setEdited(true);
-            message.setEditedAt(java.time.LocalDateTime.now());
+            message.setEditedAt(Instant.now());
             messageRepository.save(message);
             messagingTemplate.convertAndSend("/topic/room/" + roomId, MessageResponse.from(message));
         });
@@ -229,7 +229,7 @@ public class ChatController {
                 if (!(DM_PREFIX + conversationId).equals(message.getRoomId())) return;
                 message.setContent(request.getContent());
                 message.setEdited(true);
-                message.setEditedAt(java.time.LocalDateTime.now());
+                message.setEditedAt(Instant.now());
                 messageRepository.save(message);
                 MessageResponse response = MessageResponse.from(message);
                 for (String participant : conv.getParticipants()) {
@@ -307,7 +307,7 @@ public class ChatController {
         msg.setSenderName("System");
         msg.setContent(content);
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         return msg;
     }
 

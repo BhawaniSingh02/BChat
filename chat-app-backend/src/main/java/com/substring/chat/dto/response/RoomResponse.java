@@ -4,7 +4,7 @@ import com.substring.chat.entities.Room;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Getter
@@ -18,8 +18,8 @@ public class RoomResponse {
     private String createdBy;
     private List<String> members;
     private List<String> pinnedMessages;
-    private LocalDateTime createdAt;
-    private LocalDateTime lastMessageAt;
+    private Instant createdAt;
+    private Instant lastMessageAt;
     private int memberCount;
 
     public static RoomResponse from(Room room) {

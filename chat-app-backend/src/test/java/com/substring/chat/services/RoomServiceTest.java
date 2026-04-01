@@ -21,7 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -62,7 +62,7 @@ class RoomServiceTest {
         existingRoom.setCreatedBy("alice");
         existingRoom.setMembers(new ArrayList<>());
         existingRoom.getMembers().add("alice");
-        existingRoom.setCreatedAt(LocalDateTime.now());
+        existingRoom.setCreatedAt(Instant.now());
     }
 
     @Test
@@ -174,7 +174,7 @@ class RoomServiceTest {
         msg.setSender("alice");
         msg.setContent("Hello World");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         when(messageRepository.findByRoomIdAndContentContainingIgnoreCaseOrderByTimestampDesc("general", "hello"))
                 .thenReturn(List.of(msg));
@@ -203,7 +203,7 @@ class RoomServiceTest {
         msg.setSender("alice");
         msg.setContent("Hello");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(msg));
         when(messageRepository.save(any(Message.class))).thenReturn(msg);
@@ -223,7 +223,7 @@ class RoomServiceTest {
         msg.setSender("alice");
         msg.setContent("Original content");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(msg));
         when(messageRepository.save(any(Message.class))).thenReturn(msg);
@@ -245,7 +245,7 @@ class RoomServiceTest {
         msg.setRoomId("general");
         msg.setContent("Content");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(msg));
 
@@ -272,7 +272,7 @@ class RoomServiceTest {
         msg.setSender("alice");
         msg.setContent("Hello");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(msg));
         when(messageRepository.save(any(Message.class))).thenReturn(msg);
@@ -293,7 +293,7 @@ class RoomServiceTest {
         msg.setRoomId("general");
         msg.setContent("Content");
         msg.setMessageType(Message.MessageType.TEXT);
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(msg));
 
@@ -309,7 +309,7 @@ class RoomServiceTest {
         msg.setId("msg-1");
         msg.setRoomId("general");
         msg.setReadBy(new ArrayList<>(List.of("bob")));
-        msg.setTimestamp(LocalDateTime.now());
+        msg.setTimestamp(Instant.now());
         msg.setMessageType(Message.MessageType.TEXT);
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(msg));
 
@@ -326,15 +326,15 @@ class RoomServiceTest {
         alice.setId("u1");
         alice.setUsername("alice");
         alice.setEmail("alice@test.com");
-        alice.setCreatedAt(LocalDateTime.now());
-        alice.setLastSeen(LocalDateTime.now());
+        alice.setCreatedAt(Instant.now());
+        alice.setLastSeen(Instant.now());
 
         User bob = new User();
         bob.setId("u2");
         bob.setUsername("bob");
         bob.setEmail("bob@test.com");
-        bob.setCreatedAt(LocalDateTime.now());
-        bob.setLastSeen(LocalDateTime.now());
+        bob.setCreatedAt(Instant.now());
+        bob.setLastSeen(Instant.now());
 
         when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
         when(userRepository.findByUsernameIn(List.of("alice", "bob"))).thenReturn(List.of(alice, bob));
@@ -517,8 +517,8 @@ class RoomServiceTest {
         alice.setId("u1");
         alice.setUsername("alice");
         alice.setEmail("alice@test.com");
-        alice.setCreatedAt(LocalDateTime.now());
-        alice.setLastSeen(LocalDateTime.now());
+        alice.setCreatedAt(Instant.now());
+        alice.setLastSeen(Instant.now());
 
         when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
         // "ghost" is not returned by the batch query — should still appear with username-only fallback

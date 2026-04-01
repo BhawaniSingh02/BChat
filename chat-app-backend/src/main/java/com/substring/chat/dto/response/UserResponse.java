@@ -5,7 +5,7 @@ import com.substring.chat.entities.User;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -22,8 +22,8 @@ public class UserResponse {
     private String lastSeenPrivacy;
     private String onlinePrivacy;
     private String profilePhotoPrivacy;
-    private LocalDateTime createdAt;
-    private LocalDateTime lastSeen;
+    private Instant createdAt;
+    private Instant lastSeen;
 
     public static UserResponse from(User user) {
         UserResponse response = new UserResponse();

@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +49,7 @@ class UserControllerTest {
         userResponse.setLastSeenPrivacy("EVERYONE");
         userResponse.setOnlinePrivacy("EVERYONE");
         userResponse.setProfilePhotoPrivacy("EVERYONE");
-        userResponse.setCreatedAt(LocalDateTime.now());
+        userResponse.setCreatedAt(Instant.now());
     }
 
     @Test

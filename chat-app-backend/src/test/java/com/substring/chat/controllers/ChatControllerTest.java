@@ -16,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -53,7 +53,7 @@ class ChatControllerTest {
         message.setSenderName("alice");
         message.setContent("Hello");
         message.setMessageType(Message.MessageType.TEXT);
-        message.setTimestamp(LocalDateTime.now());
+        message.setTimestamp(Instant.now());
 
         conversation = new DirectConversation();
         conversation.setId("conv-1");
@@ -66,7 +66,7 @@ class ChatControllerTest {
         dmMessage.setSenderName("alice");
         dmMessage.setContent("DM hello");
         dmMessage.setMessageType(Message.MessageType.TEXT);
-        dmMessage.setTimestamp(LocalDateTime.now());
+        dmMessage.setTimestamp(Instant.now());
     }
 
     // ── sendMessage ──────────────────────────────────────────────────────────

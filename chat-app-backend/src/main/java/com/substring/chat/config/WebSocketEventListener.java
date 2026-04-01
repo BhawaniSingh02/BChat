@@ -13,7 +13,7 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -54,7 +54,7 @@ public class WebSocketEventListener {
         log.debug("User disconnected: {}", username);
 
         boolean broadcastable = userRepository.findByUsername(username).map(user -> {
-            user.setLastSeen(LocalDateTime.now());
+            user.setLastSeen(Instant.now());
             userRepository.save(user);
             return !"NOBODY".equals(user.getOnlinePrivacy());
         }).orElse(true);

@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +30,6 @@ public class Room {
     private String createdBy;
     private List<String> members = new ArrayList<>();
     private List<String> pinnedMessages = new ArrayList<>();
-    private LocalDateTime createdAt;
-    private LocalDateTime lastMessageAt;
+    private Instant createdAt;
+    private Instant lastMessageAt;
 }
