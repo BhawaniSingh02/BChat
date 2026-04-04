@@ -39,6 +39,12 @@ public class FileUploadController {
     private static final Set<String> VIDEO_TYPES = Set.of(
             "video/mp4", "video/webm", "video/quicktime"
     );
+    // Audio files: 25 MB (voice messages — Phase 24)
+    private static final long MAX_AUDIO_SIZE = 25L * 1024 * 1024;
+    private static final Set<String> AUDIO_TYPES = Set.of(
+            "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4",
+            "audio/wav", "audio/x-wav", "audio/aac"
+    );
 
     @Autowired(required = false)
     private FileUploadService fileUploadService;
@@ -64,13 +70,14 @@ public class FileUploadController {
         boolean isImage = contentType != null && IMAGE_TYPES.contains(contentType);
         boolean isVideo = contentType != null && VIDEO_TYPES.contains(contentType);
         boolean isDoc   = contentType != null && DOC_TYPES.contains(contentType);
+        boolean isAudio = contentType != null && AUDIO_TYPES.contains(contentType);
 
-        if (!isImage && !isVideo && !isDoc) {
+        if (!isImage && !isVideo && !isDoc && !isAudio) {
             return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                    .body(Map.of("error", "File type not supported. Allowed: images (JPEG/PNG/GIF/WebP), documents (PDF/DOCX/TXT), videos (MP4/WebM/MOV)."));
+                    .body(Map.of("error", "File type not supported. Allowed: images (JPEG/PNG/GIF/WebP), documents (PDF/DOCX/TXT), videos (MP4/WebM/MOV), audio (WebM/OGG/MP3/WAV)."));
         }
 
-        long maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_DOC_SIZE;
+        long maxSize = isVideo ? MAX_VIDEO_SIZE : isAudio ? MAX_AUDIO_SIZE : MAX_IMAGE_DOC_SIZE;
         if (file.getSize() > maxSize) {
             long limitMb = maxSize / (1024 * 1024);
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
@@ -86,7 +93,7 @@ public class FileUploadController {
         // 4. Upload to Cloudinary
         try {
             FileUploadService.UploadResult result = fileUploadService.upload(file);
-            String messageType = isImage ? "IMAGE" : isVideo ? "VIDEO" : "FILE";
+            String messageType = isImage ? "IMAGE" : isVideo ? "VIDEO" : isAudio ? "AUDIO" : "FILE";
             return ResponseEntity.ok(new UploadResponse(result.url(), messageType, result.bytes()));
         } catch (Exception e) {
             log.error("File upload failed for user {}: {}", principal != null ? principal.getName() : "unknown", e.getMessage(), e);

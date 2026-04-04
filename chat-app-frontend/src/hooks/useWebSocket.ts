@@ -267,11 +267,33 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     })
   }, [])
 
+  // ── Phase 27: Thread replies ─────────────────────────────────────────────
+
+  /** Subscribe to live thread reply updates for a root message. */
+  const subscribeToThread = useCallback((rootMessageId: string, onReply: (msg: Message) => void) => {
+    const client = clientRef.current
+    if (!client?.connected) return () => {}
+    const sub = client.subscribe(`/topic/thread/${rootMessageId}`, (frame) => {
+      const message = parseMessage(frame.body)
+      if (message) onReply(message)
+    })
+    return () => sub.unsubscribe()
+  }, [])
+
+  /** Send a threaded reply via STOMP. */
+  const sendThreadReply = useCallback((rootMessageId: string, content: string, senderName?: string, fileUrl?: string, messageType = 'TEXT') => {
+    clientRef.current?.publish({
+      destination: `/app/thread.reply/${rootMessageId}`,
+      body: JSON.stringify({ content, senderName, fileUrl, messageType }),
+    })
+  }, [])
+
   return {
     subscribeToRoom, sendMessage, sendTyping, markRead, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd,
+    subscribeToThread, sendThreadReply,
     isConnected, connected,
   }
 }

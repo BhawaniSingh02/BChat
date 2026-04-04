@@ -30,7 +30,83 @@ function isTrustedUrl(url: string | undefined): boolean {
   }
 }
 
-export type DropdownAction = 'reply' | 'forward' | 'star' | 'delete' | 'pin' | 'unpin'
+export type DropdownAction = 'reply' | 'forward' | 'star' | 'delete' | 'pin' | 'unpin' | 'thread'
+
+/** Inline audio player for voice messages (Phase 24) */
+function AudioPlayer({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+
+  const togglePlay = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (playing) { audio.pause() } else { audio.play().catch(() => {}) }
+  }
+
+  const handleTimeUpdate = () => setCurrentTime(audioRef.current?.currentTime ?? 0)
+  const handleDurationChange = () => setDuration(audioRef.current?.duration ?? 0)
+  const handleEnded = () => { setPlaying(false); setCurrentTime(0) }
+
+  const formatSecs = (s: number) => {
+    if (!isFinite(s)) return '0:00'
+    return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  }
+
+  return (
+    <div className="flex items-center gap-2 min-w-[200px]" data-testid="audio-player">
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onTimeUpdate={handleTimeUpdate}
+        onDurationChange={handleDurationChange}
+        onEnded={handleEnded}
+        preload="metadata"
+      />
+      <button
+        onClick={togglePlay}
+        className="w-9 h-9 rounded-full bg-[#075e54] hover:bg-[#128c7e] text-white flex items-center justify-center flex-shrink-0 transition-colors"
+        aria-label={playing ? 'Pause voice message' : 'Play voice message'}
+        data-testid="audio-play-btn"
+      >
+        {playing ? (
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+      </button>
+
+      <div className="flex-1 flex flex-col gap-0.5">
+        <input
+          type="range"
+          min={0}
+          max={duration || 1}
+          step={0.1}
+          value={currentTime}
+          onChange={(e) => {
+            const t = Number(e.target.value)
+            if (audioRef.current) { audioRef.current.currentTime = t }
+            setCurrentTime(t)
+          }}
+          className="w-full h-1.5 accent-[#075e54] cursor-pointer"
+          aria-label="Audio scrubber"
+          data-testid="audio-scrubber"
+        />
+        <div className="flex justify-between text-[10px] text-gray-400">
+          <span>{formatSecs(currentTime)}</span>
+          <span>{formatSecs(duration)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /** Returns true if the message content is a missed call notification. */
 function isMissedCallMessage(content: string): boolean {
@@ -404,6 +480,11 @@ function MessageBubble({
                     <video src={message.fileUrl} controls controlsList="nodownload" className="rounded-xl max-w-full mb-1 max-h-64" preload="metadata" data-testid="message-video" />
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>
+                ) : message.messageType === 'AUDIO' && isTrustedUrl(message.fileUrl) ? (
+                  <>
+                    <AudioPlayer src={message.fileUrl!} />
+                    <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
+                  </>
                 ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (
                   <>
                     <a href={message.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline">
@@ -511,6 +592,20 @@ function MessageBubble({
                       }
                     />
 
+                    {/* Reply in Thread — Phase 27 */}
+                    {!message.threadId && (
+                      <MenuItem
+                        testId="dropdown-thread"
+                        onClick={() => triggerDropdownAction('thread')}
+                        label="Reply in Thread"
+                        icon={
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        }
+                      />
+                    )}
+
                     {/* Copy — text messages only */}
                     {message.messageType === 'TEXT' && (
                       <MenuItem
@@ -615,6 +710,20 @@ function MessageBubble({
                   </div>
                 )}
               </div>
+
+              {/* Thread reply count — Phase 27 */}
+              {!message.threadId && (message.threadReplyCount ?? 0) > 0 && (
+                <button
+                  onClick={selectionMode ? undefined : () => onDropdownAction?.('thread', message)}
+                  className={`flex items-center gap-1 mt-1 text-xs text-emerald-600 hover:underline ${isMine ? 'justify-end' : 'justify-start'}`}
+                  data-testid="thread-reply-count"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {message.threadReplyCount} {message.threadReplyCount === 1 ? 'reply' : 'replies'}
+                </button>
+              )}
 
               {/* Reaction pills */}
               {hasReactions && (

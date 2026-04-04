@@ -26,12 +26,14 @@ interface DMChatViewProps {
   onViewCallHistory?: () => void
   /** Called when user taps "Call back" on a missed call bubble */
   onCallBack?: () => void
+  /** Phase 27: open thread side panel for a message */
+  onOpenThread?: (message: Message) => void
 }
 
 export default function DMChatView({
   conversation, currentUsername, onSend, onViewProfile,
   onEditMessage, onDeleteMessage, onReactMessage, onBack, onConversationUpdated,
-  onAudioCall, onVideoCall, onViewCallHistory, onCallBack,
+  onAudioCall, onVideoCall, onViewCallHistory, onCallBack, onOpenThread,
 }: DMChatViewProps) {
   const rawMessages = useDMStore((s) => s.messages[conversation.id])
   const messages = useMemo(() => rawMessages ?? [], [rawMessages])
@@ -131,6 +133,7 @@ export default function DMChatView({
       case 'forward': setForwardMessage(message); break
       case 'star': messagesApi.toggleStar(message.id).then(() => fetchMessages(conversation.id)).catch(() => {}); break
       case 'delete': onDeleteMessage?.(message.id); break
+      case 'thread': onOpenThread?.(message); break
       default: break // no pin/unpin in DMs
     }
   }

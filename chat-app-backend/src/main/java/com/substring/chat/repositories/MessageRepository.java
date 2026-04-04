@@ -19,4 +19,14 @@ public interface MessageRepository extends MongoRepository<Message, String> {
 
     // Phase 21 — disappearing messages: find expired messages for deletion
     List<Message> findByDisappearsAtBeforeAndDeletedFalse(Instant now);
+
+    // Phase 25 — global search: find messages by content across multiple rooms
+    List<Message> findByRoomIdInAndContentContainingIgnoreCaseAndDeletedFalseOrderByTimestampDesc(
+            List<String> roomIds, String query, Pageable pageable);
+
+    // Phase 27 — threads: find all replies for a given parent message
+    List<Message> findByThreadIdOrderByTimestampAsc(String threadId);
+
+    // Phase 27 — cursor pagination: messages before a given timestamp
+    Page<Message> findByRoomIdAndTimestampBeforeOrderByTimestampDesc(String roomId, Instant before, Pageable pageable);
 }

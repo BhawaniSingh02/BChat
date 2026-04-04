@@ -189,4 +189,70 @@ class FileUploadControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    // ── Phase 24 — Voice Messages ─────────────────────────────────────────
+
+    @Test
+    void upload_returnsAudioTypeForWebmAudio() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "voice.webm", "audio/webm", new byte[1000]);
+
+        when(fileUploadService.upload(any()))
+                .thenReturn(new FileUploadService.UploadResult(
+                        "https://res.cloudinary.com/test/video/upload/voice.webm",
+                        "bchat/voice", "video", 1000L));
+
+        ResponseEntity<?> response = controller.upload(file, principal);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        FileUploadController.UploadResponse body = (FileUploadController.UploadResponse) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.messageType()).isEqualTo("AUDIO");
+    }
+
+    @Test
+    void upload_returnsAudioTypeForOggAudio() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "voice.ogg", "audio/ogg", new byte[500]);
+
+        when(fileUploadService.upload(any()))
+                .thenReturn(new FileUploadService.UploadResult(
+                        "https://res.cloudinary.com/test/video/upload/voice.ogg",
+                        "bchat/voice", "video", 500L));
+
+        ResponseEntity<?> response = controller.upload(file, principal);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        FileUploadController.UploadResponse body = (FileUploadController.UploadResponse) response.getBody();
+        assertThat(body.messageType()).isEqualTo("AUDIO");
+    }
+
+    @Test
+    void upload_returnsPayloadTooLargeForAudioExceeding25MB() {
+        byte[] bigContent = new byte[26 * 1024 * 1024]; // 26 MB — over audio limit
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "long.webm", "audio/webm", bigContent);
+
+        ResponseEntity<?> response = controller.upload(file, null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @Test
+    void upload_allowsAudioUnder25MB() throws Exception {
+        byte[] content = new byte[10 * 1024 * 1024]; // 10 MB — under audio limit
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "voice.webm", "audio/webm", content);
+
+        when(fileUploadService.upload(any()))
+                .thenReturn(new FileUploadService.UploadResult(
+                        "https://res.cloudinary.com/test/video/upload/voice.webm",
+                        "bchat/voice", "video", content.length));
+
+        ResponseEntity<?> response = controller.upload(file, principal);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        FileUploadController.UploadResponse body = (FileUploadController.UploadResponse) response.getBody();
+        assertThat(body.messageType()).isEqualTo("AUDIO");
+    }
 }

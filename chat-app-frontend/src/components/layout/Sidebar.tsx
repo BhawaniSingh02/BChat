@@ -4,12 +4,15 @@ import { useRoomStore } from '../../store/roomStore'
 import { useDMStore } from '../../store/dmStore'
 import { usePresenceStore } from '../../store/presenceStore'
 import { useChatStore } from '../../store/chatStore'
+import { useNotificationStore } from '../../store/notificationStore'
 import Avatar from '../ui/Avatar'
 import RoomList from '../rooms/RoomList'
 import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
+import NotificationBell from '../ui/NotificationBell'
+import GlobalSearchModal from '../ui/GlobalSearchModal'
 
 type Tab = 'rooms' | 'dms'
 
@@ -31,19 +34,22 @@ function RoomSkeleton() {
 
 interface SidebarProps {
   onSelectChat?: () => void
+  onGlobalSearchNavigate?: (message: import('../../types').Message) => void
 }
 
-export default function Sidebar({ onSelectChat }: SidebarProps) {
+export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
   const { conversations, activeDMId, setActiveDM, getOrCreateConversation } = useDMStore()
   const dmUnreadCounts = useDMStore((s) => s.dmUnreadCounts)
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
+  const { notifications, markAllRead, markRead } = useNotificationStore()
   const [tab, setTab] = useState<Tab>('rooms')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
 
   const handleJoinRoom = async (roomId: string) => {
     await joinRoom(roomId)
@@ -81,21 +87,38 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
           <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: '1.35rem', letterSpacing: '-0.02em' }} className="text-white">Baaat</h1>
         </div>
         <div className="flex items-center gap-1">
+          {/* Global search button — Phase 25 */}
+          <button
+            onClick={() => setGlobalSearchOpen(true)}
+            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors text-sm"
+            title="Search messages"
+            aria-label="Search messages"
+            data-testid="global-search-btn"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
+
+          {/* Notification bell — Phase 26 */}
+          <NotificationBell
+            notifications={notifications}
+            onMarkAllRead={markAllRead}
+            onClickNotification={(n) => {
+              markRead(n.id)
+              onGlobalSearchNavigate?.(n.message)
+            }}
+          />
+
           <button
             onClick={() => tab === 'rooms' ? setDiscoverOpen(true) : setDMSearchOpen(true)}
             className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors text-sm"
             title={tab === 'rooms' ? 'Discover rooms' : 'New direct message'}
             aria-label={tab === 'rooms' ? 'Discover rooms' : 'New direct message'}
           >
-            {tab === 'rooms' ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            )}
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
           </button>
           <button
             onClick={logout}
@@ -245,6 +268,14 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
       )}
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+
+      {/* Global search modal — Phase 25 */}
+      <GlobalSearchModal
+        open={globalSearchOpen}
+        onClose={() => setGlobalSearchOpen(false)}
+        onNavigate={(msg) => { onGlobalSearchNavigate?.(msg) }}
+        currentUsername={user?.username ?? ''}
+      />
     </div>
   )
 }

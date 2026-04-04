@@ -42,6 +42,11 @@ public class MessageResponse {
     // Phase 21
     private Instant disappearsAt;
 
+    // Phase 27 — Threads
+    private String threadId;
+    private int threadReplyCount;
+    private Instant lastThreadReplyAt;
+
     public static MessageResponse from(Message message) {
         MessageResponse response = new MessageResponse();
         response.setId(message.getId());
@@ -64,6 +69,9 @@ public class MessageResponse {
         response.setForwardedFrom(message.getForwardedFrom());
         response.setStarred(message.getStarred() != null ? message.getStarred() : new ArrayList<>());
         response.setDisappearsAt(message.getDisappearsAt());
+        response.setThreadId(message.getThreadId());
+        response.setThreadReplyCount(message.getThreadReplyCount());
+        response.setLastThreadReplyAt(message.getLastThreadReplyAt());
         return response;
     }
 }

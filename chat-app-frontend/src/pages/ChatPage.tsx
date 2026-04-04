@@ -6,6 +6,7 @@ import { useDMStore } from '../store/dmStore'
 import { usePresenceStore } from '../store/presenceStore'
 import { useChatStore } from '../store/chatStore'
 import { useCallStore } from '../store/callStore'
+import { useNotificationStore } from '../store/notificationStore'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useWebRTC } from '../hooks/useWebRTC'
 import { useWakeLock } from '../hooks/useWakeLock'
@@ -13,6 +14,7 @@ import { startRingtone, startDialTone, playConnectedChime, playHangUpTone, type 
 import Sidebar from '../components/layout/Sidebar'
 import ChatView from '../components/chat/ChatView'
 import DMChatView from '../components/chat/DMChatView'
+import ThreadPanel from '../components/chat/ThreadPanel'
 import CreateRoomModal from '../components/rooms/CreateRoomModal'
 import RoomSettingsModal from '../components/rooms/RoomSettingsModal'
 import Modal from '../components/ui/Modal'
@@ -150,11 +152,14 @@ export default function ChatPage() {
     }
   }, [receiveIncomingCall, callAnswered, setRemoteAnswer, addIceCandidate, cleanupWebRTC, endCallInStore, callBusy])
 
+  const { addNotification } = useNotificationStore()
+
   const {
     subscribeToRoom, sendMessage, sendTyping, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd,
+    subscribeToThread, sendThreadReply,
     connected,
   } = useWebSocket(token, handleCallEvent)
 
@@ -167,6 +172,8 @@ export default function ChatPage() {
   const [roomSettingsOpen, setRoomSettingsOpen] = useState(false)
   // Mobile: show sidebar or chat panel
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(true)
+  // Phase 27: Thread panel
+  const [threadRootMessage, setThreadRootMessage] = useState<Message | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -208,6 +215,17 @@ export default function ChatPage() {
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [])
+
+  // Phase 26: Update browser tab title with total unread count
+  const totalRoomUnread = useChatStore((s) => Object.values(s.unreadCounts).reduce((a, b) => a + b, 0))
+  const totalDMUnread = useDMStore((s) => Object.values(s.dmUnreadCounts).reduce((a, b) => a + b, 0))
+  useEffect(() => {
+    // Don't override the call ring flash title
+    if (callState === 'ringing_incoming') return
+    const total = totalRoomUnread + totalDMUnread
+    document.title = total > 0 ? `(${total}) Baaat` : 'Baaat'
+    return () => { document.title = 'Baaat' }
+  }, [totalRoomUnread, totalDMUnread, callState])
 
   const activeRoom = myRooms.find((r) => r.roomId === activeRoomId)
     ?? rooms.find((r) => r.roomId === activeRoomId)
@@ -327,13 +345,27 @@ export default function ChatPage() {
         w-full md:w-80
         absolute md:relative inset-0 z-20 md:z-auto
       `}>
-        <Sidebar onSelectChat={() => setMobileSidebarOpen(false)} />
+        <Sidebar
+          onSelectChat={() => setMobileSidebarOpen(false)}
+          onGlobalSearchNavigate={(msg) => {
+            // Navigate to the conversation containing the found message
+            if (msg.roomId.startsWith('dm:')) {
+              const convId = msg.roomId.slice(3)
+              setActiveDM(convId)
+              setActiveRoom(null)
+            } else {
+              setActiveRoom(msg.roomId)
+              setActiveDM(null)
+            }
+            setMobileSidebarOpen(false)
+          }}
+        />
       </div>
 
       {/* Chat panel: always visible on md+, shown when chat selected on mobile */}
       <main className={`
         ${!mobileSidebarOpen || !hasActiveChat ? 'flex' : 'hidden'}
-        md:flex flex-1 flex-col min-w-0
+        md:flex flex-1 min-w-0
         w-full
       `}>
         {/* API Error Banner */}
@@ -358,6 +390,7 @@ export default function ChatPage() {
           </div>
         )}
 
+        <div className="flex flex-1 flex-col min-w-0 w-full">
         {showRoom ? (
           <ChatView
             room={activeRoom}
@@ -375,6 +408,7 @@ export default function ChatPage() {
             onOpenSettings={() => setRoomSettingsOpen(true)}
             onPinMessage={handlePinMessage}
             onUnpinMessage={handleUnpinMessage}
+            onOpenThread={setThreadRootMessage}
           />
         ) : showDM ? (
           <DMChatView
@@ -390,6 +424,7 @@ export default function ChatPage() {
             onVideoCall={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'VIDEO')}
             onViewCallHistory={async () => { await fetchCallHistory(activeConversation.id); setShowCallHistory(true) }}
             onCallBack={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'AUDIO')}
+            onOpenThread={setThreadRootMessage}
           />
         ) : roomsLoading ? (
           <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -448,6 +483,19 @@ export default function ChatPage() {
               )}
             </div>
           </div>
+        )}
+        </div>
+
+        {/* Phase 27: Thread panel — shown alongside chat when open */}
+        {threadRootMessage && user && (
+          <ThreadPanel
+            rootMessage={threadRootMessage}
+            currentUsername={user.username}
+            onClose={() => setThreadRootMessage(null)}
+            onSendReply={(rootId, content, fileUrl, messageType) => {
+              sendThreadReply(rootId, content, user.username, fileUrl, messageType)
+            }}
+          />
         )}
       </main>
 

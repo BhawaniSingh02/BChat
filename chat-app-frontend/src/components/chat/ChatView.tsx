@@ -25,12 +25,13 @@ interface ChatViewProps {
   onOpenSettings?: () => void
   onPinMessage?: (messageId: string) => void
   onUnpinMessage?: (messageId: string) => void
+  onOpenThread?: (message: Message) => void
 }
 
 export default function ChatView({
   room, currentUsername, onSendMessage, onTyping, onSubscribe, onLeave,
   onEditMessage, onDeleteMessage, onReactMessage, onViewProfile, onBack,
-  onKickMember, onOpenSettings, onPinMessage, onUnpinMessage,
+  onKickMember, onOpenSettings, onPinMessage, onUnpinMessage, onOpenThread,
 }: ChatViewProps) {
   const [showMembers, setShowMembers] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
@@ -138,6 +139,7 @@ export default function ChatView({
       case 'delete': onDeleteMessage?.(message.id); break
       case 'pin': onPinMessage?.(message.id); break
       case 'unpin': onUnpinMessage?.(message.id); break
+      case 'thread': onOpenThread?.(message); break
     }
   }
 

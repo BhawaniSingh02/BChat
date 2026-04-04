@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Message, MessageType } from '../../types'
 import { uploadApi } from '../../api/upload'
+import VoiceRecorder from './VoiceRecorder'
 
 const ACCEPTED_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -38,6 +39,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isTypingRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -158,6 +160,25 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
 
   const isUploading = uploadProgress !== null
   const canSend = (value.trim().length > 0) && !isUploading && !disabled
+
+  const handleVoiceSend = useCallback((url: string, durationSeconds: number) => {
+    const caption = `Voice message (${Math.floor(durationSeconds / 60)}:${String(durationSeconds % 60).padStart(2, '0')})`
+    onSend(caption, url, 'AUDIO', replyTo)
+    onCancelReply?.()
+    setShowVoiceRecorder(false)
+  }, [onSend, replyTo, onCancelReply])
+
+  // If voice recorder is active, show only it
+  if (showVoiceRecorder) {
+    return (
+      <div className="bg-[#f0f2f5] relative">
+        <VoiceRecorder
+          onSend={handleVoiceSend}
+          onCancel={() => setShowVoiceRecorder(false)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="bg-[#f0f2f5] px-3 py-2.5">
@@ -305,6 +326,22 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
           style={{ minHeight: '42px' }}
           aria-label="Message input"
         />
+
+        {/* Voice message button — only shown when text field is empty */}
+        {!value.trim() && !isUploading && (
+          <button
+            type="button"
+            onClick={() => setShowVoiceRecorder(true)}
+            disabled={disabled}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 disabled:opacity-40 flex-shrink-0 transition-colors shadow-sm"
+            aria-label="Record voice message"
+            data-testid="voice-record-btn"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </button>
+        )}
 
         <button
           onClick={handleSend}

@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.TextIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -31,6 +32,7 @@ public class Message {
     private String roomId;
     private String sender;
     private String senderName;
+    @TextIndexed
     private String content;
     private MessageType messageType = MessageType.TEXT;
     private String fileUrl;
@@ -55,6 +57,11 @@ public class Message {
 
     // Phase 21 — Disappearing messages
     private Instant disappearsAt;
+
+    // Phase 27 — Message Threads
+    private String threadId;          // null = root message; set = this is a thread reply
+    private int threadReplyCount = 0; // only set on root messages
+    private Instant lastThreadReplyAt; // timestamp of most recent thread reply
 
     public Message(String sender, String senderName, String roomId, String content) {
         this.sender = sender;

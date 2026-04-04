@@ -71,6 +71,11 @@ export interface Message {
 
   // Phase 21 — Disappearing
   disappearsAt?: string
+
+  // Phase 27 — Threads
+  threadId?: string
+  threadReplyCount?: number
+  lastThreadReplyAt?: string
 }
 
 export interface PagedResponse<T> {
