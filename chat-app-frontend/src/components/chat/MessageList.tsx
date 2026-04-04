@@ -98,7 +98,6 @@ export default function MessageList({
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-0 chat-bg" data-testid="message-list">
       {messages.map((message, index) => {
         const prevMessage = messages[index - 1]
-        const nextMessage = messages[index + 1]
         const showDateDivider = !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp)
 
         const isGrouped = !!prevMessage
