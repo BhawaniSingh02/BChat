@@ -147,7 +147,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
   const startCall = useCallback(async (withVideo: boolean): Promise<string> => {
     cleanup()
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: withVideo,
     })
     localStreamRef.current = stream
@@ -169,7 +169,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
   ): Promise<string> => {
     cleanup()
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: withVideo,
     })
     localStreamRef.current = stream

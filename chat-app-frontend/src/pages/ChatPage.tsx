@@ -22,6 +22,7 @@ import UserProfileModal from '../components/ui/UserProfileModal'
 import IncomingCallOverlay from '../components/call/IncomingCallOverlay'
 import ActiveCallView from '../components/call/ActiveCallView'
 import OutgoingCallView from '../components/call/OutgoingCallView'
+import CallHistoryPanel from '../components/call/CallHistoryPanel'
 import { useUserCacheStore } from '../store/userCacheStore'
 
 export default function ChatPage() {
@@ -39,7 +40,7 @@ export default function ChatPage() {
   // Call state
   const {
     callState, callSessionId, conversationId: callConvId, otherUsername: callOtherUser,
-    callType, pendingSdp, busyReason,
+    callType, pendingSdp, busyReason, callHistory,
     startOutgoingCall, receiveIncomingCall, callAnswered, endCall: endCallInStore,
     callBusy, fetchCallHistory,
   } = useCallStore()
@@ -158,6 +159,7 @@ export default function ChatPage() {
   } = useWebSocket(token, handleCallEvent)
 
   const [apiError, setApiError] = useState<string | null>(null)
+  const [showCallHistory, setShowCallHistory] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false)
@@ -386,7 +388,7 @@ export default function ChatPage() {
             onBack={() => setMobileSidebarOpen(true)}
             onAudioCall={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'AUDIO')}
             onVideoCall={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'VIDEO')}
-            onViewCallHistory={() => fetchCallHistory(activeConversation.id)}
+            onViewCallHistory={async () => { await fetchCallHistory(activeConversation.id); setShowCallHistory(true) }}
             onCallBack={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'AUDIO')}
           />
         ) : roomsLoading ? (
@@ -514,6 +516,14 @@ export default function ChatPage() {
           remoteStream={remoteStream}
           otherAvatarUrl={cache[callOtherUser]?.avatarUrl}
           onHangUp={handleHangUp}
+        />
+      )}
+
+      {showCallHistory && activeDMId && user && (
+        <CallHistoryPanel
+          sessions={callHistory[activeDMId] ?? []}
+          currentUsername={user.username}
+          onClose={() => setShowCallHistory(false)}
         />
       )}
 

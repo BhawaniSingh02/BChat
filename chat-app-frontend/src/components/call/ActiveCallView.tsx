@@ -23,13 +23,16 @@ export default function ActiveCallView({
   otherAvatarUrl,
   onHangUp,
 }: ActiveCallViewProps) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+
   const [micMuted, setMicMuted] = useState(false)
   const [cameraOff, setCameraOff] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [isFullScreen, setIsFullScreen] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(isMobile && callType === 'VIDEO')
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Attach streams to video elements
@@ -42,6 +45,9 @@ export default function ActiveCallView({
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream
+    }
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream
     }
   }, [remoteStream])
 
@@ -178,6 +184,11 @@ export default function ActiveCallView({
           )}
         </div>
       </div>
+
+      {/* Hidden audio element — plays remote audio in audio-only calls */}
+      {callType === 'AUDIO' && (
+        <audio ref={remoteAudioRef} autoPlay data-testid="remote-audio" />
+      )}
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-4 py-3 bg-gray-900">
