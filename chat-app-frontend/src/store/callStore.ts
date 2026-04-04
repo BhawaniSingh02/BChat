@@ -83,7 +83,7 @@ export const useCallStore = create<CallStore>((set) => ({
     }),
 
   callBusy: (reason) =>
-    set((prev) => ({
+    set(() => ({
       callState: 'busy',
       busyReason: reason,
       // Keep otherUsername/callType for display
