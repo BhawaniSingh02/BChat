@@ -12,7 +12,7 @@ import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
 import NotificationBell from '../ui/NotificationBell'
-import GlobalSearchModal from '../ui/GlobalSearchModal'
+
 
 type Tab = 'rooms' | 'dms'
 
@@ -49,7 +49,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
+
 
   const handleJoinRoom = async (roomId: string) => {
     await joinRoom(roomId)
@@ -88,18 +88,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
         </div>
         <div className="flex items-center gap-1">
           {/* Global search button — Phase 25 */}
-          <button
-            onClick={() => setGlobalSearchOpen(true)}
-            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors text-sm"
-            title="Search messages"
-            aria-label="Search messages"
-            data-testid="global-search-btn"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-
+         
           {/* Notification bell — Phase 26 */}
           <NotificationBell
             notifications={notifications}
@@ -269,13 +258,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
 
-      {/* Global search modal — Phase 25 */}
-      <GlobalSearchModal
-        open={globalSearchOpen}
-        onClose={() => setGlobalSearchOpen(false)}
-        onNavigate={(msg) => { onGlobalSearchNavigate?.(msg) }}
-        currentUsername={user?.username ?? ''}
-      />
+     
     </div>
   )
 }
