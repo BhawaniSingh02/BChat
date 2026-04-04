@@ -6,7 +6,7 @@ import { useDMStore } from '../store/dmStore'
 import { usePresenceStore } from '../store/presenceStore'
 import { useChatStore } from '../store/chatStore'
 import { useCallStore } from '../store/callStore'
-import { useNotificationStore } from '../store/notificationStore'
+
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useWebRTC } from '../hooks/useWebRTC'
 import { useWakeLock } from '../hooks/useWakeLock'
@@ -152,14 +152,14 @@ export default function ChatPage() {
     }
   }, [receiveIncomingCall, callAnswered, setRemoteAnswer, addIceCandidate, cleanupWebRTC, endCallInStore, callBusy])
 
-  const { addNotification } = useNotificationStore()
+
 
   const {
     subscribeToRoom, sendMessage, sendTyping, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd,
-    subscribeToThread, sendThreadReply,
+   sendThreadReply,
     connected,
   } = useWebSocket(token, handleCallEvent)
 

@@ -19,16 +19,16 @@ const mockGetUserMedia = vi.fn().mockResolvedValue({
 
 beforeEach(() => {
   vi.clearAllMocks()
-  Object.defineProperty(global.navigator, 'mediaDevices', {
+  Object.defineProperty(globalThis.navigator, 'mediaDevices', {
     value: { getUserMedia: mockGetUserMedia },
     writable: true,
   })
   // @ts-expect-error mock
-  global.MediaRecorder = vi.fn(() => mockMediaRecorder)
+  globalThis.MediaRecorder = vi.fn(() => mockMediaRecorder)
+ 
+  globalThis.MediaRecorder.isTypeSupported = vi.fn(() => true)
   // @ts-expect-error mock
-  global.MediaRecorder.isTypeSupported = vi.fn(() => true)
-  // @ts-expect-error mock
-  global.AudioContext = vi.fn(() => ({
+  globalThis.AudioContext = vi.fn(() => ({
     createMediaStreamSource: vi.fn(() => ({ connect: vi.fn() })),
     createAnalyser: vi.fn(() => ({
       fftSize: 64,
