@@ -32,6 +32,14 @@ function isTrustedUrl(url: string | undefined): boolean {
 
 export type DropdownAction = 'reply' | 'forward' | 'star' | 'delete' | 'pin' | 'unpin'
 
+/** Returns true if the message content is a missed call notification. */
+function isMissedCallMessage(content: string): boolean {
+  const trimmed = content.trim()
+  return (
+    trimmed.startsWith('📞') || trimmed.startsWith('📹')
+  ) && /Missed (audio|video) call/i.test(trimmed)
+}
+
 interface MessageBubbleProps {
   message: Message
   isMine: boolean
@@ -52,6 +60,8 @@ interface MessageBubbleProps {
   onEnterSelectionMode?: (message: Message) => void
   // Inline edit trigger from selection action bar
   isEditing?: boolean
+  /** Called when user taps "Call back" on a missed call bubble */
+  onCallBack?: () => void
 }
 
 function ReadTicks({ readBy, sender, isMine }: { readBy: string[]; sender: string; isMine: boolean }) {
@@ -138,7 +148,7 @@ function MessageBubble({
   onEdit, onReact, onScrollToMessage,
   onDropdownAction, isAdmin = false, isPinned = false,
   isSelected = false, selectionMode = false, onSelect, onEnterSelectionMode,
-  isEditing = false,
+  isEditing = false, onCallBack,
 }: MessageBubbleProps) {
   const [hovered, setHovered] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -399,6 +409,28 @@ function MessageBubble({
                     <a href={message.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline">
                       📎 Download file
                     </a>
+                    <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
+                  </>
+                ) : isMissedCallMessage(message.content) ? (
+                  <>
+                    <div className="flex items-center gap-2" data-testid="missed-call-bubble">
+                      <span className="text-lg" aria-hidden="true">
+                        {message.content.startsWith('📹') ? '📹' : '📞'}
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-500">{message.content}</p>
+                        {onCallBack && !isMine && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onCallBack() }}
+                            className="text-xs text-emerald-600 font-semibold hover:underline mt-0.5"
+                            aria-label="Call back"
+                            data-testid="call-back-btn"
+                          >
+                            Call back
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>
                 ) : (

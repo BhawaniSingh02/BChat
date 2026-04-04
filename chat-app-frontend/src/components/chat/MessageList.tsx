@@ -21,6 +21,8 @@ interface MessageListProps {
   onDropdownAction?: (action: DropdownAction, message: Message) => void
   isAdmin?: boolean
   pinnedMessageIds?: string[]
+  /** Called when user taps "Call back" on a missed call bubble */
+  onCallBack?: () => void
 }
 
 function DateDivider({ date }: { date: string }) {
@@ -64,7 +66,7 @@ export default function MessageList({
   onReactMessage,
   selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
   editingMessageId, onEditMessage,
-  onDropdownAction, isAdmin, pinnedMessageIds,
+  onDropdownAction, isAdmin, pinnedMessageIds, onCallBack,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const prefetch = useUserCacheStore((s) => s.prefetch)
@@ -131,6 +133,7 @@ export default function MessageList({
                   onDropdownAction={onDropdownAction}
                   isAdmin={isAdmin}
                   isPinned={pinnedMessageIds?.includes(message.id) ?? false}
+                  onCallBack={onCallBack}
                 />
               </div>
             </div>

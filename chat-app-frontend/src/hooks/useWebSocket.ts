@@ -22,10 +22,11 @@ import { useChatStore } from '../store/chatStore'
 import { useRoomStore } from '../store/roomStore'
 import { usePresenceStore } from '../store/presenceStore'
 import { useDMStore } from '../store/dmStore'
+import type { CallEvent } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? '/ws'
 
-export function useWebSocket(token: string | null) {
+export function useWebSocket(token: string | null, onCallEvent?: (event: CallEvent) => void) {
   const clientRef = useRef<Client | null>(null)
   const subscribedRooms = useRef<Set<string>>(new Set())
 
@@ -43,6 +44,11 @@ export function useWebSocket(token: string | null) {
   const [connected, setConnected] = useState(false)
   const activeRoomIdRef = useRef<string | null>(null)
   const activeDMIdRef = useRef<string | null>(null)
+  const onCallEventRef = useRef(onCallEvent)
+
+  useEffect(() => {
+    onCallEventRef.current = onCallEvent
+  }, [onCallEvent])
 
   useEffect(() => {
     activeRoomIdRef.current = activeRoomId
@@ -73,6 +79,16 @@ export function useWebSocket(token: string | null) {
               incrementDMUnread(conversationId)
             }
           }
+        })
+
+        // Call signaling events
+        stompClient.subscribe('/user/queue/call', (frame) => {
+          try {
+            const event: CallEvent = JSON.parse(frame.body)
+            if (event?.eventType && onCallEventRef.current) {
+              onCallEventRef.current(event)
+            }
+          } catch { /* ignore malformed call frames */ }
         })
 
         // Global presence updates
@@ -221,10 +237,41 @@ export function useWebSocket(token: string | null) {
 
   const isConnected = useCallback(() => clientRef.current?.connected ?? false, [])
 
+  // ── Call signaling ───────────────────────────────────────────────────────
+
+  const sendCallOffer = useCallback((conversationId: string, callType: string, sdpPayload: string) => {
+    clientRef.current?.publish({
+      destination: `/app/call.offer/${conversationId}`,
+      body: JSON.stringify({ callType, payload: sdpPayload }),
+    })
+  }, [])
+
+  const sendCallAnswer = useCallback((conversationId: string, callSessionId: string, sdpPayload: string) => {
+    clientRef.current?.publish({
+      destination: `/app/call.answer/${conversationId}/${callSessionId}`,
+      body: JSON.stringify({ payload: sdpPayload }),
+    })
+  }, [])
+
+  const sendIceCandidate = useCallback((conversationId: string, callSessionId: string, candidatePayload: string) => {
+    clientRef.current?.publish({
+      destination: `/app/call.ice/${conversationId}/${callSessionId}`,
+      body: JSON.stringify({ payload: candidatePayload }),
+    })
+  }, [])
+
+  const sendCallEnd = useCallback((conversationId: string, callSessionId: string) => {
+    clientRef.current?.publish({
+      destination: `/app/call.end/${conversationId}/${callSessionId}`,
+      body: JSON.stringify({}),
+    })
+  }, [])
+
   return {
     subscribeToRoom, sendMessage, sendTyping, markRead, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
+    sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd,
     isConnected, connected,
   }
 }

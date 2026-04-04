@@ -153,6 +153,34 @@ export interface DisappearingTimerRequest {
   timer: DisappearingTimer
 }
 
+// Phase 17: Video & Audio Calls
+export type CallType = 'AUDIO' | 'VIDEO'
+export type CallStatus = 'RINGING' | 'ACTIVE' | 'ENDED' | 'MISSED' | 'REJECTED'
+
+export interface CallSession {
+  id: string
+  conversationId: string
+  callerId: string
+  calleeId: string
+  callType: CallType
+  status: CallStatus
+  startedAt: string
+  answeredAt?: string
+  endedAt?: string
+  durationSeconds: number
+}
+
+export type CallEventType = 'INCOMING_CALL' | 'CALL_ANSWERED' | 'ICE_CANDIDATE' | 'CALL_ENDED' | 'CALL_BUSY'
+
+export interface CallEvent {
+  eventType: CallEventType
+  callSessionId: string
+  conversationId: string
+  fromUsername: string
+  callType: CallType
+  payload?: string
+}
+
 // Phase 18: Sending a message with reply/forward
 export interface SendMessageWithReplyRequest {
   content: string

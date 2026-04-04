@@ -186,4 +186,220 @@ describe('DMChatView', () => {
     fireEvent.click(screen.getByTestId('selection-delete-btn'))
     expect(onDelete).toHaveBeenCalledWith('m1')
   })
+
+  // ── Phase 17 — Call buttons ───────────────────────────────────────────────
+
+  it('shows audio call button when onAudioCall is provided', () => {
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onAudioCall={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('audio-call-btn')).toBeInTheDocument()
+  })
+
+  it('shows video call button when onVideoCall is provided', () => {
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onVideoCall={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('video-call-btn')).toBeInTheDocument()
+  })
+
+  it('shows call history button when onViewCallHistory is provided', () => {
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onViewCallHistory={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('call-history-btn')).toBeInTheDocument()
+  })
+
+  it('does not show audio call button when onAudioCall is not provided', () => {
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+      />
+    )
+    expect(screen.queryByTestId('audio-call-btn')).not.toBeInTheDocument()
+  })
+
+  it('does not show video call button when onVideoCall is not provided', () => {
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+      />
+    )
+    expect(screen.queryByTestId('video-call-btn')).not.toBeInTheDocument()
+  })
+
+  it('calls onAudioCall when audio call button is clicked', () => {
+    const onAudioCall = vi.fn()
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onAudioCall={onAudioCall}
+      />
+    )
+    fireEvent.click(screen.getByTestId('audio-call-btn'))
+    expect(onAudioCall).toHaveBeenCalledOnce()
+  })
+
+  it('calls onVideoCall when video call button is clicked', () => {
+    const onVideoCall = vi.fn()
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onVideoCall={onVideoCall}
+      />
+    )
+    fireEvent.click(screen.getByTestId('video-call-btn'))
+    expect(onVideoCall).toHaveBeenCalledOnce()
+  })
+
+  it('calls onViewCallHistory when call history button is clicked', () => {
+    const onViewCallHistory = vi.fn()
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onViewCallHistory={onViewCallHistory}
+      />
+    )
+    fireEvent.click(screen.getByTestId('call-history-btn'))
+    expect(onViewCallHistory).toHaveBeenCalledOnce()
+  })
+
+  // ── Missed call bubble with call-back button ──────────────────────────────
+
+  it('shows missed call bubble for missed audio call message', () => {
+    mockMessages = [{
+      id: 'm-missed',
+      roomId: 'dm:conv-1',
+      sender: 'bob',
+      senderName: 'bob',
+      content: '📞 Missed audio call',
+      messageType: 'TEXT',
+      readBy: [],
+      timestamp: '2026-03-28T10:00:00',
+    }]
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onCallBack={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('missed-call-bubble')).toBeInTheDocument()
+  })
+
+  it('shows call-back button on missed call bubble when callee is viewing', () => {
+    mockMessages = [{
+      id: 'm-missed',
+      roomId: 'dm:conv-1',
+      sender: 'bob',
+      senderName: 'bob',
+      content: '📞 Missed audio call',
+      messageType: 'TEXT',
+      readBy: [],
+      timestamp: '2026-03-28T10:00:00',
+    }]
+    const onCallBack = vi.fn()
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onCallBack={onCallBack}
+      />
+    )
+    expect(screen.getByTestId('call-back-btn')).toBeInTheDocument()
+  })
+
+  it('calls onCallBack when call-back button is clicked', () => {
+    mockMessages = [{
+      id: 'm-missed',
+      roomId: 'dm:conv-1',
+      sender: 'bob',
+      senderName: 'bob',
+      content: '📞 Missed audio call',
+      messageType: 'TEXT',
+      readBy: [],
+      timestamp: '2026-03-28T10:00:00',
+    }]
+    const onCallBack = vi.fn()
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onCallBack={onCallBack}
+      />
+    )
+    fireEvent.click(screen.getByTestId('call-back-btn'))
+    expect(onCallBack).toHaveBeenCalledOnce()
+  })
+
+  it('shows missed call bubble for missed video call message', () => {
+    mockMessages = [{
+      id: 'm-missed-video',
+      roomId: 'dm:conv-1',
+      sender: 'bob',
+      senderName: 'bob',
+      content: '📹 Missed video call',
+      messageType: 'TEXT',
+      readBy: [],
+      timestamp: '2026-03-28T10:00:00',
+    }]
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+        onCallBack={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('missed-call-bubble')).toBeInTheDocument()
+  })
+
+  it('does not show call-back button when onCallBack is not provided', () => {
+    mockMessages = [{
+      id: 'm-missed',
+      roomId: 'dm:conv-1',
+      sender: 'bob',
+      senderName: 'bob',
+      content: '📞 Missed audio call',
+      messageType: 'TEXT',
+      readBy: [],
+      timestamp: '2026-03-28T10:00:00',
+    }]
+    render(
+      <DMChatView
+        conversation={makeConv()}
+        currentUsername="alice"
+        onSend={onSend}
+      />
+    )
+    expect(screen.queryByTestId('call-back-btn')).not.toBeInTheDocument()
+  })
 })

@@ -21,11 +21,17 @@ interface DMChatViewProps {
   onReactMessage?: (messageId: string, emoji: string) => void
   onBack?: () => void
   onConversationUpdated?: (updated: DirectConversation) => void
+  onAudioCall?: () => void
+  onVideoCall?: () => void
+  onViewCallHistory?: () => void
+  /** Called when user taps "Call back" on a missed call bubble */
+  onCallBack?: () => void
 }
 
 export default function DMChatView({
   conversation, currentUsername, onSend, onViewProfile,
   onEditMessage, onDeleteMessage, onReactMessage, onBack, onConversationUpdated,
+  onAudioCall, onVideoCall, onViewCallHistory, onCallBack,
 }: DMChatViewProps) {
   const rawMessages = useDMStore((s) => s.messages[conversation.id])
   const messages = useMemo(() => rawMessages ?? [], [rawMessages])
@@ -280,6 +286,48 @@ export default function DMChatView({
               )}
             </div>
           </div>
+          {/* Audio call button */}
+          {onAudioCall && (
+            <button
+              onClick={onAudioCall}
+              className="p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+              aria-label="Start audio call"
+              data-testid="audio-call-btn"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+            </button>
+          )}
+
+          {/* Video call button */}
+          {onVideoCall && (
+            <button
+              onClick={onVideoCall}
+              className="p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+              aria-label="Start video call"
+              data-testid="video-call-btn"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          )}
+
+          {/* Call history button */}
+          {onViewCallHistory && (
+            <button
+              onClick={onViewCallHistory}
+              className="p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+              aria-label="View call history"
+              data-testid="call-history-btn"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          )}
+
           <button
             onClick={() => setShowSettings(true)}
             className="p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
@@ -310,6 +358,7 @@ export default function DMChatView({
           editingMessageId={editingMessageId}
           onEditMessage={handleEditSave}
           onDropdownAction={handleDropdownAction}
+          onCallBack={onCallBack}
         />
       )}
 
