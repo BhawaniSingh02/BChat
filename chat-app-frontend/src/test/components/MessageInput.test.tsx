@@ -29,13 +29,13 @@ describe('MessageInput', () => {
     render(<MessageInput onSend={onSend} />)
     await userEvent.type(screen.getByLabelText('Message input'), 'Hello World')
     await userEvent.click(screen.getByLabelText('Send message'))
-    expect(onSend).toHaveBeenCalledWith('Hello World')
+    expect(onSend).toHaveBeenCalledWith('Hello World', undefined, undefined, undefined)
   })
 
   it('calls onSend when Enter pressed', async () => {
     render(<MessageInput onSend={onSend} />)
     await userEvent.type(screen.getByLabelText('Message input'), 'Hello{Enter}')
-    expect(onSend).toHaveBeenCalledWith('Hello')
+    expect(onSend).toHaveBeenCalledWith('Hello', undefined, undefined, undefined)
   })
 
   it('does not call onSend on Shift+Enter', async () => {
@@ -109,7 +109,8 @@ describe('MessageInput', () => {
       expect(onSend).toHaveBeenCalledWith(
         'photo.jpg',
         'https://cdn.example.com/photo.jpg',
-        'IMAGE'
+        'IMAGE',
+        undefined
       )
     })
   })
@@ -128,7 +129,7 @@ describe('MessageInput', () => {
     await userEvent.upload(fileInput, file)
 
     await waitFor(() => {
-      expect(onSend).toHaveBeenCalledWith('doc.pdf', 'https://cdn.example.com/doc.pdf', 'FILE')
+      expect(onSend).toHaveBeenCalledWith('doc.pdf', 'https://cdn.example.com/doc.pdf', 'FILE', undefined)
     })
   })
 

@@ -5,6 +5,7 @@ import com.substring.chat.dto.response.DirectConversationResponse;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.entities.DirectConversation;
 import com.substring.chat.entities.Message;
+import com.substring.chat.entities.User;
 import com.substring.chat.exceptions.ConversationNotFoundException;
 import com.substring.chat.exceptions.UserNotFoundException;
 import com.substring.chat.repositories.DirectConversationRepository;
@@ -13,7 +14,9 @@ import com.substring.chat.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -74,6 +77,19 @@ public class DirectMessageService {
             throw new ConversationNotFoundException(conversationId);
         }
 
+        // Block check: refuse if the recipient has blocked the sender
+        String recipient = conv.getParticipants().stream()
+                .filter(p -> !p.equals(senderUsername))
+                .findFirst().orElse(null);
+        if (recipient != null) {
+            User recipientUser = userRepository.findByUsername(recipient).orElse(null);
+            if (recipientUser != null
+                    && recipientUser.getBlockedUsers() != null
+                    && recipientUser.getBlockedUsers().contains(senderUsername)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot send messages to this user");
+            }
+        }
+
         Message message = new Message();
         message.setRoomId("dm:" + conversationId);
         message.setSender(senderUsername);
@@ -82,6 +98,11 @@ public class DirectMessageService {
         message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
         message.setFileUrl(request.getFileUrl());
         message.setTimestamp(Instant.now());
+        // Phase 18 — reply and forward
+        message.setReplyToId(request.getReplyToId());
+        message.setReplyToSnippet(request.getReplyToSnippet());
+        message.setReplyToSender(request.getReplyToSender());
+        message.setForwardedFrom(request.getForwardedFrom());
 
         Message saved = messageRepository.save(message);
 

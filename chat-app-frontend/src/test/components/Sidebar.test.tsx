@@ -65,9 +65,9 @@ describe('Sidebar', () => {
     vi.clearAllMocks()
   })
 
-  it('renders BChat brand name', () => {
+  it('renders brand name', () => {
     render(<Sidebar />)
-    expect(screen.getByText('BChat')).toBeInTheDocument()
+    expect(screen.getByText('Baaat')).toBeInTheDocument()
   })
 
   it('renders logged-in user info', () => {

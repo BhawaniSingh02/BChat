@@ -15,4 +15,12 @@ public class SendMessageRequest {
     private MessageType messageType = MessageType.TEXT;
 
     private String fileUrl;
+
+    // Phase 18 — Quote reply
+    private String replyToId;
+    private String replyToSnippet;
+    private String replyToSender;
+
+    // Phase 18 — Forwarded message
+    private String forwardedFrom;
 }

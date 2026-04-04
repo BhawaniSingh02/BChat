@@ -47,14 +47,25 @@ public class UserService {
             return UserResponse.from(target);
         }
 
+        // Blocked viewer: return a bare profile — no avatar, bio, status, last seen
+        boolean viewerIsBlocked = target.getBlockedUsers() != null
+                && target.getBlockedUsers().contains(viewerUsername);
+        if (viewerIsBlocked) {
+            UserResponse bare = new UserResponse();
+            bare.setUsername(target.getUsername());
+            bare.setDisplayName(target.getDisplayName());
+            return bare;
+        }
+
         UserResponse response = UserResponse.from(target);
 
         // Hide email — never expose to other users
         response.setEmail(null);
-        // Hide privacy settings — viewer doesn't need to know target's settings
+        // Hide privacy settings and blocked list — viewer doesn't need to know
         response.setLastSeenPrivacy(null);
         response.setOnlinePrivacy(null);
         response.setProfilePhotoPrivacy(null);
+        response.setBlockedUsers(null);
 
         // Profile photo privacy
         if ("NOBODY".equals(target.getProfilePhotoPrivacy())) {
@@ -71,12 +82,16 @@ public class UserService {
 
     /**
      * Returns whether a user's online status is visible to a given viewer.
-     * Respects the user's onlinePrivacy setting.
+     * Respects the user's onlinePrivacy setting and blocking.
      */
     public boolean isOnlineVisibleTo(String targetUsername, String viewerUsername) {
         if (targetUsername.equals(viewerUsername)) return true;
         return userRepository.findByUsername(targetUsername)
-                .map(u -> !"NOBODY".equals(u.getOnlinePrivacy()))
+                .map(u -> {
+                    // Blocked viewers see offline
+                    if (u.getBlockedUsers() != null && u.getBlockedUsers().contains(viewerUsername)) return false;
+                    return !"NOBODY".equals(u.getOnlinePrivacy());
+                })
                 .orElse(true);
     }
 
@@ -144,5 +159,51 @@ public class UserService {
         }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    // ── Phase 23: User Blocking ──────────────────────────────────────────
+
+    public UserResponse blockUser(String username, String targetUsername) {
+        if (username.equals(targetUsername)) {
+            throw new IllegalArgumentException("Cannot block yourself");
+        }
+        // Verify target user exists
+        if (!userRepository.existsByUsername(targetUsername)) {
+            throw new UserNotFoundException(targetUsername);
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+
+        if (!user.getBlockedUsers().contains(targetUsername)) {
+            user.getBlockedUsers().add(targetUsername);
+            userRepository.save(user);
+        }
+        return UserResponse.from(user);
+    }
+
+    public UserResponse unblockUser(String username, String targetUsername) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+
+        user.getBlockedUsers().remove(targetUsername);
+        userRepository.save(user);
+        return UserResponse.from(user);
+    }
+
+    public List<UserResponse> getBlockedUsers(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+
+        return user.getBlockedUsers().stream()
+                .flatMap(blockedName -> userRepository.findByUsername(blockedName).stream())
+                .map(UserResponse::from)
+                .toList();
+    }
+
+    /** Returns true if viewer is blocked by target (target blocked viewer). */
+    public boolean isBlockedBy(String targetUsername, String viewerUsername) {
+        return userRepository.findByUsername(targetUsername)
+                .map(u -> u.getBlockedUsers() != null && u.getBlockedUsers().contains(viewerUsername))
+                .orElse(false);
     }
 }

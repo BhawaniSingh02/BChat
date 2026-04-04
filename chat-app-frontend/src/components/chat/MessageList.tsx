@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { Message } from '../../types'
-import MessageBubble from './MessageBubble'
-import Avatar from '../ui/Avatar'
+import MessageBubble, { type DropdownAction } from './MessageBubble'
 import { formatDate, isSameDay } from '../../utils/date'
 import { useUserCacheStore } from '../../store/userCacheStore'
 
@@ -9,14 +8,20 @@ interface MessageListProps {
   messages: Message[]
   currentUsername: string
   typingUsers: string[]
+  onViewProfile?: (username: string) => void
+  onReactMessage?: (messageId: string, emoji: string) => void
+  // Selection (WhatsApp-style)
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onSelectMessage?: (messageId: string) => void
+  onEnterSelectionMode?: (message: Message) => void
+  // Inline edit trigger from action bar
+  editingMessageId?: string | null
+  onEditMessage?: (messageId: string, newContent: string) => void
+  // Desktop dropdown
+  onDropdownAction?: (action: DropdownAction, message: Message) => void
   isAdmin?: boolean
   pinnedMessageIds?: string[]
-  onEditMessage?: (messageId: string, newContent: string) => void
-  onDeleteMessage?: (messageId: string) => void
-  onReactMessage?: (messageId: string, emoji: string) => void
-  onViewProfile?: (username: string) => void
-  onPinMessage?: (messageId: string) => void
-  onUnpinMessage?: (messageId: string) => void
 }
 
 function DateDivider({ date }: { date: string }) {
@@ -51,17 +56,20 @@ function TypingIndicator({ users }: { users: string[] }) {
   )
 }
 
-// Returns true if two timestamps are within 5 minutes of each other
 function withinGroup(a: string, b: string): boolean {
   return Math.abs(new Date(a).getTime() - new Date(b).getTime()) < 5 * 60 * 1000
 }
 
-export default function MessageList({ messages, currentUsername, typingUsers, isAdmin, pinnedMessageIds, onEditMessage, onDeleteMessage, onReactMessage, onViewProfile, onPinMessage, onUnpinMessage }: MessageListProps) {
+export default function MessageList({
+  messages, currentUsername, typingUsers,
+  onViewProfile, onReactMessage,
+  selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
+  editingMessageId, onEditMessage,
+  onDropdownAction, isAdmin, pinnedMessageIds,
+}: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const prefetch = useUserCacheStore((s) => s.prefetch)
-  const cache = useUserCacheStore((s) => s.cache)
 
-  // Prefetch avatars for all unique senders whenever messages change
   useEffect(() => {
     const senders = messages
       .filter((m) => m.sender !== currentUsername)
@@ -94,13 +102,11 @@ export default function MessageList({ messages, currentUsername, typingUsers, is
         const nextMessage = messages[index + 1]
         const showDateDivider = !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp)
 
-        // Grouping: same sender + within 5 minutes of previous
         const isGrouped = !!prevMessage
           && prevMessage.sender === message.sender
           && withinGroup(prevMessage.timestamp, message.timestamp)
           && !showDateDivider
 
-        // Is this the last message in a group (show avatar here for others)
         const isLastInGroup = !nextMessage
           || nextMessage.sender !== message.sender
           || !withinGroup(message.timestamp, nextMessage.timestamp)
@@ -112,32 +118,25 @@ export default function MessageList({ messages, currentUsername, typingUsers, is
             {showDateDivider && <DateDivider date={message.timestamp} />}
 
             <div className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'} ${isGrouped ? 'mt-0.5' : 'mt-3'}`}>
-              {/* Avatar space for others */}
-              {!isMine && (
-                <div className="flex-shrink-0 w-8">
-                  {isLastInGroup ? (
-                    <button onClick={() => onViewProfile?.(message.sender)} className="focus:outline-none" aria-label={`View ${message.senderName}'s profile`}>
-                      <Avatar name={message.senderName} size="sm" src={cache[message.sender]?.avatarUrl} />
-                    </button>
-                  ) : (
-                    <div className="w-8" />
-                  )}
-                </div>
-              )}
-
               <div className="flex flex-col flex-1 min-w-0">
                 <MessageBubble
                   message={message}
                   isMine={isMine}
                   isGrouped={isGrouped}
                   currentUsername={currentUsername}
-                  isAdmin={isAdmin}
-                  isPinned={pinnedMessageIds?.includes(message.id)}
-                  onEdit={onEditMessage}
-                  onDelete={onDeleteMessage}
                   onReact={onReactMessage}
-                  onPin={onPinMessage}
-                  onUnpin={onUnpinMessage}
+                  onEdit={onEditMessage}
+                  onScrollToMessage={(id) => {
+                    document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }}
+                  isSelected={selectedIds?.has(message.id) ?? false}
+                  selectionMode={selectionMode ?? false}
+                  onSelect={onSelectMessage}
+                  onEnterSelectionMode={onEnterSelectionMode}
+                  isEditing={editingMessageId === message.id}
+                  onDropdownAction={onDropdownAction}
+                  isAdmin={isAdmin}
+                  isPinned={pinnedMessageIds?.includes(message.id) ?? false}
                 />
               </div>
             </div>

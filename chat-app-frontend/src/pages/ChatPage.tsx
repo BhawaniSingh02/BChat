@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { Message } from '../types'
 import { useAuthStore } from '../store/authStore'
 import { useRoomStore } from '../store/roomStore'
 import { useDMStore } from '../store/dmStore'
@@ -80,8 +81,13 @@ export default function ChatPage() {
     ?? rooms.find((r) => r.roomId === activeRoomId)
   const activeConversation = conversations.find((c) => c.id === activeDMId)
 
-  const handleSendRoomMessage = (content: string, fileUrl?: string, messageType?: string) => {
-    if (activeRoomId) sendMessage(activeRoomId, content, fileUrl, messageType)
+  const handleSendRoomMessage = (content: string, fileUrl?: string, messageType?: string, replyTo?: Message | null) => {
+    if (activeRoomId) sendMessage(
+      activeRoomId, content, fileUrl, messageType,
+      replyTo?.id,
+      replyTo ? replyTo.content.substring(0, 80) : undefined,
+      replyTo?.senderName,
+    )
   }
   const handleTyping = (typing: boolean) => {
     if (activeRoomId) sendTyping(activeRoomId, typing)
@@ -92,8 +98,13 @@ export default function ChatPage() {
   const handleLeaveRoom = async () => {
     if (activeRoomId) { await leaveRoom(activeRoomId); setActiveRoom(null); setMobileSidebarOpen(true) }
   }
-  const handleSendDM = (content: string, fileUrl?: string, messageType?: string) => {
-    if (activeDMId) sendDM(activeDMId, content, fileUrl, messageType)
+  const handleSendDM = (content: string, fileUrl?: string, messageType?: string, replyTo?: Message | null) => {
+    if (activeDMId) sendDM(
+      activeDMId, content, fileUrl, messageType,
+      replyTo?.id,
+      replyTo ? replyTo.content.substring(0, 80) : undefined,
+      replyTo?.senderName,
+    )
   }
   const handleEditMessage = (messageId: string, newContent: string) => {
     if (activeRoomId) editMessage(activeRoomId, messageId, newContent)

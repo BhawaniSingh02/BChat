@@ -153,23 +153,23 @@ describe('DMChatView', () => {
     expect(screen.getByTestId('react-btn')).toBeInTheDocument()
   })
 
-  it('shows edit button on own message hover when onEditMessage provided', () => {
+  it('shows selection action bar when a message is long-pressed', async () => {
     mockMessages = [makeMsg('m1')]
-    const onEdit = vi.fn()
     render(
       <DMChatView
         conversation={makeConv()}
         currentUsername="alice"
         onSend={onSend}
-        onEditMessage={onEdit}
+        onEditMessage={vi.fn()}
       />
     )
-    const bubble = screen.getByTestId('message-bubble')
-    fireEvent.mouseEnter(bubble.closest('[id^="msg-"]')!)
-    expect(screen.getByTestId('edit-message-btn')).toBeInTheDocument()
+    const msgEl = screen.getByTestId('message-bubble').closest('[id^="msg-"]')!
+    fireEvent.mouseDown(msgEl)
+    await new Promise((r) => setTimeout(r, 600))
+    expect(screen.getByTestId('selection-action-bar')).toBeInTheDocument()
   })
 
-  it('shows delete button on own message hover when onDeleteMessage provided', () => {
+  it('shows delete button in selection action bar for own messages', async () => {
     mockMessages = [makeMsg('m1')]
     const onDelete = vi.fn()
     render(
@@ -180,25 +180,10 @@ describe('DMChatView', () => {
         onDeleteMessage={onDelete}
       />
     )
-    const bubble = screen.getByTestId('message-bubble')
-    fireEvent.mouseEnter(bubble.closest('[id^="msg-"]')!)
-    expect(screen.getByTestId('delete-message-btn')).toBeInTheDocument()
-  })
-
-  it('calls onDeleteMessage when delete btn clicked', () => {
-    mockMessages = [makeMsg('m1')]
-    const onDelete = vi.fn()
-    render(
-      <DMChatView
-        conversation={makeConv()}
-        currentUsername="alice"
-        onSend={onSend}
-        onDeleteMessage={onDelete}
-      />
-    )
-    const bubble = screen.getByTestId('message-bubble')
-    fireEvent.mouseEnter(bubble.closest('[id^="msg-"]')!)
-    fireEvent.click(screen.getByTestId('delete-message-btn'))
+    const msgEl = screen.getByTestId('message-bubble').closest('[id^="msg-"]')!
+    fireEvent.mouseDown(msgEl)
+    await new Promise((r) => setTimeout(r, 600))
+    fireEvent.click(screen.getByTestId('selection-delete-btn'))
     expect(onDelete).toHaveBeenCalledWith('m1')
   })
 })

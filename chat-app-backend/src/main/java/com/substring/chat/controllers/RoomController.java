@@ -2,10 +2,12 @@ package com.substring.chat.controllers;
 
 import com.substring.chat.dto.request.CreateRoomRequest;
 import com.substring.chat.dto.request.EditMessageRequest;
+import com.substring.chat.dto.request.MuteRequest;
 import com.substring.chat.dto.request.UpdateRoomRequest;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.dto.response.RoomResponse;
 import com.substring.chat.dto.response.UserResponse;
+import com.substring.chat.services.ConversationService;
 import com.substring.chat.services.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -33,6 +36,7 @@ import java.util.List;
 public class RoomController {
 
     private final RoomService roomService;
+    private final ConversationService conversationService;
 
     @PostMapping
     public ResponseEntity<RoomResponse> createRoom(@Valid @RequestBody CreateRoomRequest request,
@@ -139,5 +143,47 @@ public class RoomController {
                                                       @PathVariable String messageId,
                                                       @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(roomService.unpinMessage(roomId, messageId, userDetails.getUsername()));
+    }
+
+    // ── Phase 20: Room Mute ──────────────────────────────────────────────
+
+    /** Mute this room for the authenticated user. */
+    @PostMapping("/{roomId}/mute")
+    public ResponseEntity<Map<String, String>> muteRoom(
+            @PathVariable String roomId,
+            @RequestBody(required = false) MuteRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String duration = request != null ? request.getDuration() : "ALWAYS";
+        conversationService.muteRoom(roomId, userDetails.getUsername(), duration);
+        return ResponseEntity.ok(Map.of("message", "Room muted"));
+    }
+
+    /** Unmute this room for the authenticated user. */
+    @DeleteMapping("/{roomId}/mute")
+    public ResponseEntity<Map<String, String>> unmuteRoom(
+            @PathVariable String roomId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        conversationService.unmuteRoom(roomId, userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Room unmuted"));
+    }
+
+    // ── Phase 20: Room Archive ───────────────────────────────────────────
+
+    /** Archive this room for the authenticated user. */
+    @PostMapping("/{roomId}/archive")
+    public ResponseEntity<Map<String, String>> archiveRoom(
+            @PathVariable String roomId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        conversationService.archiveRoom(roomId, userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Room archived"));
+    }
+
+    /** Unarchive this room. */
+    @DeleteMapping("/{roomId}/archive")
+    public ResponseEntity<Map<String, String>> unarchiveRoom(
+            @PathVariable String roomId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        conversationService.unarchiveRoom(roomId, userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Room unarchived"));
     }
 }

@@ -2,12 +2,14 @@ package com.substring.chat.controllers;
 
 import com.substring.chat.dto.request.SendDirectMessageRequest;
 import com.substring.chat.dto.request.SendMessageRequest;
+import com.substring.chat.entities.DirectConversation;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.dto.response.TypingEvent;
 import com.substring.chat.entities.Message;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
+import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.entities.Room;
 import com.substring.chat.services.MessageRateLimiter;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class ChatController {
     private final RoomRepository roomRepository;
     private final DirectConversationRepository conversationRepository;
     private final MessageRateLimiter rateLimiter;
+    private final UserRepository userRepository;
 
     @MessageMapping("/chat.sendMessage/{roomId}")
     public void sendMessage(@DestinationVariable String roomId,
@@ -64,6 +67,12 @@ public class ChatController {
         message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
         message.setFileUrl(request.getFileUrl());
         message.setTimestamp(Instant.now());
+        // Phase 18 — reply and forward
+        message.setReplyToId(request.getReplyToId());
+        message.setReplyToSnippet(request.getReplyToSnippet());
+        message.setReplyToSender(request.getReplyToSender());
+        message.setForwardedFrom(request.getForwardedFrom());
+        // Phase 21 — apply disappearing timer if set on the conversation (n/a for rooms, handled at DM level)
 
         Message saved = messageRepository.save(message);
         room.setLastMessageAt(saved.getTimestamp());
@@ -101,10 +110,12 @@ public class ChatController {
                          @Payload ReadReceiptRequest request,
                          Principal principal) {
         messageRepository.findById(request.getMessageId()).ifPresent(message -> {
+            // Phase 22: record per-user read timestamp
             if (!message.getReadBy().contains(principal.getName())) {
                 message.getReadBy().add(principal.getName());
-                messageRepository.save(message);
             }
+            message.getReadAt().put(principal.getName(), Instant.now());
+            messageRepository.save(message);
             messagingTemplate.convertAndSend("/topic/room/" + roomId + "/read",
                     MessageResponse.from(message));
         });
@@ -119,6 +130,19 @@ public class ChatController {
                                    @Payload SendDirectMessageRequest request,
                                    Principal principal) {
         conversationRepository.findById(conversationId).ifPresent(conv -> {
+            if (!conv.getParticipants().contains(principal.getName())) return;
+
+            // Block check: silently drop if recipient has blocked the sender
+            String recipient = conv.getParticipants().stream()
+                    .filter(p -> !p.equals(principal.getName()))
+                    .findFirst().orElse(null);
+            if (recipient != null) {
+                boolean blocked = userRepository.findByUsername(recipient)
+                        .map(u -> u.getBlockedUsers() != null && u.getBlockedUsers().contains(principal.getName()))
+                        .orElse(false);
+                if (blocked) return;
+            }
+
             Message message = new Message();
             message.setRoomId(DM_PREFIX + conversationId);
             message.setSender(principal.getName());
@@ -127,8 +151,17 @@ public class ChatController {
             message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
             message.setFileUrl(request.getFileUrl());
             message.setTimestamp(Instant.now());
-            Message saved = messageRepository.save(message);
+            // Phase 18 — reply and forward
+            message.setReplyToId(request.getReplyToId());
+            message.setReplyToSnippet(request.getReplyToSnippet());
+            message.setReplyToSender(request.getReplyToSender());
+            message.setForwardedFrom(request.getForwardedFrom());
+            // Phase 21 — apply disappearing timer if set on this conversation
+            if (conv.getDisappearingMessagesTimer() != null && !"OFF".equals(conv.getDisappearingMessagesTimer())) {
+                message.setDisappearsAt(computeDisappearsAt(conv.getDisappearingMessagesTimer()));
+            }
 
+            Message saved = messageRepository.save(message);
             conv.setLastMessageAt(saved.getTimestamp());
             conversationRepository.save(conv);
 
@@ -137,6 +170,15 @@ public class ChatController {
                 messagingTemplate.convertAndSendToUser(participant, "/queue/messages", response);
             }
         });
+    }
+
+    private Instant computeDisappearsAt(String timer) {
+        return switch (timer) {
+            case "24H" -> Instant.now().plusSeconds(24 * 3600);
+            case "7D" -> Instant.now().plusSeconds(7 * 24 * 3600);
+            case "90D" -> Instant.now().plusSeconds(90L * 24 * 3600);
+            default -> null;
+        };
     }
 
     /**
@@ -194,19 +236,30 @@ public class ChatController {
                                @Payload ReactMessageWsRequest request,
                                Principal principal) {
         messageRepository.findById(request.getMessageId()).ifPresent(message -> {
+            String username = principal.getName();
             Map<String, List<String>> reactions = message.getReactions();
             if (reactions == null) {
                 reactions = new HashMap<>();
                 message.setReactions(reactions);
             }
-            List<String> users = reactions.computeIfAbsent(request.getEmoji(), k -> new ArrayList<>());
-            if (users.contains(principal.getName())) {
-                users.remove(principal.getName());
-            } else {
-                users.add(principal.getName());
+            // One reaction per user: find and remove any existing reaction by this user
+            String existingEmoji = null;
+            for (Map.Entry<String, List<String>> entry : reactions.entrySet()) {
+                if (entry.getValue().contains(username)) {
+                    existingEmoji = entry.getKey();
+                    break;
+                }
             }
-            if (users.isEmpty()) {
-                reactions.remove(request.getEmoji());
+            if (existingEmoji != null) {
+                List<String> existingUsers = reactions.get(existingEmoji);
+                existingUsers.remove(username);
+                if (existingUsers.isEmpty()) {
+                    reactions.remove(existingEmoji);
+                }
+            }
+            // Add to new emoji only if different from existing (same = toggle off, already removed)
+            if (!request.getEmoji().equals(existingEmoji)) {
+                reactions.computeIfAbsent(request.getEmoji(), k -> new ArrayList<>()).add(username);
             }
             messageRepository.save(message);
             messagingTemplate.convertAndSend("/topic/room/" + roomId, MessageResponse.from(message));
@@ -277,19 +330,28 @@ public class ChatController {
             if (!conv.getParticipants().contains(principal.getName())) return;
             messageRepository.findById(request.getMessageId()).ifPresent(message -> {
                 if (!(DM_PREFIX + conversationId).equals(message.getRoomId())) return;
+                String username = principal.getName();
                 Map<String, List<String>> reactions = message.getReactions();
                 if (reactions == null) {
                     reactions = new HashMap<>();
                     message.setReactions(reactions);
                 }
-                List<String> users = reactions.computeIfAbsent(request.getEmoji(), k -> new ArrayList<>());
-                if (users.contains(principal.getName())) {
-                    users.remove(principal.getName());
-                } else {
-                    users.add(principal.getName());
+                String existingEmoji = null;
+                for (Map.Entry<String, List<String>> entry : reactions.entrySet()) {
+                    if (entry.getValue().contains(username)) {
+                        existingEmoji = entry.getKey();
+                        break;
+                    }
                 }
-                if (users.isEmpty()) {
-                    reactions.remove(request.getEmoji());
+                if (existingEmoji != null) {
+                    List<String> existingUsers = reactions.get(existingEmoji);
+                    existingUsers.remove(username);
+                    if (existingUsers.isEmpty()) {
+                        reactions.remove(existingEmoji);
+                    }
+                }
+                if (!request.getEmoji().equals(existingEmoji)) {
+                    reactions.computeIfAbsent(request.getEmoji(), k -> new ArrayList<>()).add(username);
                 }
                 messageRepository.save(message);
                 MessageResponse response = MessageResponse.from(message);

@@ -86,4 +86,30 @@ public class UserController {
             Principal principal) {
         return ResponseEntity.ok(userService.updateProfile(principal.getName(), request));
     }
+
+    // ── Phase 23: User Blocking ──────────────────────────────────────────
+
+    /** Get own list of blocked users */
+    @GetMapping("/me/blocked")
+    public ResponseEntity<List<UserResponse>> getBlockedUsers(Principal principal) {
+        return ResponseEntity.ok(userService.getBlockedUsers(principal.getName()));
+    }
+
+    /** Block a user */
+    @PostMapping("/{username}/block")
+    public ResponseEntity<Map<String, String>> blockUser(
+            @PathVariable String username,
+            Principal principal) {
+        userService.blockUser(principal.getName(), username);
+        return ResponseEntity.ok(Map.of("message", "User blocked successfully"));
+    }
+
+    /** Unblock a user */
+    @DeleteMapping("/{username}/block")
+    public ResponseEntity<Map<String, String>> unblockUser(
+            @PathVariable String username,
+            Principal principal) {
+        userService.unblockUser(principal.getName(), username);
+        return ResponseEntity.ok(Map.of("message", "User unblocked successfully"));
+    }
 }

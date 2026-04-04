@@ -10,7 +10,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Document(collection = "rooms")
 @Getter
@@ -32,4 +34,8 @@ public class Room {
     private List<String> pinnedMessages = new ArrayList<>();
     private Instant createdAt;
     private Instant lastMessageAt;
+
+    // Phase 20 — Mute & Archive
+    private Map<String, Instant> mutedBy = new HashMap<>();  // username -> muted until
+    private List<String> archivedBy = new ArrayList<>();      // usernames who archived this room
 }

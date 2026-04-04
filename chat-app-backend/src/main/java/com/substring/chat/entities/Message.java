@@ -35,11 +35,26 @@ public class Message {
     private MessageType messageType = MessageType.TEXT;
     private String fileUrl;
     private List<String> readBy = new ArrayList<>();
+    private Map<String, Instant> readAt = new HashMap<>(); // username -> read timestamp (Phase 22)
     private Instant timestamp;
     private boolean edited = false;
     private Instant editedAt;
     private boolean deleted = false;
     private Map<String, List<String>> reactions = new HashMap<>(); // emoji -> list of usernames
+
+    // Phase 18 — Quote reply
+    private String replyToId;       // ID of the message being replied to
+    private String replyToSnippet;  // First 80 chars of quoted message content
+    private String replyToSender;   // Sender username of the quoted message
+
+    // Phase 18 — Forwarded messages
+    private String forwardedFrom;   // Original sender username if this is a forward
+
+    // Phase 19 — Message starring
+    private List<String> starred = new ArrayList<>(); // usernames who starred
+
+    // Phase 21 — Disappearing messages
+    private Instant disappearsAt;
 
     public Message(String sender, String senderName, String roomId, String content) {
         this.sender = sender;
@@ -51,6 +66,6 @@ public class Message {
     }
 
     public enum MessageType {
-        TEXT, IMAGE, FILE, VIDEO
+        TEXT, IMAGE, FILE, VIDEO, AUDIO
     }
 }

@@ -56,6 +56,9 @@ vi.mock('../../store/roomStore', () => ({
       leaveRoom: mocks.leaveRoom,
       joinRoom: mocks.joinRoom,
       updateRoomLastMessage: mocks.updateRoomLastMessage,
+      kickMember: vi.fn().mockResolvedValue(undefined),
+      pinMessage: vi.fn().mockResolvedValue(undefined),
+      unpinMessage: vi.fn().mockResolvedValue(undefined),
     }
     return selector ? selector(state) : state
   },
@@ -92,6 +95,9 @@ vi.mock('../../hooks/useWebSocket', () => ({
     editMessage: mocks.editMessage,
     deleteMessage: mocks.deleteMessage,
     reactToMessage: mocks.reactToMessage,
+    editDMMessage: vi.fn(),
+    deleteDMMessage: vi.fn(),
+    reactToDMMessage: vi.fn(),
     isConnected: mocks.isConnected,
     connected: false,
   }),
@@ -186,7 +192,7 @@ describe('ChatPage', () => {
 
   it('shows welcome screen when no rooms are active', () => {
     render(<ChatPage />)
-    expect(screen.getByText('Welcome to BChat')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to Baaat')).toBeInTheDocument()
   })
 
   it('shows Create Room CTA on welcome screen', () => {

@@ -11,6 +11,8 @@ export interface User {
   profilePhotoPrivacy?: 'EVERYONE' | 'NOBODY' | 'CONTACTS'
   createdAt: string
   lastSeen: string
+  // Phase 23 — Blocking (only present on own profile)
+  blockedUsers?: string[]
 }
 
 export interface AuthResponse {
@@ -38,7 +40,7 @@ export interface UpdateRoomRequest {
   description?: string
 }
 
-export type MessageType = 'TEXT' | 'IMAGE' | 'FILE' | 'VIDEO'
+export type MessageType = 'TEXT' | 'IMAGE' | 'FILE' | 'VIDEO' | 'AUDIO'
 
 export interface Message {
   id: string
@@ -49,11 +51,26 @@ export interface Message {
   messageType: MessageType
   fileUrl?: string
   readBy: string[]
+  readAt?: Record<string, string>  // Phase 22: per-user read timestamps
   timestamp: string
   edited?: boolean
   editedAt?: string
   deleted?: boolean
   reactions?: Record<string, string[]>
+
+  // Phase 18 — Quote reply
+  replyToId?: string
+  replyToSnippet?: string
+  replyToSender?: string
+
+  // Phase 18 — Forwarded
+  forwardedFrom?: string
+
+  // Phase 19 — Starring
+  starred?: string[]
+
+  // Phase 21 — Disappearing
+  disappearsAt?: string
 }
 
 export interface PagedResponse<T> {
@@ -70,6 +87,11 @@ export interface DirectConversation {
   participants: string[]
   createdAt: string
   lastMessageAt?: string
+  // Phase 20 — Mute & Archive
+  mutedBy?: Record<string, string>   // username -> ISO date (muted until)
+  archivedBy?: string[]
+  // Phase 21 — Disappearing
+  disappearingMessagesTimer?: 'OFF' | '24H' | '7D' | '90D'
 }
 
 export interface TypingEvent {
@@ -112,4 +134,32 @@ export interface UpdateProfileRequest {
 export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
+}
+
+// Phase 18: Forward
+export interface ForwardMessageRequest {
+  roomId?: string
+  conversationId?: string
+}
+
+// Phase 20: Mute
+export interface MuteRequest {
+  duration?: '8H' | '1W' | 'ALWAYS'
+}
+
+// Phase 21: Disappearing timer
+export type DisappearingTimer = 'OFF' | '24H' | '7D' | '90D'
+export interface DisappearingTimerRequest {
+  timer: DisappearingTimer
+}
+
+// Phase 18: Sending a message with reply/forward
+export interface SendMessageWithReplyRequest {
+  content: string
+  messageType?: MessageType
+  fileUrl?: string
+  replyToId?: string
+  replyToSnippet?: string
+  replyToSender?: string
+  forwardedFrom?: string
 }

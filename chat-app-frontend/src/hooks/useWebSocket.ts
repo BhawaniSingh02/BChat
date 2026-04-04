@@ -131,10 +131,19 @@ export function useWebSocket(token: string | null) {
     })
   }, [upsertRoomMessage, setTyping, updateReadBy, updateRoomLastMessage, incrementUnread])
 
-  const sendMessage = useCallback((roomId: string, content: string, fileUrl?: string, messageType = 'TEXT') => {
+  const sendMessage = useCallback((
+    roomId: string,
+    content: string,
+    fileUrl?: string,
+    messageType = 'TEXT',
+    replyToId?: string,
+    replyToSnippet?: string,
+    replyToSender?: string,
+    forwardedFrom?: string,
+  ) => {
     clientRef.current?.publish({
       destination: `/app/chat.sendMessage/${roomId}`,
-      body: JSON.stringify({ content, fileUrl, messageType }),
+      body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom }),
     })
   }, [])
 
@@ -152,10 +161,19 @@ export function useWebSocket(token: string | null) {
     })
   }, [])
 
-  const sendDM = useCallback((conversationId: string, content: string, fileUrl?: string, messageType = 'TEXT') => {
+  const sendDM = useCallback((
+    conversationId: string,
+    content: string,
+    fileUrl?: string,
+    messageType = 'TEXT',
+    replyToId?: string,
+    replyToSnippet?: string,
+    replyToSender?: string,
+    forwardedFrom?: string,
+  ) => {
     clientRef.current?.publish({
       destination: `/app/dm.send/${conversationId}`,
-      body: JSON.stringify({ content, fileUrl, messageType }),
+      body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom }),
     })
   }, [])
 

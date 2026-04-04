@@ -168,7 +168,7 @@ class ChatControllerTest {
     }
 
     @Test
-    void reactToMessage_supportsMultipleDifferentEmojis() {
+    void reactToMessage_oneReactionPerUser_switchingEmojiRemovesPrevious() {
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
         when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -182,7 +182,10 @@ class ChatControllerTest {
         r2.setEmoji("😂");
         chatController.reactToMessage("general", r2, principal);
 
-        assertThat(message.getReactions()).containsKeys("👍", "😂");
+        // With one-reaction-per-user: switching from 👍 to 😂 removes 👍
+        assertThat(message.getReactions()).doesNotContainKey("👍");
+        assertThat(message.getReactions()).containsKey("😂");
+        assertThat(message.getReactions().get("😂")).contains("alice");
     }
 
     // ── edit message ──────────────────────────────────────────────────────────

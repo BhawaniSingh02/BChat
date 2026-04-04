@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { MessageType } from '../../types'
+import type { Message, MessageType } from '../../types'
 import { uploadApi } from '../../api/upload'
 
 const ACCEPTED_TYPES = [
@@ -18,10 +18,12 @@ const EMOJI_CATEGORIES = [
 ]
 
 interface MessageInputProps {
-  onSend: (content: string, fileUrl?: string, messageType?: MessageType) => void
+  onSend: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null) => void
   onTyping?: (typing: boolean) => void
   disabled?: boolean
   placeholder?: string
+  replyTo?: Message | null          // Phase 18: message being replied to
+  onCancelReply?: () => void        // Phase 18: clear reply state
 }
 
 interface PendingFile {
@@ -30,7 +32,7 @@ interface PendingFile {
   type: MessageType
 }
 
-export default function MessageInput({ onSend, onTyping, disabled, placeholder }: MessageInputProps) {
+export default function MessageInput({ onSend, onTyping, disabled, placeholder, replyTo, onCancelReply }: MessageInputProps) {
   const [value, setValue] = useState('')
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null)
@@ -79,8 +81,9 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder }
     // File sends are handled immediately in handleFileUploadComplete; only handle plain text here
     if (!trimmed || disabled || uploadProgress !== null) return
 
-    onSend(trimmed)
+    onSend(trimmed, undefined, undefined, replyTo)
     setValue('')
+    onCancelReply?.()
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     isTypingRef.current = false
     onTyping?.(false)
@@ -88,15 +91,16 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder }
 
   const handleFileUploadComplete = useCallback((url: string, messageType: MessageType, filename: string) => {
     const caption = value.trim()
-    onSend(caption || filename, url, messageType)
+    onSend(caption || filename, url, messageType, replyTo)
     setValue('')
+    onCancelReply?.()
     setPendingFile(null)
     setUploadProgress(null)
     setUploadError(null)
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     isTypingRef.current = false
     onTyping?.(false)
-  }, [value, onSend, onTyping])
+  }, [value, onSend, onTyping, replyTo, onCancelReply])
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -157,6 +161,26 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder }
 
   return (
     <div className="bg-[#f0f2f5] px-3 py-2.5">
+      {/* Phase 18: Reply-to preview bar */}
+      {replyTo && (
+        <div className="flex items-start gap-2 mb-2 bg-white/80 rounded-xl px-3 py-2 border-l-4 border-emerald-500" data-testid="reply-preview">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-emerald-700">{replyTo.senderName}</p>
+            <p className="text-xs text-gray-500 truncate">{replyTo.content}</p>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+            aria-label="Cancel reply"
+            data-testid="cancel-reply-btn"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Upload progress bar */}
       {isUploading && (
         <div className="mb-2">

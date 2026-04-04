@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MessageBubble from '../../components/chat/MessageBubble'
 import type { Message } from '../../types'
@@ -22,13 +22,13 @@ describe('MessageBubble', () => {
   })
 
   it('aligns to right for own messages', () => {
-    const { container } = render(<MessageBubble message={baseMessage} isMine />)
-    expect(container.firstChild).toHaveClass('justify-end')
+    render(<MessageBubble message={baseMessage} isMine />)
+    expect(screen.getByTestId('message-row')).toHaveClass('justify-end')
   })
 
   it('aligns to left for others messages', () => {
-    const { container } = render(<MessageBubble message={baseMessage} isMine={false} />)
-    expect(container.firstChild).toHaveClass('justify-start')
+    render(<MessageBubble message={baseMessage} isMine={false} />)
+    expect(screen.getByTestId('message-row')).toHaveClass('justify-start')
   })
 
   it('applies green background for own messages', () => {
@@ -114,7 +114,6 @@ describe('MessageBubble', () => {
       content: '',
     }
     render(<MessageBubble message={imageMsg} isMine={false} />)
-    // In test/dev mode import.meta.env.DEV is true, so localhost is trusted
     expect(screen.getByRole('img', { name: 'shared' })).toBeInTheDocument()
   })
 
@@ -129,68 +128,30 @@ describe('MessageBubble', () => {
     expect(screen.getByText('📎 Download file')).toBeInTheDocument()
   })
 
-  // ── Edit/delete actions ───────────────────────────────────────────────────
+  // ── Edit mode (triggered by isEditing prop) ────────────────────────────────
 
-  it('does not show edit/delete buttons when not mine', async () => {
-    const onEdit = vi.fn()
-    const onDelete = vi.fn()
-    render(<MessageBubble message={baseMessage} isMine={false} onEdit={onEdit} onDelete={onDelete} />)
-    // hover the bubble
-    await userEvent.hover(screen.getByTestId('message-bubble'))
-    expect(screen.queryByTestId('edit-message-btn')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('delete-message-btn')).not.toBeInTheDocument()
+  it('does not show edit input by default', () => {
+    render(<MessageBubble message={baseMessage} isMine onEdit={vi.fn()} />)
+    expect(screen.queryByTestId('edit-message-input')).not.toBeInTheDocument()
   })
 
-  it('shows edit/delete buttons on hover for own messages', async () => {
-    const onEdit = vi.fn()
-    const onDelete = vi.fn()
-    const { container } = render(
-      <MessageBubble message={baseMessage} isMine onEdit={onEdit} onDelete={onDelete} />
-    )
-    await userEvent.hover(container.firstChild as Element)
-    expect(screen.getByTestId('edit-message-btn')).toBeInTheDocument()
-    expect(screen.getByTestId('delete-message-btn')).toBeInTheDocument()
-  })
-
-  it('calls onDelete when delete button clicked', async () => {
-    const onDelete = vi.fn()
-    const { container } = render(
-      <MessageBubble message={baseMessage} isMine onDelete={onDelete} />
-    )
-    await userEvent.hover(container.firstChild as Element)
-    await userEvent.click(screen.getByTestId('delete-message-btn'))
-    expect(onDelete).toHaveBeenCalledWith('msg-1')
-  })
-
-  it('enters edit mode when edit button clicked', async () => {
-    const { container } = render(
-      <MessageBubble message={baseMessage} isMine onEdit={vi.fn()} />
-    )
-    await userEvent.hover(container.firstChild as Element)
-    await userEvent.click(screen.getByTestId('edit-message-btn'))
+  it('shows edit textarea when isEditing=true', () => {
+    render(<MessageBubble message={baseMessage} isMine onEdit={vi.fn()} isEditing />)
     expect(screen.getByTestId('edit-message-input')).toBeInTheDocument()
   })
 
   it('calls onEdit with new content on Enter in edit mode', async () => {
     const onEdit = vi.fn()
-    const { container } = render(
-      <MessageBubble message={baseMessage} isMine onEdit={onEdit} />
-    )
-    await userEvent.hover(container.firstChild as Element)
-    await userEvent.click(screen.getByTestId('edit-message-btn'))
+    render(<MessageBubble message={baseMessage} isMine onEdit={onEdit} isEditing />)
     const textarea = screen.getByTestId('edit-message-input')
     await userEvent.clear(textarea)
     await userEvent.type(textarea, 'New content{Enter}')
     expect(onEdit).toHaveBeenCalledWith('msg-1', 'New content')
   })
 
-  it('cancels edit on Escape', async () => {
+  it('cancels edit on Escape without calling onEdit', async () => {
     const onEdit = vi.fn()
-    const { container } = render(
-      <MessageBubble message={baseMessage} isMine onEdit={onEdit} />
-    )
-    await userEvent.hover(container.firstChild as Element)
-    await userEvent.click(screen.getByTestId('edit-message-btn'))
+    render(<MessageBubble message={baseMessage} isMine onEdit={onEdit} isEditing />)
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByTestId('edit-message-input')).not.toBeInTheDocument()
     expect(onEdit).not.toHaveBeenCalled()
@@ -218,19 +179,6 @@ describe('MessageBubble', () => {
     const bubble = screen.getByTestId('message-bubble')
     expect(bubble).toHaveClass('bg-white/60')
     expect(screen.getByText('[This message was deleted]')).toHaveClass('italic')
-  })
-
-  it('does not show edit/delete on deleted messages', async () => {
-    const { container } = render(
-      <MessageBubble
-        message={{ ...baseMessage, content: '[This message was deleted]', deleted: true }}
-        isMine
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-      />
-    )
-    await userEvent.hover(container.firstChild as Element)
-    expect(screen.queryByTestId('edit-message-btn')).not.toBeInTheDocument()
   })
 
   // ── Emoji reactions ───────────────────────────────────────────────────────
@@ -281,6 +229,14 @@ describe('MessageBubble', () => {
     expect(screen.queryByTestId('emoji-picker')).not.toBeInTheDocument()
   })
 
+  it('does not show react button in selectionMode', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onReact={vi.fn()} selectionMode />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    expect(screen.queryByTestId('react-btn')).not.toBeInTheDocument()
+  })
+
   it('shows reaction pills when message has reactions', () => {
     const messageWithReactions = {
       ...baseMessage,
@@ -323,6 +279,258 @@ describe('MessageBubble', () => {
       reactions: { '👍': ['bob'] },
     }
     render(<MessageBubble message={messageWithReactions} isMine currentUsername="alice" />)
-    expect(screen.getByTestId('reaction-pill-👍')).not.toHaveClass('bg-green-100')
+    expect(screen.getByTestId('reaction-pill-👍')).not.toHaveClass('bg-emerald-100')
+  })
+
+  // ── WhatsApp-style selection ───────────────────────────────────────────────
+
+  it('does not show selection checkbox by default', () => {
+    render(<MessageBubble message={baseMessage} isMine />)
+    expect(screen.queryByTestId('selection-checkbox')).not.toBeInTheDocument()
+  })
+
+  it('shows selection checkbox when selectionMode=true', () => {
+    render(<MessageBubble message={baseMessage} isMine selectionMode />)
+    expect(screen.getByTestId('selection-checkbox')).toBeInTheDocument()
+  })
+
+  it('checkbox appears filled when isSelected=true', () => {
+    render(<MessageBubble message={baseMessage} isMine selectionMode isSelected />)
+    const checkbox = screen.getByTestId('selection-checkbox')
+    expect(checkbox).toHaveClass('bg-[#075e54]')
+  })
+
+  it('checkbox appears hollow when isSelected=false in selectionMode', () => {
+    render(<MessageBubble message={baseMessage} isMine selectionMode isSelected={false} />)
+    const checkbox = screen.getByTestId('selection-checkbox')
+    expect(checkbox).not.toHaveClass('bg-[#075e54]')
+  })
+
+  it('calls onSelect when message is clicked in selectionMode', async () => {
+    const onSelect = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine selectionMode onSelect={onSelect} />
+    )
+    await userEvent.click(container.firstChild as Element)
+    expect(onSelect).toHaveBeenCalledWith('msg-1')
+  })
+
+  it('adds selected highlight when isSelected=true', () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine selectionMode isSelected />
+    )
+    expect(container.firstChild).toHaveClass('bg-emerald-50')
+  })
+
+  it('does not add selected highlight when isSelected=false', () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine selectionMode isSelected={false} />
+    )
+    expect(container.firstChild).not.toHaveClass('bg-emerald-50')
+  })
+
+  it('calls onEnterSelectionMode after long press', async () => {
+    vi.useFakeTimers()
+    const onEnterSelectionMode = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onEnterSelectionMode={onEnterSelectionMode} />
+    )
+    // Simulate mousedown without mouseup (long press)
+    const outer = container.firstChild as Element
+    outer.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    act(() => { vi.advanceTimersByTime(600) })
+    expect(onEnterSelectionMode).toHaveBeenCalledWith(baseMessage)
+    vi.useRealTimers()
+  })
+
+  // ── Phase 18: Quote reply ─────────────────────────────────────────────────
+
+  it('shows quoted reply bubble when message has replyToId', () => {
+    const msg = {
+      ...baseMessage,
+      replyToId: 'original-msg',
+      replyToSnippet: 'Original message content',
+      replyToSender: 'charlie',
+    }
+    render(<MessageBubble message={msg} isMine />)
+    expect(screen.getByTestId('reply-quote')).toBeInTheDocument()
+    expect(screen.getByText('Original message content')).toBeInTheDocument()
+    expect(screen.getByText('charlie')).toBeInTheDocument()
+  })
+
+  it('does not show reply quote when no replyToId', () => {
+    render(<MessageBubble message={baseMessage} isMine />)
+    expect(screen.queryByTestId('reply-quote')).not.toBeInTheDocument()
+  })
+
+  it('calls onScrollToMessage when reply quote is clicked', async () => {
+    const onScroll = vi.fn()
+    const msg = {
+      ...baseMessage,
+      replyToId: 'original-msg',
+      replyToSnippet: 'Original',
+      replyToSender: 'charlie',
+    }
+    render(<MessageBubble message={msg} isMine onScrollToMessage={onScroll} />)
+    await userEvent.click(screen.getByTestId('reply-quote'))
+    expect(onScroll).toHaveBeenCalledWith('original-msg')
+  })
+
+  // ── Phase 18: Forwarded label ─────────────────────────────────────────────
+
+  it('shows forwarded label when message has forwardedFrom', () => {
+    const msg = { ...baseMessage, forwardedFrom: 'dave' }
+    render(<MessageBubble message={msg} isMine />)
+    expect(screen.getByTestId('forwarded-label')).toBeInTheDocument()
+    expect(screen.getByText(/Forwarded from/)).toBeInTheDocument()
+    expect(screen.getByText('dave')).toBeInTheDocument()
+  })
+
+  it('does not show forwarded label when message is original', () => {
+    render(<MessageBubble message={baseMessage} isMine />)
+    expect(screen.queryByTestId('forwarded-label')).not.toBeInTheDocument()
+  })
+
+  // ── Desktop dropdown ─────────────────────────────────────────────────────
+
+  it('does not show dropdown trigger by default (not hovered)', () => {
+    render(<MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} />)
+    expect(screen.queryByTestId('message-dropdown-trigger')).not.toBeInTheDocument()
+  })
+
+  it('shows dropdown trigger on hover when onDropdownAction provided', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    expect(screen.getByTestId('message-dropdown-trigger')).toBeInTheDocument()
+  })
+
+  it('opens dropdown menu when trigger is clicked', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    expect(screen.getByTestId('message-dropdown')).toBeInTheDocument()
+  })
+
+  it('calls onDropdownAction with "reply" when Reply is clicked', async () => {
+    const onDropdownAction = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={onDropdownAction} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    await userEvent.click(screen.getByTestId('dropdown-reply'))
+    expect(onDropdownAction).toHaveBeenCalledWith('reply', baseMessage)
+  })
+
+  it('calls onDropdownAction with "forward" when Forward is clicked', async () => {
+    const onDropdownAction = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={onDropdownAction} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    await userEvent.click(screen.getByTestId('dropdown-forward'))
+    expect(onDropdownAction).toHaveBeenCalledWith('forward', baseMessage)
+  })
+
+  it('calls onDropdownAction with "star" when Star is clicked', async () => {
+    const onDropdownAction = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={onDropdownAction} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    await userEvent.click(screen.getByTestId('dropdown-star'))
+    expect(onDropdownAction).toHaveBeenCalledWith('star', baseMessage)
+  })
+
+  it('calls onDropdownAction with "delete" when Delete is clicked (own message)', async () => {
+    const onDropdownAction = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={onDropdownAction} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    await userEvent.click(screen.getByTestId('dropdown-delete'))
+    expect(onDropdownAction).toHaveBeenCalledWith('delete', baseMessage)
+  })
+
+  it('does not show Delete option for others messages', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine={false} onDropdownAction={vi.fn()} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    expect(screen.queryByTestId('dropdown-delete')).not.toBeInTheDocument()
+  })
+
+  it('shows Pin option for admin users', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} isAdmin />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    expect(screen.getByTestId('dropdown-pin')).toBeInTheDocument()
+  })
+
+  it('does not show Pin option for non-admin users', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} isAdmin={false} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    expect(screen.queryByTestId('dropdown-pin')).not.toBeInTheDocument()
+  })
+
+  it('shows "Unpin" label when message is already pinned', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} isAdmin isPinned />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    expect(screen.getByTestId('dropdown-pin')).toHaveTextContent('Unpin')
+  })
+
+  it('calls onEnterSelectionMode when Select is clicked from dropdown', async () => {
+    const onEnterSelectionMode = vi.fn()
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} onEnterSelectionMode={onEnterSelectionMode} />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    await userEvent.click(screen.getByTestId('message-dropdown-trigger'))
+    await userEvent.click(screen.getByTestId('dropdown-select'))
+    expect(onEnterSelectionMode).toHaveBeenCalledWith(baseMessage)
+  })
+
+  it('does not show dropdown trigger in selectionMode', async () => {
+    const { container } = render(
+      <MessageBubble message={baseMessage} isMine onDropdownAction={vi.fn()} selectionMode />
+    )
+    await userEvent.hover(container.firstChild as Element)
+    expect(screen.queryByTestId('message-dropdown-trigger')).not.toBeInTheDocument()
+  })
+
+  it('does not show dropdown trigger when onDropdownAction is not provided', async () => {
+    const { container } = render(<MessageBubble message={baseMessage} isMine />)
+    await userEvent.hover(container.firstChild as Element)
+    expect(screen.queryByTestId('message-dropdown-trigger')).not.toBeInTheDocument()
+  })
+
+  // ── Phase 19: Star indicator ──────────────────────────────────────────────
+
+  it('shows star indicator in footer when message is starred by current user', () => {
+    const starred = { ...baseMessage, starred: ['alice'] }
+    render(<MessageBubble message={starred} isMine currentUsername="alice" />)
+    expect(screen.getByTestId('star-indicator')).toBeInTheDocument()
+  })
+
+  it('does not show star indicator when message is not starred by current user', () => {
+    const notStarred = { ...baseMessage, starred: ['bob'] }
+    render(<MessageBubble message={notStarred} isMine currentUsername="alice" />)
+    expect(screen.queryByTestId('star-indicator')).not.toBeInTheDocument()
   })
 })

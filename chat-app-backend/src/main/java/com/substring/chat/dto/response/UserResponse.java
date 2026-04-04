@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -25,6 +27,9 @@ public class UserResponse {
     private Instant createdAt;
     private Instant lastSeen;
 
+    // Phase 23 — Blocking (only returned for /me, not public profiles)
+    private List<String> blockedUsers;
+
     public static UserResponse from(User user) {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
@@ -39,6 +44,7 @@ public class UserResponse {
         response.setProfilePhotoPrivacy(user.getProfilePhotoPrivacy());
         response.setCreatedAt(user.getCreatedAt());
         response.setLastSeen(user.getLastSeen());
+        response.setBlockedUsers(user.getBlockedUsers() != null ? user.getBlockedUsers() : new ArrayList<>());
         return response;
     }
 }

@@ -9,6 +9,8 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Document(collection = "users")
 @Getter
@@ -36,4 +38,7 @@ public class User {
     private String profilePhotoPrivacy; // EVERYONE | NOBODY | CONTACTS
     private Instant createdAt;
     private Instant lastSeen;
+
+    // Phase 23 — User blocking
+    private List<String> blockedUsers = new ArrayList<>(); // list of blocked usernames
 }
