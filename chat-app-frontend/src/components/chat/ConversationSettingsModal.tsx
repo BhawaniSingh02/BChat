@@ -40,7 +40,6 @@ export default function ConversationSettingsModal({
   const [error, setError] = useState<string | null>(null)
 
   const isMuted = !!conversation.mutedBy?.[currentUsername]
-  const isArchived = conversation.archivedBy?.includes(currentUsername) ?? false
   const disappearing = conversation.disappearingMessagesTimer ?? 'OFF'
 
   const handleMute = async (duration: string) => {
@@ -64,21 +63,6 @@ export default function ConversationSettingsModal({
       onUpdated(updated)
     } catch {
       setError('Failed to unmute conversation')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleArchive = async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      const updated = isArchived
-        ? await messagesApi.unarchiveDM(conversation.id)
-        : await messagesApi.archiveDM(conversation.id)
-      onUpdated(updated)
-    } catch {
-      setError('Failed to update archive status')
     } finally {
       setSaving(false)
     }
@@ -144,26 +128,6 @@ export default function ConversationSettingsModal({
                 ))}
               </div>
             )}
-          </section>
-
-          {/* ── Archive ── */}
-          <section>
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Archive</h4>
-            <button
-              onClick={handleArchive}
-              disabled={saving}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors disabled:opacity-50 ${
-                isArchived
-                  ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-              }`}
-              data-testid="archive-btn"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-              </svg>
-              {isArchived ? 'Unarchive conversation' : 'Archive conversation'}
-            </button>
           </section>
 
           {/* ── Disappearing messages ── */}

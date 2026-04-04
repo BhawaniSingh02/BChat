@@ -302,7 +302,6 @@ export default function DMChatView({
           messages={messages}
           currentUsername={currentUsername}
           typingUsers={[]}
-          onViewProfile={onViewProfile}
           onReactMessage={onReactMessage}
           selectionMode={selectionMode}
           selectedIds={selectedIds}

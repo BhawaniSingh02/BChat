@@ -8,7 +8,7 @@ interface StarredMessagesPanelProps {
   currentUsername: string
 }
 
-export default function StarredMessagesPanel({ onClose, currentUsername }: StarredMessagesPanelProps) {
+export default function StarredMessagesPanel({ onClose, currentUsername: _currentUsername }: StarredMessagesPanelProps) {
   const [starred, setStarred] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

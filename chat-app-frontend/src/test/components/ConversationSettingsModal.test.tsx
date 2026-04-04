@@ -9,16 +9,12 @@ vi.mock('../../api/messages', () => ({
   messagesApi: {
     muteDM: vi.fn(),
     unmuteDM: vi.fn(),
-    archiveDM: vi.fn(),
-    unarchiveDM: vi.fn(),
     setDisappearingTimer: vi.fn(),
   },
 }))
 
 const mockMuteDM = vi.mocked(messagesApi.muteDM)
 const mockUnmuteDM = vi.mocked(messagesApi.unmuteDM)
-const mockArchiveDM = vi.mocked(messagesApi.archiveDM)
-const mockUnarchiveDM = vi.mocked(messagesApi.unarchiveDM)
 const mockSetDisappearing = vi.mocked(messagesApi.setDisappearingTimer)
 
 const baseConversation: DirectConversation = {
@@ -126,52 +122,6 @@ describe('ConversationSettingsModal', () => {
     await waitFor(() => {
       expect(mockUnmuteDM).toHaveBeenCalledWith('conv-1')
       expect(onUpdated).toHaveBeenCalledWith(baseConversation)
-    })
-  })
-
-  it('calls archiveDM and invokes onUpdated when archiving', async () => {
-    const archivedConv: DirectConversation = { ...baseConversation, archivedBy: ['alice'] }
-    mockArchiveDM.mockResolvedValue(archivedConv)
-    const onUpdated = vi.fn()
-
-    render(
-      <ConversationSettingsModal
-        conversation={baseConversation}
-        currentUsername="alice"
-        otherUsername="bob"
-        onClose={vi.fn()}
-        onUpdated={onUpdated}
-      />
-    )
-
-    await userEvent.click(screen.getByTestId('archive-btn'))
-
-    await waitFor(() => {
-      expect(mockArchiveDM).toHaveBeenCalledWith('conv-1')
-      expect(onUpdated).toHaveBeenCalledWith(archivedConv)
-    })
-  })
-
-  it('shows unarchive button and calls unarchiveDM when already archived', async () => {
-    const archivedConv: DirectConversation = { ...baseConversation, archivedBy: ['alice'] }
-    mockUnarchiveDM.mockResolvedValue(baseConversation)
-    const onUpdated = vi.fn()
-
-    render(
-      <ConversationSettingsModal
-        conversation={archivedConv}
-        currentUsername="alice"
-        otherUsername="bob"
-        onClose={vi.fn()}
-        onUpdated={onUpdated}
-      />
-    )
-
-    expect(screen.getByText(/Unarchive conversation/i)).toBeInTheDocument()
-    await userEvent.click(screen.getByTestId('archive-btn'))
-
-    await waitFor(() => {
-      expect(mockUnarchiveDM).toHaveBeenCalledWith('conv-1')
     })
   })
 

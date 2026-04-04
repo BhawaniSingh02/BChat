@@ -363,7 +363,6 @@ export default function ChatView({
             currentUsername={currentUsername}
             typingUsers={typingUsers}
             onReactMessage={onReactMessage}
-            onViewProfile={onViewProfile}
             selectionMode={selectionMode}
             selectedIds={selectedIds}
             onSelectMessage={handleSelectMessage}

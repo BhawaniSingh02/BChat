@@ -8,7 +8,6 @@ interface MessageListProps {
   messages: Message[]
   currentUsername: string
   typingUsers: string[]
-  onViewProfile?: (username: string) => void
   onReactMessage?: (messageId: string, emoji: string) => void
   // Selection (WhatsApp-style)
   selectionMode?: boolean
@@ -62,7 +61,7 @@ function withinGroup(a: string, b: string): boolean {
 
 export default function MessageList({
   messages, currentUsername, typingUsers,
-  onViewProfile, onReactMessage,
+  onReactMessage,
   selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
   editingMessageId, onEditMessage,
   onDropdownAction, isAdmin, pinnedMessageIds,
@@ -106,10 +105,6 @@ export default function MessageList({
           && prevMessage.sender === message.sender
           && withinGroup(prevMessage.timestamp, message.timestamp)
           && !showDateDivider
-
-        const isLastInGroup = !nextMessage
-          || nextMessage.sender !== message.sender
-          || !withinGroup(message.timestamp, nextMessage.timestamp)
 
         const isMine = message.sender === currentUsername
 
