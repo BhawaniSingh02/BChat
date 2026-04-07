@@ -14,33 +14,47 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * Periodically cleans up RINGING call sessions that were never answered or cancelled.
- * Prevents zombie sessions from blocking future calls between the same users.
+ * Periodically cleans up zombie call sessions:
+ * - RINGING sessions older than 90 s (caller closed browser / network drop before answer)
+ * - ACTIVE sessions older than 4 h (both sides closed browser without hanging up)
+ * Without this, stale sessions block the busy-check and prevent any new calls.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CallSessionJanitor {
 
-    /** A ringing call older than this is considered abandoned. */
     private static final long RINGING_TIMEOUT_SECONDS = 90;
+    private static final long ACTIVE_TIMEOUT_HOURS    = 4;
 
     private final CallSessionRepository callSessionRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     @Scheduled(fixedDelay = 30_000) // run every 30 seconds
-    public void expireStaleRingingSessions() {
-        Instant cutoff = Instant.now().minus(RINGING_TIMEOUT_SECONDS, ChronoUnit.SECONDS);
+    public void expirestaleSessions() {
+        expireByStatus(
+                CallSession.CallStatus.RINGING,
+                Instant.now().minus(RINGING_TIMEOUT_SECONDS, ChronoUnit.SECONDS),
+                CallSession.CallStatus.MISSED);
+
+        expireByStatus(
+                CallSession.CallStatus.ACTIVE,
+                Instant.now().minus(ACTIVE_TIMEOUT_HOURS, ChronoUnit.HOURS),
+                CallSession.CallStatus.ENDED);
+    }
+
+    private void expireByStatus(CallSession.CallStatus fromStatus,
+                                 Instant cutoff,
+                                 CallSession.CallStatus toStatus) {
         List<CallSession> stale = callSessionRepository
-                .findByStatusAndStartedAtBefore(CallSession.CallStatus.RINGING, cutoff);
+                .findByStatusAndStartedAtBefore(fromStatus, cutoff);
 
         for (CallSession session : stale) {
             try {
-                session.setStatus(CallSession.CallStatus.MISSED);
+                session.setStatus(toStatus);
                 session.setEndedAt(Instant.now());
                 callSessionRepository.save(session);
 
-                // Notify both participants so their UIs can clean up
                 CallEvent event = CallEvent.builder()
                         .eventType(CallEvent.EventType.CALL_ENDED.name())
                         .callSessionId(session.getId())
@@ -52,8 +66,8 @@ public class CallSessionJanitor {
                 messagingTemplate.convertAndSendToUser(session.getCallerId(), "/queue/call", event);
                 messagingTemplate.convertAndSendToUser(session.getCalleeId(), "/queue/call", event);
 
-                log.info("Janitor expired stale RINGING session {} (started {})",
-                        session.getId(), session.getStartedAt());
+                log.info("Janitor expired stale {} session {} → {} (started {})",
+                        fromStatus, session.getId(), toStatus, session.getStartedAt());
             } catch (Exception e) {
                 log.warn("Janitor failed to expire session {}: {}", session.getId(), e.getMessage());
             }

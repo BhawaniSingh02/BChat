@@ -66,7 +66,9 @@ public class FileUploadController {
                     .body(Map.of("error", "File is empty."));
         }
 
-        String contentType = file.getContentType();
+        // Normalize: strip codec/parameter suffix (e.g. "audio/webm;codecs=opus" → "audio/webm")
+        String rawContentType = file.getContentType();
+        String contentType = rawContentType != null ? rawContentType.split(";")[0].trim().toLowerCase() : null;
         boolean isImage = contentType != null && IMAGE_TYPES.contains(contentType);
         boolean isVideo = contentType != null && VIDEO_TYPES.contains(contentType);
         boolean isDoc   = contentType != null && DOC_TYPES.contains(contentType);

@@ -24,6 +24,9 @@ public interface CallSessionRepository extends MongoRepository<CallSession, Stri
     @Query("{ '$or': [{ 'callerId': ?0 }, { 'calleeId': ?0 }], 'status': { '$in': ?1 } }")
     Optional<CallSession> findActiveCallByParticipant(String username, List<CallSession.CallStatus> statuses);
 
-    /** Find all RINGING sessions that started before the given time (for janitor cleanup). */
+    /** Find all sessions with the given status that started before the given time (for janitor cleanup). */
     List<CallSession> findByStatusAndStartedAtBefore(CallSession.CallStatus status, Instant before);
+
+    /** Find all sessions in any of the given statuses that started before the given time. */
+    List<CallSession> findByStatusInAndStartedAtBefore(List<CallSession.CallStatus> statuses, Instant before);
 }
