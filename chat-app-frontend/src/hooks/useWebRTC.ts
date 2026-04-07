@@ -43,6 +43,7 @@ export interface WebRTCHandlers {
 export function useWebRTC(handlers: WebRTCHandlers) {
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const remoteStreamRef = useRef<MediaStream | null>(null)
   const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([])
   // Timers for ICE reconnection
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -71,6 +72,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     pendingIceCandidatesRef.current = []
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
     localStreamRef.current = null
+    remoteStreamRef.current = null
     pcRef.current?.close()
     pcRef.current = null
   }, [clearReconnectTimers])
@@ -93,6 +95,8 @@ export function useWebRTC(handlers: WebRTCHandlers) {
 
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    const remoteStream = new MediaStream()
+    remoteStreamRef.current = remoteStream
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -101,9 +105,14 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     }
 
     pc.ontrack = (e) => {
-      if (e.streams[0]) {
-        handlers.onRemoteStream(e.streams[0])
+      const inboundStream = e.streams[0] ?? remoteStreamRef.current
+      if (!inboundStream) return
+
+      if (!e.streams[0]) {
+        inboundStream.addTrack(e.track)
       }
+
+      handlers.onRemoteStream(inboundStream)
     }
 
     pc.onconnectionstatechange = () => {
