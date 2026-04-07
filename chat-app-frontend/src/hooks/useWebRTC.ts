@@ -43,6 +43,7 @@ export interface WebRTCHandlers {
 export function useWebRTC(handlers: WebRTCHandlers) {
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([])
   // Timers for ICE reconnection
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -67,11 +68,28 @@ export function useWebRTC(handlers: WebRTCHandlers) {
 
   const cleanup = useCallback(() => {
     clearReconnectTimers()
+    pendingIceCandidatesRef.current = []
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
     localStreamRef.current = null
     pcRef.current?.close()
     pcRef.current = null
   }, [clearReconnectTimers])
+
+  const flushPendingIceCandidates = useCallback(async () => {
+    const pc = pcRef.current
+    if (!pc?.remoteDescription || pendingIceCandidatesRef.current.length === 0) return
+
+    const queued = [...pendingIceCandidatesRef.current]
+    pendingIceCandidatesRef.current = []
+
+    for (const candidateInit of queued) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidateInit))
+      } catch {
+        // Ignore stale or duplicate candidates that can appear during reconnects.
+      }
+    }
+  }, [])
 
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
@@ -179,11 +197,12 @@ export function useWebRTC(handlers: WebRTCHandlers) {
 
     const offer: RTCSessionDescriptionInit = JSON.parse(offerSdpJson)
     await pc.setRemoteDescription(new RTCSessionDescription(offer))
+    await flushPendingIceCandidates()
 
     const answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     return JSON.stringify(answer)
-  }, [cleanup, createPeerConnection])
+  }, [cleanup, createPeerConnection, flushPendingIceCandidates])
 
   /**
    * Caller: receive the callee's answer SDP.
@@ -193,7 +212,8 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     if (!pc) return
     const answer: RTCSessionDescriptionInit = JSON.parse(answerSdpJson)
     await pc.setRemoteDescription(new RTCSessionDescription(answer))
-  }, [])
+    await flushPendingIceCandidates()
+  }, [flushPendingIceCandidates])
 
   /**
    * Add a remote ICE candidate received from the signaling channel.
@@ -210,15 +230,21 @@ export function useWebRTC(handlers: WebRTCHandlers) {
         if (pc.signalingState === 'have-local-offer') {
           await pc.setRemoteDescription(new RTCSessionDescription(parsed))
           clearReconnectTimers()
+          await flushPendingIceCandidates()
         }
       } else {
+        if (!pc.remoteDescription) {
+          pendingIceCandidatesRef.current.push(parsed as RTCIceCandidateInit)
+          return
+        }
+
         const candidate = new RTCIceCandidate(parsed)
         await pc.addIceCandidate(candidate)
       }
     } catch {
       // Benign: candidate may arrive before remote description is set
     }
-  }, [clearReconnectTimers])
+  }, [clearReconnectTimers, flushPendingIceCandidates])
 
   return {
     localStream: localStreamRef,
