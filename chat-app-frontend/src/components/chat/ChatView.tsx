@@ -255,24 +255,24 @@ export default function ChatView({
             )}
           </div>
         ) : (
-          <div className="px-4 py-2.5 bg-[#075e54] flex items-center justify-between shadow-md z-10">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="px-3 md:px-4 py-2.5 bg-[#075e54] flex items-center justify-between shadow-md z-10">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="md:hidden p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                  className="md:hidden p-1 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
                   aria-label="Back to sidebar"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
               )}
-              <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-base">#</span>
+              <div className="w-8 h-8 md:w-9 md:h-9 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-sm md:text-base">#</span>
               </div>
               <div className="min-w-0">
-                <h2 className="font-semibold text-white truncate text-[15px]">{room.name}</h2>
+                <h2 className="font-semibold text-white truncate text-sm md:text-[15px]">{room.name}</h2>
                 {room.description ? (
                   <p className="text-xs text-white/60 truncate">{room.description}</p>
                 ) : (
@@ -280,50 +280,50 @@ export default function ChatView({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-0 md:gap-1 flex-shrink-0">
               <button
                 onClick={() => setShowSearch(!showSearch)}
-                className={`p-2 rounded-full transition-colors ${showSearch ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                className={`p-1.5 md:p-2 rounded-full transition-colors ${showSearch ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
                 aria-label="Search messages"
                 data-testid="search-toggle-btn"
                 title="Search messages"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
               <button
                 onClick={() => setShowMembers(!showMembers)}
-                className={`p-2 rounded-full transition-colors ${showMembers ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                className={`p-1.5 md:p-2 rounded-full transition-colors ${showMembers ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
                 aria-label="Toggle members panel"
                 data-testid="members-toggle-btn"
                 title="Members"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
               {isAdmin && onOpenSettings && (
                 <button
                   onClick={onOpenSettings}
-                  className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                  className="p-1.5 md:p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors"
                   title="Room settings"
                   data-testid="room-settings-btn"
                   aria-label="Room settings"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 016 0z" />
                   </svg>
                 </button>
               )}
               {onLeave && (
                 <button
                   onClick={onLeave}
-                  className="p-2 text-white/70 hover:text-red-300 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-1.5 md:p-2 text-white/70 hover:text-red-300 hover:bg-white/10 rounded-full transition-colors"
                   title="Leave room"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                 </button>

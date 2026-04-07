@@ -296,12 +296,21 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     })
   }, [])
 
+  /** Mark a DM message as read — triggers blue ticks on the sender's side. */
+  const markDMRead = useCallback((conversationId: string, messageId: string) => {
+    clientRef.current?.publish({
+      destination: `/app/dm.read/${conversationId}`,
+      body: JSON.stringify({ messageId }),
+    })
+  }, [])
+
   return {
     subscribeToRoom, sendMessage, sendTyping, markRead, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd, sendCallCancel,
     subscribeToThread, sendThreadReply,
+    markDMRead,
     isConnected, connected,
   }
 }

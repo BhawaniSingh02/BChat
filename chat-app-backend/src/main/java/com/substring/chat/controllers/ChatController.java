@@ -362,6 +362,34 @@ public class ChatController {
         });
     }
 
+    /**
+     * DM read receipt: client sends to /app/dm.read/{conversationId}
+     * with payload {"messageId": "..."}
+     * Marks the message as read by the sender and pushes the updated message
+     * to all participants via /user/queue/messages so the sender's ticks turn blue.
+     */
+    @MessageMapping("/dm.read/{conversationId}")
+    public void markDMRead(@DestinationVariable String conversationId,
+                           @Payload ReadReceiptRequest request,
+                           Principal principal) {
+        conversationRepository.findById(conversationId).ifPresent(conv -> {
+            if (!conv.getParticipants().contains(principal.getName())) return;
+            messageRepository.findById(request.getMessageId()).ifPresent(message -> {
+                if (!(DM_PREFIX + conversationId).equals(message.getRoomId())) return;
+                String reader = principal.getName();
+                if (!message.getReadBy().contains(reader)) {
+                    message.getReadBy().add(reader);
+                }
+                message.getReadAt().put(reader, Instant.now());
+                messageRepository.save(message);
+                MessageResponse response = MessageResponse.from(message);
+                for (String participant : conv.getParticipants()) {
+                    messagingTemplate.convertAndSendToUser(participant, "/queue/messages", response);
+                }
+            });
+        });
+    }
+
     private Message buildSystemMessage(String roomId, String content) {
         Message msg = new Message();
         msg.setRoomId(roomId);
