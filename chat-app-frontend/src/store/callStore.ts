@@ -30,6 +30,8 @@ interface CallStore {
   endCall: () => void
   /** Called when callee is already on another call */
   callBusy: (reason: string) => void
+  /** Called when CALL_SESSION_CREATED ack arrives — sets the sessionId for the outgoing caller */
+  setCallSessionId: (id: string) => void
 
   fetchCallHistory: (conversationId: string) => Promise<void>
 }
@@ -55,13 +57,17 @@ export const useCallStore = create<CallStore>((set) => ({
     }),
 
   receiveIncomingCall: (event) =>
-    set({
-      callState: 'ringing_incoming',
-      callSessionId: event.callSessionId,
-      conversationId: event.conversationId,
-      otherUsername: event.fromUsername,
-      callType: event.callType,
-      pendingSdp: event.payload ?? null,
+    set((prev) => {
+      // If already in any call, reject the incoming event to avoid cross-conversation corruption
+      if (prev.callState !== 'idle') return prev
+      return {
+        callState: 'ringing_incoming',
+        callSessionId: event.callSessionId,
+        conversationId: event.conversationId,
+        otherUsername: event.fromUsername,
+        callType: event.callType,
+        pendingSdp: event.payload ?? null,
+      }
     }),
 
   callAnswered: (event) =>
@@ -90,6 +96,9 @@ export const useCallStore = create<CallStore>((set) => ({
       callSessionId: null,
       pendingSdp: null,
     })),
+
+  setCallSessionId: (id) =>
+    set({ callSessionId: id }),
 
   fetchCallHistory: async (conversationId) => {
     try {

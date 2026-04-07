@@ -56,7 +56,8 @@ export default function DMChatView({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
 
-  const isMuted = !!conversation.mutedBy?.[currentUsername]
+  const muteUntil = conversation.mutedBy?.[currentUsername]
+  const isMuted = !!muteUntil && new Date(muteUntil).getTime() > Date.now()
 
   useEffect(() => {
     fetchMessages(conversation.id)

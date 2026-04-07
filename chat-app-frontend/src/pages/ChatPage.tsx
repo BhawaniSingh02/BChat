@@ -44,7 +44,7 @@ export default function ChatPage() {
     callState, callSessionId, conversationId: callConvId, otherUsername: callOtherUser,
     callType, pendingSdp, busyReason, callHistory,
     startOutgoingCall, receiveIncomingCall, callAnswered, endCall: endCallInStore,
-    callBusy, fetchCallHistory,
+    callBusy, setCallSessionId, fetchCallHistory,
   } = useCallStore()
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
@@ -120,6 +120,11 @@ export default function ChatPage() {
   // ── Incoming call events ──────────────────────────────────────────────────
   const handleCallEvent = useCallback(async (event: CallEvent) => {
     switch (event.eventType) {
+      case 'CALL_SESSION_CREATED':
+        // Ack from server: we now have the sessionId for the outgoing call
+        setCallSessionId(event.callSessionId)
+        break
+
       case 'INCOMING_CALL':
         receiveIncomingCall(event)
         break
@@ -150,7 +155,7 @@ export default function ChatPage() {
         setTimeout(() => endCallInStore(), 4000)
         break
     }
-  }, [receiveIncomingCall, callAnswered, setRemoteAnswer, addIceCandidate, cleanupWebRTC, endCallInStore, callBusy])
+  }, [setCallSessionId, receiveIncomingCall, callAnswered, setRemoteAnswer, addIceCandidate, cleanupWebRTC, endCallInStore, callBusy])
 
 
 
@@ -158,8 +163,8 @@ export default function ChatPage() {
     subscribeToRoom, sendMessage, sendTyping, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
-    sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd,
-   sendThreadReply,
+    sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd, sendCallCancel,
+    sendThreadReply,
     connected,
   } = useWebSocket(token, handleCallEvent)
 
@@ -323,13 +328,20 @@ export default function ChatPage() {
   }, [callSessionId, callConvId, sendCallEnd, cleanupWebRTC, endCallInStore])
 
   const handleHangUp = useCallback(() => {
-    if (callSessionId && callConvId) sendCallEnd(callConvId, callSessionId)
+    if (callConvId) {
+      if (callSessionId) {
+        sendCallEnd(callConvId, callSessionId)
+      } else {
+        // Session ID not yet received (caller cancelled before CALL_SESSION_CREATED ack arrived)
+        sendCallCancel(callConvId)
+      }
+    }
     cleanupWebRTC()
     setRemoteStream(null)
     endCallInStore()
     // Refresh call history for this conversation
     if (callConvId) fetchCallHistory(callConvId)
-  }, [callSessionId, callConvId, sendCallEnd, cleanupWebRTC, endCallInStore, fetchCallHistory])
+  }, [callSessionId, callConvId, sendCallEnd, sendCallCancel, cleanupWebRTC, endCallInStore, fetchCallHistory])
 
   const showRoom = activeRoom && user && !activeDMId
   const showDM = activeConversation && user && activeDMId
@@ -338,6 +350,14 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen w-full bg-gray-100">
+      {/* WebSocket connecting indicator — fixed overlay so it never displaces content */}
+      {!connected && !apiError && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 text-xs text-amber-700">
+          <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse flex-shrink-0" />
+          Connecting to server…
+        </div>
+      )}
+
       {/* Sidebar: always visible on md+, shown/hidden on mobile */}
       <div className={`
         ${mobileSidebarOpen ? 'flex' : 'hidden'}
@@ -382,13 +402,6 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* WebSocket connecting indicator */}
-        {!connected && !apiError && (
-          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 text-xs text-amber-700">
-            <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse flex-shrink-0" />
-            Connecting to server…
-          </div>
-        )}
 
         <div className="flex flex-1 flex-col min-w-0 w-full">
         {showRoom ? (

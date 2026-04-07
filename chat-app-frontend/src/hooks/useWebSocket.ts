@@ -267,6 +267,14 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     })
   }, [])
 
+  /** Cancel a ringing call by conversationId only — used when sessionId is not yet known. */
+  const sendCallCancel = useCallback((conversationId: string) => {
+    clientRef.current?.publish({
+      destination: `/app/call.cancel/${conversationId}`,
+      body: JSON.stringify({}),
+    })
+  }, [])
+
   // ── Phase 27: Thread replies ─────────────────────────────────────────────
 
   /** Subscribe to live thread reply updates for a root message. */
@@ -292,7 +300,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     subscribeToRoom, sendMessage, sendTyping, markRead, sendDM,
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
-    sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd,
+    sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd, sendCallCancel,
     subscribeToThread, sendThreadReply,
     isConnected, connected,
   }

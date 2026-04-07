@@ -99,7 +99,7 @@ export default function ActiveCallView({
       ref={containerRef}
       className={`z-50 rounded-2xl overflow-hidden shadow-2xl bg-gray-900 text-white ${
         isFullScreen
-          ? 'fixed inset-0 rounded-none'
+          ? 'fixed inset-0 rounded-none flex flex-col'
           : 'fixed bottom-6 right-6'
       }`}
       style={isFullScreen ? undefined : { width: callType === 'VIDEO' ? 340 : 280, minHeight: callType === 'VIDEO' ? 260 : 160 }}
@@ -109,7 +109,7 @@ export default function ActiveCallView({
     >
       {callType === 'VIDEO' ? (
         /* Video layout */
-        <div className="relative w-full h-48 bg-gray-800">
+        <div className={`relative w-full bg-gray-800 ${isFullScreen ? 'flex-1 h-0' : 'h-48'}`}>
           {/* Remote video fills the box */}
           <video
             ref={remoteVideoRef}

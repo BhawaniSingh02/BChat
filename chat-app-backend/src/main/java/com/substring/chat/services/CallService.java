@@ -41,12 +41,12 @@ public class CallService {
                 .findFirst()
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
-        // Reject if there's already an active/ringing call
-        callSessionRepository.findByConversationIdAndStatusIn(
-                conversationId, List.of(CallSession.CallStatus.RINGING, CallSession.CallStatus.ACTIVE))
-                .ifPresent(existing -> {
-                    throw new IllegalStateException("A call is already in progress for conversation " + conversationId);
-                });
+        // Reject if either participant is already in any active or ringing call (across all conversations)
+        List<CallSession.CallStatus> activeStatuses = List.of(CallSession.CallStatus.RINGING, CallSession.CallStatus.ACTIVE);
+        callSessionRepository.findActiveCallByParticipant(callerUsername, activeStatuses)
+                .ifPresent(s -> { throw new IllegalStateException("You are already in an active call"); });
+        callSessionRepository.findActiveCallByParticipant(calleeUsername, activeStatuses)
+                .ifPresent(s -> { throw new IllegalStateException(calleeUsername + " is already in an active call"); });
 
         CallSession session = new CallSession();
         session.setConversationId(conversationId);
@@ -80,6 +80,10 @@ public class CallService {
                 .orElseThrow(() -> new IllegalArgumentException("Call session not found: " + callSessionId));
 
         validateParticipant(session, calleeUsername, conversationId);
+
+        if (session.getStatus() != CallSession.CallStatus.RINGING) {
+            throw new IllegalStateException("Call session " + callSessionId + " is no longer ringing");
+        }
 
         session.setStatus(CallSession.CallStatus.ACTIVE);
         session.setAnsweredAt(Instant.now());
@@ -177,6 +181,32 @@ public class CallService {
         return saved;
     }
 
+    /**
+     * Caller cancels a ringing call using only the conversationId (before they have a session ID).
+     * Safe to call even if the session no longer exists or is no longer RINGING.
+     */
+    public void cancelCallByConversation(String conversationId, String callerUsername) {
+        callSessionRepository.findByConversationIdAndStatusIn(
+                conversationId, List.of(CallSession.CallStatus.RINGING))
+                .ifPresent(session -> {
+                    if (!session.getCallerId().equals(callerUsername)) return; // not the caller, ignore
+                    session.setStatus(CallSession.CallStatus.MISSED);
+                    session.setEndedAt(Instant.now());
+                    callSessionRepository.save(session);
+                    postMissedCallMessage(session, conversationId);
+
+                    CallEvent event = CallEvent.builder()
+                            .eventType(CallEvent.EventType.CALL_ENDED.name())
+                            .callSessionId(session.getId())
+                            .conversationId(conversationId)
+                            .fromUsername(callerUsername)
+                            .callType(session.getCallType().name())
+                            .payload(null)
+                            .build();
+                    messagingTemplate.convertAndSendToUser(session.getCalleeId(), "/queue/call", event);
+                });
+    }
+
     // ── Call history ─────────────────────────────────────────────────────────
 
     public List<CallSessionResponse> getCallHistory(String conversationId, String requestingUser) {
@@ -210,6 +240,9 @@ public class CallService {
         msg.setContent(icon + " Missed " + session.getCallType().name().toLowerCase() + " call");
         msg.setMessageType(Message.MessageType.TEXT);
         msg.setTimestamp(Instant.now());
-        messageRepository.save(msg);
+        Message saved = messageRepository.save(msg);
+        // Push to both participants so their DM panels update in real-time
+        messagingTemplate.convertAndSendToUser(session.getCallerId(), "/queue/messages", saved);
+        messagingTemplate.convertAndSendToUser(session.getCalleeId(), "/queue/messages", saved);
     }
 }

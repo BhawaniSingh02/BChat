@@ -30,6 +30,9 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animFrameRef = useRef<number>(0)
   const streamRef = useRef<MediaStream | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  // Stable ref so the timer interval can invoke stopAndUpload without a stale closure
+  const stopAndUploadRef = useRef<() => void>(() => {})
 
   const stopTimerAndAnimation = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
@@ -44,6 +47,7 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
 
       // Set up analyser for waveform visualisation
       const audioCtx = new AudioContext()
+      audioCtxRef.current = audioCtx
       const source = audioCtx.createMediaStreamSource(stream)
       const analyser = audioCtx.createAnalyser()
       analyser.fftSize = 64
@@ -74,8 +78,8 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
         const secs = Math.floor((Date.now() - startTimeRef.current) / 1000)
         setElapsed(secs)
         if (secs >= MAX_DURATION_SECONDS) {
-          // Auto-stop at max duration
-          recorder.stop()
+          // Auto-stop at max duration — call stopAndUpload so onstop is set before stop()
+          stopAndUploadRef.current()
         }
       }, 500)
 
@@ -104,6 +108,7 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
     stopTimerAndAnimation()
 
     recorder.onstop = async () => {
+      audioCtxRef.current?.close(); audioCtxRef.current = null
       streamRef.current?.getTracks().forEach((t) => t.stop())
       const blob = new Blob(chunksRef.current, { type: chunksRef.current[0]?.type ?? 'audio/webm' })
 
@@ -132,16 +137,23 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
       recorder.onstop = null
       recorder.stop()
     }
+    audioCtxRef.current?.close(); audioCtxRef.current = null
     streamRef.current?.getTracks().forEach((t) => t.stop())
     stopTimerAndAnimation()
     onCancel()
   }, [onCancel, stopTimerAndAnimation])
+
+  // Keep stopAndUploadRef current so the timer's auto-stop path always uses the latest closure
+  useEffect(() => {
+    stopAndUploadRef.current = stopAndUpload
+  }, [stopAndUpload])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopTimerAndAnimation()
       streamRef.current?.getTracks().forEach((t) => t.stop())
+      audioCtxRef.current?.close(); audioCtxRef.current = null
     }
   }, [stopTimerAndAnimation])
 

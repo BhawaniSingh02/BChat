@@ -81,7 +81,7 @@ public class FileUploadController {
         if (file.getSize() > maxSize) {
             long limitMb = maxSize / (1024 * 1024);
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                    .body(Map.of("error", String.format("File exceeds the %d MB limit for %s.", limitMb, isVideo ? "videos" : "images and documents")));
+                    .body(Map.of("error", String.format("File exceeds the %d MB limit for %s.", limitMb, isVideo ? "videos" : isAudio ? "audio files" : "images and documents")));
         }
 
         // 3. Per-user upload rate limit (10 uploads/minute)

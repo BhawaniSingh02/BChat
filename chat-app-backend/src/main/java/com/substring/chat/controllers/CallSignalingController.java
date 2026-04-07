@@ -13,7 +13,6 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,7 +34,6 @@ import java.util.List;
  *
  * <p>All events are forwarded to {@code /user/queue/call} for the target user.</p>
  */
-@Controller
 @RestController
 @RequestMapping("/api/v1/calls")
 @RequiredArgsConstructor
@@ -52,20 +50,28 @@ public class CallSignalingController {
             @DestinationVariable String conversationId,
             @Payload CallSignalRequest request,
             Principal principal) {
+        String resolvedCallType = request.getCallType() != null ? request.getCallType() : "AUDIO";
         try {
-            callService.initiateCall(
-                    conversationId,
-                    principal.getName(),
-                    request.getCallType() != null ? request.getCallType() : "AUDIO",
-                    request.getPayload());
+            CallSession session = callService.initiateCall(
+                    conversationId, principal.getName(), resolvedCallType, request.getPayload());
+
+            // Ack to caller: provide the callSessionId so they can cancel and relay ICE candidates
+            CallEvent ackEvent = CallEvent.builder()
+                    .eventType(CallEvent.EventType.CALL_SESSION_CREATED.name())
+                    .callSessionId(session.getId())
+                    .conversationId(conversationId)
+                    .fromUsername(principal.getName())
+                    .callType(resolvedCallType)
+                    .build();
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/call", ackEvent);
         } catch (IllegalStateException e) {
-            // Callee is already on another call — notify the caller with BUSY signal
+            // Either participant is already in a call — notify caller with BUSY signal
             CallEvent busyEvent = CallEvent.builder()
                     .eventType(CallEvent.EventType.CALL_BUSY.name())
                     .conversationId(conversationId)
                     .fromUsername(principal.getName())
-                    .callType(request.getCallType() != null ? request.getCallType() : "AUDIO")
-                    .payload("On another call")
+                    .callType(resolvedCallType)
+                    .payload(e.getMessage())
                     .build();
             messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/call", busyEvent);
         }
@@ -98,6 +104,17 @@ public class CallSignalingController {
             @DestinationVariable String callSessionId,
             Principal principal) {
         callService.endCall(conversationId, callSessionId, principal.getName());
+    }
+
+    /**
+     * Caller cancels a ringing call before they have received the callSessionId ack.
+     * Looks up the active RINGING session for the conversation and cancels it.
+     */
+    @MessageMapping("/call.cancel/{conversationId}")
+    public void handleCancel(
+            @DestinationVariable String conversationId,
+            Principal principal) {
+        callService.cancelCallByConversation(conversationId, principal.getName());
     }
 
     // ── REST endpoints ────────────────────────────────────────────────────────

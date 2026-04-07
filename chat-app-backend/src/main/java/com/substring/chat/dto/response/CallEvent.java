@@ -20,6 +20,8 @@ public class CallEvent {
     public enum EventType {
         /** Caller is initiating — callee sees incoming call overlay. */
         INCOMING_CALL,
+        /** Ack sent back to the caller with the newly created callSessionId. */
+        CALL_SESSION_CREATED,
         /** Callee accepted the call — establishes peer connection. */
         CALL_ANSWERED,
         /** ICE candidate exchange during negotiation. */
