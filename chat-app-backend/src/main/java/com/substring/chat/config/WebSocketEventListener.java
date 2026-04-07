@@ -2,6 +2,7 @@ package com.substring.chat.config;
 
 import com.substring.chat.dto.response.PresenceEvent;
 import com.substring.chat.repositories.UserRepository;
+import com.substring.chat.services.CallService;
 import com.substring.chat.services.PresenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.time.Instant;
 public class WebSocketEventListener {
 
     private final PresenceService presenceService;
+    private final CallService callService;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
 
@@ -51,6 +53,7 @@ public class WebSocketEventListener {
 
         String username = principal.getName();
         presenceService.setOffline(username);
+        callService.expireSessionsForDisconnectedUser(username);
         log.debug("User disconnected: {}", username);
 
         boolean broadcastable = userRepository.findByUsername(username).map(user -> {

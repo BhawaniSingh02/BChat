@@ -39,6 +39,7 @@ class CallServiceTest {
     @Mock private DirectConversationRepository conversationRepository;
     @Mock private MessageRepository messageRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
+    @Mock private PresenceService presenceService;
 
     @InjectMocks
     private CallService callService;
@@ -70,7 +71,8 @@ class CallServiceTest {
     @Test
     void initiateCall_createsRingingSessionAndNotifiesCallee() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-        when(callSessionRepository.findByConversationIdAndStatusIn(anyString(), any())).thenReturn(Optional.empty());
+        when(presenceService.isOnline(anyString())).thenReturn(true);
+        when(callSessionRepository.findActiveCallByParticipant(anyString(), any())).thenReturn(Optional.empty());
         when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> {
             CallSession s = inv.getArgument(0);
             s.setId("session-1");
@@ -94,7 +96,8 @@ class CallServiceTest {
     @Test
     void initiateCall_video_createsVideoSession() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-        when(callSessionRepository.findByConversationIdAndStatusIn(anyString(), any())).thenReturn(Optional.empty());
+        when(presenceService.isOnline(anyString())).thenReturn(true);
+        when(callSessionRepository.findActiveCallByParticipant(anyString(), any())).thenReturn(Optional.empty());
         when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> {
             CallSession s = inv.getArgument(0);
             s.setId("session-2");
@@ -118,12 +121,13 @@ class CallServiceTest {
     @Test
     void initiateCall_throwsWhenCallAlreadyInProgress() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-        when(callSessionRepository.findByConversationIdAndStatusIn(anyString(), any()))
+        when(presenceService.isOnline(anyString())).thenReturn(true);
+        when(callSessionRepository.findActiveCallByParticipant(anyString(), any()))
                 .thenReturn(Optional.of(ringingSession));
 
         assertThatThrownBy(() -> callService.initiateCall("conv-1", "alice", "AUDIO", null))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("already in progress");
+                .hasMessageContaining("active call");
     }
 
     // ── answerCall ────────────────────────────────────────────────────────────
@@ -249,16 +253,17 @@ class CallServiceTest {
     @Test
     void initiateCall_throwsIllegalStateWhenCallAlreadyActive() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
+        when(presenceService.isOnline(anyString())).thenReturn(true);
         // Simulate an ACTIVE session already in progress
         CallSession activeSession = new CallSession();
         activeSession.setId("active-session");
         activeSession.setStatus(CallSession.CallStatus.ACTIVE);
-        when(callSessionRepository.findByConversationIdAndStatusIn(anyString(), any()))
+        when(callSessionRepository.findActiveCallByParticipant(anyString(), any()))
                 .thenReturn(Optional.of(activeSession));
 
         assertThatThrownBy(() -> callService.initiateCall("conv-1", "alice", "AUDIO", null))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("already in progress");
+                .hasMessageContaining("active call");
         // No new session saved, no notification sent to callee
         verify(callSessionRepository, never()).save(any(CallSession.class));
         verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());

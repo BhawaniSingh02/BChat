@@ -24,6 +24,7 @@ public class CallService {
     private final DirectConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PresenceService presenceService;
 
     // ── Signaling ────────────────────────────────────────────────────────────
 
@@ -40,6 +41,9 @@ public class CallService {
                 .filter(p -> !p.equals(callerUsername))
                 .findFirst()
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+
+        expireOfflineSessionsForParticipant(callerUsername);
+        expireOfflineSessionsForParticipant(calleeUsername);
 
         // Reject if either participant is already in any active or ringing call (across all conversations)
         List<CallSession.CallStatus> activeStatuses = List.of(CallSession.CallStatus.RINGING, CallSession.CallStatus.ACTIVE);
@@ -69,6 +73,48 @@ public class CallService {
         messagingTemplate.convertAndSendToUser(calleeUsername, "/queue/call", event);
 
         return saved;
+    }
+
+    /**
+     * App-level calls cannot remain valid after a user disconnects from this app.
+     * Clearing them immediately prevents false "on another call" busy signals later.
+     */
+    public void expireSessionsForDisconnectedUser(String username) {
+        List<CallSession.CallStatus> activeStatuses = List.of(CallSession.CallStatus.RINGING, CallSession.CallStatus.ACTIVE);
+        List<CallSession> sessions = callSessionRepository.findAllActiveCallsByParticipant(username, activeStatuses);
+
+        for (CallSession session : sessions) {
+            Instant now = Instant.now();
+            boolean callerDisconnected = session.getCallerId().equals(username);
+            boolean wasRinging = session.getStatus() == CallSession.CallStatus.RINGING;
+
+            session.setEndedAt(now);
+            if (wasRinging && callerDisconnected) {
+                session.setStatus(CallSession.CallStatus.MISSED);
+                postMissedCallMessage(session, session.getConversationId());
+            } else if (wasRinging) {
+                session.setStatus(CallSession.CallStatus.REJECTED);
+            } else {
+                session.setStatus(CallSession.CallStatus.ENDED);
+                if (session.getAnsweredAt() != null) {
+                    long secs = now.getEpochSecond() - session.getAnsweredAt().getEpochSecond();
+                    session.setDurationSeconds((int) Math.max(0, secs));
+                }
+            }
+
+            callSessionRepository.save(session);
+
+            CallEvent event = CallEvent.builder()
+                    .eventType(CallEvent.EventType.CALL_ENDED.name())
+                    .callSessionId(session.getId())
+                    .conversationId(session.getConversationId())
+                    .fromUsername(username)
+                    .callType(session.getCallType().name())
+                    .payload(null)
+                    .build();
+            messagingTemplate.convertAndSendToUser(session.getCallerId(), "/queue/call", event);
+            messagingTemplate.convertAndSendToUser(session.getCalleeId(), "/queue/call", event);
+        }
     }
 
     /**
@@ -229,6 +275,11 @@ public class CallService {
         if (!session.getConversationId().equals(conversationId)) {
             throw new ConversationNotFoundException(conversationId);
         }
+    }
+
+    private void expireOfflineSessionsForParticipant(String username) {
+        if (presenceService.isOnline(username)) return;
+        expireSessionsForDisconnectedUser(username);
     }
 
     private void postMissedCallMessage(CallSession session, String conversationId) {

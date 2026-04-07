@@ -143,12 +143,13 @@ interface MessageBubbleProps {
 function ReadTicks({ readBy, sender, isMine }: { readBy: string[]; sender: string; isMine: boolean }) {
   if (!isMine) return null
   const readByOthers = readBy.filter((u) => u !== sender).length > 0
-  const color = readByOthers ? '#53bdeb' : '#8696a0'
+  const color = readByOthers ? '#0b63ce' : '#8696a0'
   return (
     <svg
-      width="16" height="11" viewBox="0 0 16 11"
-      className="ml-0.5 inline-block flex-shrink-0"
+      width="18" height="12" viewBox="0 0 16 11"
+      className="ml-0.5 inline-block flex-shrink-0 transition-colors duration-150"
       aria-label={readByOthers ? 'Read' : 'Delivered'}
+      title={readByOthers ? 'Read' : 'Delivered'}
     >
       <path d="M11.071.653 4.241 7.384 1.361 4.38.293 5.487l3.948 4.11 7.9-7.84z" fill={color} />
       <path d="M15.707.653 8.877 7.384 7.4 5.863 6.33 6.97l2.547 2.628 7.9-7.84z" fill={color} />

@@ -45,13 +45,19 @@ class CallSignalingControllerTest {
         request.setCallType("AUDIO");
         request.setPayload("{\"sdp\":\"offer\"}");
 
+        CallSession session = new CallSession();
+        session.setId("sess-1");
+        session.setCallType(CallSession.CallType.AUDIO);
         when(callService.initiateCall(anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(new CallSession());
+                .thenReturn(session);
 
         controller.handleOffer("conv-1", request, principal("alice"));
 
+        ArgumentCaptor<CallEvent> eventCaptor = ArgumentCaptor.forClass(CallEvent.class);
         verify(callService).initiateCall("conv-1", "alice", "AUDIO", "{\"sdp\":\"offer\"}");
-        verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/call"), eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getEventType()).isEqualTo(CallEvent.EventType.CALL_SESSION_CREATED.name());
+        assertThat(eventCaptor.getValue().getCallSessionId()).isEqualTo("sess-1");
     }
 
     @Test
