@@ -164,7 +164,7 @@ export default function ChatPage() {
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd, sendCallCancel,
-    sendThreadReply,
+    sendThreadReply, markDMRead,
     connected,
   } = useWebSocket(token, handleCallEvent)
 
@@ -428,6 +428,7 @@ export default function ChatPage() {
             conversation={activeConversation}
             currentUsername={user.username}
             onSend={handleSendDM}
+            onMarkRead={(messageId) => markDMRead(activeConversation.id, messageId)}
             onViewProfile={setViewingUser}
             onEditMessage={handleDMEditMessage}
             onDeleteMessage={handleDMDeleteMessage}

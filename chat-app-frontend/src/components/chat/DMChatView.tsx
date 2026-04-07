@@ -15,6 +15,7 @@ interface DMChatViewProps {
   conversation: DirectConversation
   currentUsername: string
   onSend: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null) => void
+  onMarkRead?: (messageId: string) => void
   onViewProfile?: (username: string) => void
   onEditMessage?: (messageId: string, newContent: string) => void
   onDeleteMessage?: (messageId: string) => void
@@ -31,7 +32,7 @@ interface DMChatViewProps {
 }
 
 export default function DMChatView({
-  conversation, currentUsername, onSend, onViewProfile,
+  conversation, currentUsername, onSend, onMarkRead, onViewProfile,
   onEditMessage, onDeleteMessage, onReactMessage, onBack, onConversationUpdated,
   onAudioCall, onVideoCall, onViewCallHistory, onCallBack, onOpenThread,
 }: DMChatViewProps) {
@@ -69,6 +70,17 @@ export default function DMChatView({
       })
       .catch(() => {})
   }, [conversation.id, otherUser])
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+
+    messages
+      .filter((message) =>
+        message.sender !== currentUsername &&
+        !(message.readBy ?? []).includes(currentUsername),
+      )
+      .forEach((message) => onMarkRead?.(message.id))
+  }, [messages, currentUsername, onMarkRead])
 
   // Auto-exit selection when nothing selected
   useEffect(() => {
