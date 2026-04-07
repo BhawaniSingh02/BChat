@@ -1,4 +1,5 @@
 import { memo, useState, useRef, useEffect } from 'react'
+import type { ReactNode } from 'react'
 import type { Message } from '../../types'
 import { formatTime } from '../../utils/date'
 
@@ -149,7 +150,6 @@ function ReadTicks({ readBy, sender, isMine }: { readBy: string[]; sender: strin
       width="18" height="12" viewBox="0 0 16 11"
       className="ml-0.5 inline-block flex-shrink-0 transition-colors duration-150"
       aria-label={readByOthers ? 'Read' : 'Delivered'}
-      title={readByOthers ? 'Read' : 'Delivered'}
     >
       <path d="M11.071.653 4.241 7.384 1.361 4.38.293 5.487l3.948 4.11 7.9-7.84z" fill={color} />
       <path d="M15.707.653 8.877 7.384 7.4 5.863 6.33 6.97l2.547 2.628 7.9-7.84z" fill={color} />
@@ -199,7 +199,7 @@ function MessageMeta({
 function MenuItem({
   icon, label, onClick, danger = false, testId,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   onClick: () => void
   danger?: boolean
@@ -228,8 +228,7 @@ function MessageBubble({
   isEditing = false, onCallBack,
 }: MessageBubbleProps) {
   const [hovered, setHovered] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editContent, setEditContent] = useState(message.content)
+  const [dismissedEditing, setDismissedEditing] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [dropdownDir, setDropdownDir] = useState<'down' | 'up'>('down')
@@ -246,14 +245,14 @@ function MessageBubble({
   const myReaction = currentUsername
     ? Object.entries(message.reactions ?? {}).find(([, users]) => (users as string[]).includes(currentUsername))?.[0]
     : undefined
+  const editing = isEditing && !dismissedEditing
 
-  // Sync isEditing prop → local editing state
   useEffect(() => {
-    if (isEditing && !editing) {
-      setEditContent(message.content)
-      setEditing(true)
+    if (!isEditing && dismissedEditing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDismissedEditing(false)
     }
-  }, [isEditing])
+  }, [isEditing, dismissedEditing])
 
   useEffect(() => {
     if (editing) {
@@ -313,14 +312,17 @@ function MessageBubble({
   }
 
   const handleEditSave = () => {
-    const trimmed = editContent.trim()
+    const trimmed = textareaRef.current?.value.trim() ?? ''
     if (trimmed && trimmed !== message.content) onEdit?.(message.id, trimmed)
-    setEditing(false)
+    setDismissedEditing(true)
   }
 
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
-    else if (e.key === 'Escape') { setEditContent(message.content); setEditing(false) }
+    else if (e.key === 'Escape') {
+      if (textareaRef.current) textareaRef.current.value = message.content
+      setDismissedEditing(true)
+    }
   }
 
   const handleReact = (emoji: string) => {
@@ -460,8 +462,7 @@ function MessageBubble({
                   <>
                     <textarea
                       ref={textareaRef}
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
+                      defaultValue={message.content}
                       onKeyDown={handleEditKeyDown}
                       onBlur={handleEditSave}
                       className="w-full bg-transparent text-sm resize-none focus:outline-none border-b border-gray-400/50 pb-1 min-w-[160px]"
