@@ -40,14 +40,23 @@ export default function ActiveCallView({
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream
+      localVideoRef.current.play().catch(() => {})
     }
   }, [localStream])
 
   useEffect(() => {
     if (!remoteStream) { setRemoteHasVideo(false); return }
 
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
-    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream
+      // Explicit play() call — autoPlay alone can be blocked by browser policy
+      // when srcObject is set outside a user-gesture boundary (e.g. in useEffect).
+      remoteVideoRef.current.play().catch(() => {})
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = remoteStream
+      remoteAudioRef.current.play().catch(() => {})
+    }
 
     // Check initial track state and listen for new tracks arriving after mount
     setRemoteHasVideo(remoteStream.getVideoTracks().length > 0)
