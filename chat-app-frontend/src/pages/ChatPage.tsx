@@ -95,19 +95,35 @@ export default function ChatPage() {
     }
   }, [callState, callOtherUser])
 
+  // ── ICE candidate buffering ───────────────────────────────────────────────
+  // callConvId and callSessionId may be null when the first ICE candidates fire
+  // (the PC is created before the CALL_SESSION_CREATED ack arrives from the server).
+  // We keep always-current refs and buffer candidates until both IDs are known.
+  const callConvIdRef = useRef<string | null>(null)
+  const callSessionIdRef = useRef<string | null>(null)
+  const iceCandidateBufferRef = useRef<string[]>([])
+  callConvIdRef.current = callConvId
+  callSessionIdRef.current = callSessionId
+
   // ── WebRTC ────────────────────────────────────────────────────────────────
   const { startCall: startWebRTCCall, answerCall: answerWebRTCCall, setRemoteAnswer, addIceCandidate, cleanup: cleanupWebRTC, localStream } = useWebRTC({
     onIceCandidate: (candidateJson) => {
-      if (callSessionId && callConvId) {
-        sendIceCandidate(callConvId, callSessionId, candidateJson)
+      const convId = callConvIdRef.current
+      const sessionId = callSessionIdRef.current
+      if (convId && sessionId) {
+        sendIceCandidate(convId, sessionId, candidateJson)
+      } else {
+        // Buffer — session ID arrives shortly via CALL_SESSION_CREATED
+        iceCandidateBufferRef.current.push(candidateJson)
       }
     },
     onRemoteStream: (stream) => setRemoteStream(stream),
     onConnectionClosed: () => handleHangUp(),
     onIceRestartOffer: (offerSdpJson) => {
-      // Relay the ICE restart offer as a special ICE candidate payload
-      if (callSessionId && callConvId) {
-        sendIceCandidate(callConvId, callSessionId, offerSdpJson)
+      const convId = callConvIdRef.current
+      const sessionId = callSessionIdRef.current
+      if (convId && sessionId) {
+        sendIceCandidate(convId, sessionId, offerSdpJson)
       }
     },
   })
@@ -167,6 +183,20 @@ export default function ChatPage() {
     sendThreadReply, markDMRead,
     connected,
   } = useWebSocket(token, handleCallEvent)
+
+  // Flush buffered ICE candidates once the session ID is confirmed
+  useEffect(() => {
+    if (!callSessionId || !callConvId) return
+    const buffer = iceCandidateBufferRef.current
+    if (!buffer.length) return
+    iceCandidateBufferRef.current = []
+    buffer.forEach((c) => sendIceCandidate(callConvId, callSessionId, c))
+  }, [callSessionId, callConvId, sendIceCandidate])
+
+  // Clear buffer when a call fully ends
+  useEffect(() => {
+    if (callState === 'idle') iceCandidateBufferRef.current = []
+  }, [callState])
 
   const [apiError, setApiError] = useState<string | null>(null)
   const [showCallHistory, setShowCallHistory] = useState(false)

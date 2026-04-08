@@ -49,6 +49,10 @@ export function useWebRTC(handlers: WebRTCHandlers) {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Always-current handlers ref — prevents stale closures in PC event callbacks
+  const handlersRef = useRef(handlers)
+  handlersRef.current = handlers
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -100,26 +104,30 @@ export function useWebRTC(handlers: WebRTCHandlers) {
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        handlers.onIceCandidate(JSON.stringify(e.candidate.toJSON()))
+        handlersRef.current.onIceCandidate(JSON.stringify(e.candidate.toJSON()))
       }
     }
 
     pc.ontrack = (e) => {
-      const inboundStream = e.streams[0] ?? remoteStreamRef.current
-      if (!inboundStream) return
-
-      if (!e.streams[0]) {
-        inboundStream.addTrack(e.track)
+      // Always funnel all tracks into our own managed stream so we hold a stable
+      // object reference across multiple ontrack fires (audio + video arrive separately).
+      const managed = remoteStreamRef.current
+      if (!managed) return
+      if (e.streams[0]) {
+        e.streams[0].getTracks().forEach((t) => {
+          if (!managed.getTrackById(t.id)) managed.addTrack(t)
+        })
+      } else {
+        if (!managed.getTrackById(e.track.id)) managed.addTrack(e.track)
       }
-
-      handlers.onRemoteStream(inboundStream)
+      handlersRef.current.onRemoteStream(managed)
     }
 
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState
       if (state === 'failed') {
         clearReconnectTimers()
-        handlers.onConnectionClosed()
+        handlersRef.current.onConnectionClosed()
       }
     }
 
@@ -128,45 +136,41 @@ export function useWebRTC(handlers: WebRTCHandlers) {
       const iceState = pc.iceConnectionState
 
       if (iceState === 'disconnected') {
-        // Give the connection a chance to self-heal (transient network blip)
         reconnectTimerRef.current = setTimeout(async () => {
           if (!pcRef.current || pcRef.current.iceConnectionState !== 'disconnected') return
           try {
-            // Attempt an ICE restart: creates a new offer with fresh ICE candidates
             const offer = await pcRef.current.createOffer({ iceRestart: true })
             await pcRef.current.setLocalDescription(offer)
-            handlers.onIceRestartOffer?.(JSON.stringify(offer))
+            handlersRef.current.onIceRestartOffer?.(JSON.stringify(offer))
 
-            // Start a timeout — if not recovered within 10s, give up
             restartTimeoutRef.current = setTimeout(() => {
               if (
                 pcRef.current &&
                 (pcRef.current.iceConnectionState === 'disconnected' ||
                   pcRef.current.iceConnectionState === 'failed')
               ) {
-                handlers.onConnectionClosed()
+                handlersRef.current.onConnectionClosed()
               }
             }, ICE_RESTART_TIMEOUT_MS)
           } catch {
-            handlers.onConnectionClosed()
+            handlersRef.current.onConnectionClosed()
           }
         }, ICE_RECONNECT_DELAY_MS)
       }
 
       if (iceState === 'connected' || iceState === 'completed') {
-        // Connection recovered — cancel any pending reconnect
         clearReconnectTimers()
       }
 
       if (iceState === 'failed') {
         clearReconnectTimers()
-        handlers.onConnectionClosed()
+        handlersRef.current.onConnectionClosed()
       }
     }
 
     pcRef.current = pc
     return pc
-  }, [handlers, clearReconnectTimers])
+  }, [clearReconnectTimers])
 
   /**
    * Caller: acquire local media, create offer, return SDP string.

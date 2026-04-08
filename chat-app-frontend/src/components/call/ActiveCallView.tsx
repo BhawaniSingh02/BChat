@@ -29,6 +29,7 @@ export default function ActiveCallView({
   const [cameraOff, setCameraOff] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isFullScreen, setIsFullScreen] = useState(isMobile && callType === 'VIDEO')
+  const [remoteHasVideo, setRemoteHasVideo] = useState(false)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
@@ -43,12 +44,16 @@ export default function ActiveCallView({
   }, [localStream])
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
-    }
-    if (remoteAudioRef.current && remoteStream) {
-      remoteAudioRef.current.srcObject = remoteStream
-    }
+    if (!remoteStream) { setRemoteHasVideo(false); return }
+
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream
+
+    // Check initial track state and listen for new tracks arriving after mount
+    setRemoteHasVideo(remoteStream.getVideoTracks().length > 0)
+    const onTrackAdded = () => setRemoteHasVideo(remoteStream.getVideoTracks().length > 0)
+    remoteStream.addEventListener('addtrack', onTrackAdded)
+    return () => remoteStream.removeEventListener('addtrack', onTrackAdded)
   }, [remoteStream])
 
   // Call timer
@@ -119,8 +124,8 @@ export default function ActiveCallView({
             data-testid="remote-video"
             aria-label={`${otherUsername}'s video`}
           />
-          {/* Fallback when no remote stream */}
-          {!remoteStream && (
+          {/* Fallback avatar while remote video hasn't started flowing yet */}
+          {!remoteHasVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Avatar name={otherUsername} size="xl" src={otherAvatarUrl} />
             </div>
