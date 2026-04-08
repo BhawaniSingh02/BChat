@@ -474,34 +474,48 @@ app.on('second-instance', (_event, argv) => {
 
 // ─── Auto Updater Stub ────────────────────────────────────────────────────────
 function setupUpdater() {
+  if (IS_DEV) return; // never check for updates in dev
+
   try {
     const { autoUpdater } = require('electron-updater');
-    autoUpdater.logger = null; // silent for now
-    autoUpdater.autoDownload = false;
+    const { dialog } = require('electron');
+
+    autoUpdater.autoDownload = true;       // download silently in background
+    autoUpdater.autoInstallOnAppQuit = true; // install when user quits normally
+    autoUpdater.logger = null;
 
     autoUpdater.on('update-available', (info) => {
-      console.log('Update available:', info.version);
-      if (mainWindow) {
-        mainWindow.webContents.send('update-available', info);
-      }
+      // Notify renderer so it can show a subtle banner if desired
+      if (mainWindow) mainWindow.webContents.send('update-available', info);
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-      console.log('Update downloaded:', info.version);
-      if (mainWindow) {
-        mainWindow.webContents.send('update-downloaded', info);
-      }
+      // Update is ready — ask user to restart
+      if (mainWindow) mainWindow.webContents.send('update-downloaded', info);
+
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: `Baaat v${info.version} is ready to install.`,
+        detail: 'Restart now to apply the update, or it will install automatically next time you quit.',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+      }).then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
     });
 
     autoUpdater.on('error', (err) => {
-      // Silently ignore in dev / when no update server
-      if (IS_DEV) console.log('Updater error (expected in dev):', err.message);
+      // Silently ignore — no internet, no release, etc.
+      console.log('Auto-updater error:', err.message);
     });
 
-    // Only check for updates in production
-    if (!IS_DEV) {
-      autoUpdater.checkForUpdatesAndNotify().catch(() => {});
-    }
+    // Check on startup, then every 2 hours
+    autoUpdater.checkForUpdates().catch(() => {});
+    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 2 * 60 * 60 * 1000);
+
   } catch (err) {
     console.log('electron-updater not available:', err.message);
   }

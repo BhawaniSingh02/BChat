@@ -71,8 +71,9 @@
       "artifactName": "Baaat-Setup-${version}.exe"
     },
     "publish": {
-      "provider": "generic",
-      "url": "https://downloads.baaat.app/releases/latest/"
+      "provider": "github",
+      "owner": "BhawaniSingh02",
+      "repo": "BChat"
     }
   }
 }
