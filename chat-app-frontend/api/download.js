@@ -12,7 +12,7 @@
  */
 
 const VERSION = '1.0.0'
-const GITHUB = 'https://github.com/YOUR_GITHUB_USER/YOUR_REPO/releases/download'
+const GITHUB = 'https://github.com/BhawaniSingh02/BChat/releases/download'
 
 const RELEASE_URLS = {
   win:   `${GITHUB}/v${VERSION}/Baaat-Setup-${VERSION}.exe`,
