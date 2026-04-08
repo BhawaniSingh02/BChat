@@ -27,6 +27,7 @@ import ActiveCallView from '../components/call/ActiveCallView'
 import OutgoingCallView from '../components/call/OutgoingCallView'
 import CallHistoryPanel from '../components/call/CallHistoryPanel'
 import { useUserCacheStore } from '../store/userCacheStore'
+import { Link } from 'react-router-dom'
 
 export default function ChatPage() {
   const { user, token } = useAuthStore()
@@ -526,8 +527,27 @@ export default function ChatPage() {
                 </button>
               </div>
 
+              {/* Desktop app banner */}
+              {!window.electronAPI && (
+                <Link
+                  to="/download"
+                  className="mt-6 flex items-center gap-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-cyan-50/60 px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-[0_12px_28px_rgba(20,184,166,0.10)] group"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-100 to-cyan-100 text-xl transition-all group-hover:from-teal-500 group-hover:to-cyan-600 group-hover:text-white">
+                    💻
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-800 text-sm">Get the desktop app</div>
+                    <div className="text-xs text-gray-400 mt-0.5">Native notifications · offline support · system tray</div>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-300 shrink-0 transition-colors group-hover:text-teal-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              )}
+
               {user && (
-                <p className="text-xs text-gray-400 mt-6">
+                <p className="text-xs text-gray-400 mt-4">
                   Signed in as <span className="font-medium text-gray-600">{user.username}</span>
                 </p>
               )}

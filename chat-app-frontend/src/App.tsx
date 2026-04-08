@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ChatPage from './pages/ChatPage'
+import DownloadPage from './pages/DownloadPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -59,6 +60,7 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route path="/download" element={<DownloadPage />} />
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
     </BrowserRouter>

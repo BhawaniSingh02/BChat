@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baaat — No Connection</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-app-region: drag;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      -webkit-app-region: no-drag;
+    }
+
+    .icon-wrap {
+      position: relative;
+      width: 96px;
+      height: 96px;
+    }
+
+    .icon-bg {
+      width: 96px;
+      height: 96px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #e94560, #c62a47);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(233, 69, 96, 0.35);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    .icon-bg svg {
+      width: 48px;
+      height: 48px;
+      fill: white;
+    }
+
+    .offline-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #ff6b6b;
+      border: 3px solid #0f0f23;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    p {
+      font-size: 14px;
+      color: #888;
+      text-align: center;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+      color: #e94560;
+      font-weight: 500;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e94560;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    .retry-btn {
+      padding: 10px 28px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #e94560, #c62a47);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 16px rgba(233,69,96,0.3);
+    }
+
+    .retry-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(233,69,96,0.45);
+    }
+
+    .retry-btn:active {
+      transform: translateY(0);
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 8px 32px rgba(233, 69, 96, 0.35); }
+      50% { box-shadow: 0 8px 40px rgba(233, 69, 96, 0.6); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-wrap">
+      <div class="icon-bg">
+        <!-- Chat bubble icon -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+        </svg>
+      </div>
+      <div class="offline-badge">⚡</div>
+    </div>
+
+    <h1>Baaat</h1>
+
+    <div class="status">
+      <div class="dot"></div>
+      No internet connection
+    </div>
+
+    <p>Check your network connection.<br/>The app will reconnect automatically.</p>
+
+    <button class="retry-btn" id="retryBtn" onclick="retry()">
+      <span id="btnText">Try Again</span>
+      <span class="spinner" id="spinner"></span>
+    </button>
+  </div>
+
+  <script>
+    let checking = false;
+
+    function retry() {
+      if (checking) return;
+      checking = true;
+
+      const btn = document.getElementById('retryBtn');
+      const txt = document.getElementById('btnText');
+      const spin = document.getElementById('spinner');
+
+      txt.textContent = 'Checking...';
+      spin.style.display = 'inline-block';
+      btn.disabled = true;
+
+      // If online, trigger reload via Electron
+      setTimeout(() => {
+        if (navigator.onLine) {
+          if (window.electronAPI) {
+            window.electronAPI.reloadApp();
+          } else {
+            location.reload();
+          }
+        } else {
+          txt.textContent = 'Still offline';
+          spin.style.display = 'none';
+          setTimeout(() => {
+            txt.textContent = 'Try Again';
+            btn.disabled = false;
+            checking = false;
+          }, 1500);
+        }
+      }, 1000);
+    }
+
+    // Auto-reload when network comes back
+    window.addEventListener('online', () => {
+      if (window.electronAPI) {
+        window.electronAPI.reloadApp();
+      } else {
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>

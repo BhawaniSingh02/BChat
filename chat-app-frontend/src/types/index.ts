@@ -196,3 +196,23 @@ export interface SendMessageWithReplyRequest {
   replyToSender?: string
   forwardedFrom?: string
 }
+
+// Electron desktop bridge (injected by preload.js)
+declare global {
+  interface Window {
+    electronAPI?: {
+      isElectron: boolean
+      platform: string
+      notify: (payload: { title?: string; body?: string; chatId?: string }) => void
+      setUnreadCount: (count: number) => void
+      setOnlineStatus: (isOnline: boolean) => void
+      reloadApp: () => void
+      openExternal: (url: string) => void
+      getAutoLaunch: () => Promise<boolean>
+      setAutoLaunch: (enable: boolean) => Promise<void>
+      onDeepLink: (callback: (url: string) => void) => void
+      onUpdateAvailable: (callback: (info: { version: string }) => void) => void
+      onUpdateDownloaded: (callback: (info: { version: string }) => void) => void
+    }
+  }
+}

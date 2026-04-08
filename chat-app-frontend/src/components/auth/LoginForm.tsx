@@ -134,6 +134,31 @@ export default function LoginForm() {
                 Sign up free
               </Link>
             </p>
+            <Link
+              to="/download"
+              className={`mt-4 flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 group ${
+                darkMode
+                  ? 'border-white/10 bg-slate-800/60 hover:border-teal-500/40 hover:bg-slate-800/90 hover:shadow-[0_8px_24px_rgba(20,184,166,0.10)]'
+                  : 'border-slate-200 bg-slate-50/80 hover:border-teal-300 hover:bg-teal-50/60 hover:shadow-[0_8px_24px_rgba(20,184,166,0.10)]'
+              }`}
+            >
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg transition-all group-hover:scale-110 ${
+                darkMode ? 'bg-slate-700' : 'bg-white shadow-sm'
+              }`}>
+                💻
+              </div>
+              <div className="flex-1 text-left">
+                <div className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                  Get the desktop app
+                </div>
+                <div className={`text-xs mt-0.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Windows · macOS · Linux
+                </div>
+              </div>
+              <svg className={`w-4 h-4 shrink-0 transition-colors ${darkMode ? 'text-slate-600 group-hover:text-teal-400' : 'text-slate-300 group-hover:text-teal-500'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </div>
       </div>
