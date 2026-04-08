@@ -83,7 +83,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
   return (
     <div className="w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full shadow-sm">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_12px_30px_rgba(15,23,42,0.34)]">
+      <div className="h-[58px] px-4 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_12px_30px_rgba(15,23,42,0.34)]">
         <div className="flex items-center gap-2">
           <BrandLogo size="md" tone="light" showIcon={false} interactive className="origin-left scale-x-[1.06]" />
         </div>

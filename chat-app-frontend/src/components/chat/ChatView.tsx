@@ -255,7 +255,7 @@ export default function ChatView({
             )}
           </div>
         ) : (
-          <div className="px-3 md:px-4 py-2.5 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_14px_34px_rgba(15,23,42,0.28)] z-10">
+          <div className="h-[58px] px-3 md:px-4 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_14px_34px_rgba(15,23,42,0.28)] z-10">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               {onBack && (
                 <button
