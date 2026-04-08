@@ -46,7 +46,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
   const { notifications, markAllRead, markRead } = useNotificationStore()
-  const [tab, setTab] = useState<Tab>('rooms')
+  const [tab, setTab] = useState<Tab>('dms')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -78,7 +78,14 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
     onSelectChat?.()
   }
 
-  const unreadDMs = conversations.length
+  const totalDMUnread = Object.values(dmUnreadCounts).reduce((a, b) => a + b, 0)
+
+  const sortedConversations = [...conversations].sort((a, b) => {
+    if (!a.lastMessageAt && !b.lastMessageAt) return 0
+    if (!a.lastMessageAt) return 1
+    if (!b.lastMessageAt) return -1
+    return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+  })
 
   return (
     <div className="w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full shadow-sm">
@@ -127,6 +134,19 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
       <div className="flex border-b border-gray-200 bg-gray-50">
         <button
           className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
+            tab === 'dms'
+              ? 'text-teal-700 bg-white'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+          }`}
+          onClick={() => setTab('dms')}
+        >
+          Messages {totalDMUnread > 0 && `(${totalDMUnread})`}
+          {tab === 'dms' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
+          )}
+        </button>
+        <button
+          className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
             tab === 'rooms'
               ? 'text-teal-700 bg-white'
               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
@@ -135,19 +155,6 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
         >
           Rooms
           {tab === 'rooms' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
-          )}
-        </button>
-        <button
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
-            tab === 'dms'
-              ? 'text-teal-700 bg-white'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-          }`}
-          onClick={() => setTab('dms')}
-        >
-          Messages {unreadDMs > 0 && `(${unreadDMs})`}
-          {tab === 'dms' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
           )}
         </button>
@@ -170,7 +177,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
           )
         ) : (
           <div className="flex flex-col h-full">
-            {conversations.length === 0 ? (
+            {sortedConversations.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-2xl">
                   💬
@@ -185,7 +192,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
               </div>
             ) : (
               <>
-                {conversations.map((conv) => (
+                {sortedConversations.map((conv) => (
                   <DMConversationCard
                     key={conv.id}
                     conversation={conv}
