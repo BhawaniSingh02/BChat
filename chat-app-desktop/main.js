@@ -109,7 +109,7 @@ function createWindow() {
     // Uncomment to open DevTools manually: mainWindow.webContents.openDevTools({ mode: 'detach' });
   });
 
-  loadApp();
+  void loadApp();
 }
 
 // ─── Load App / Offline Handling ─────────────────────────────────────────────
@@ -122,8 +122,27 @@ function isOnline() {
   }
 }
 
-function loadApp() {
+async function clearRendererCache() {
   if (!mainWindow) return;
+
+  try {
+    const origin = new URL(VERCEL_URL).origin;
+    const { session } = mainWindow.webContents;
+
+    await session.clearCache();
+    await session.clearStorageData({
+      origin,
+      storages: ['appcache', 'cachestorage', 'serviceworkers'],
+    });
+  } catch (err) {
+    console.log('Cache clear skipped:', err.message);
+  }
+}
+
+async function loadApp() {
+  if (!mainWindow) return;
+
+  await clearRendererCache();
 
   // Check network via IPC from preload after page loads
   // For launch-time check, attempt to load and handle failure
@@ -152,7 +171,9 @@ function loadOfflinePage() {
 
 function reloadApp() {
   if (!mainWindow) return;
-  mainWindow.loadURL(VERCEL_URL).catch(() => loadOfflinePage());
+  clearRendererCache()
+    .then(() => mainWindow.loadURL(VERCEL_URL))
+    .catch(() => loadOfflinePage());
 }
 
 // Inject a thin script into the Vercel page to monitor online/offline events
