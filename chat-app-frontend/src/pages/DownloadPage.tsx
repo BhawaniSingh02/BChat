@@ -174,6 +174,21 @@ export default function DownloadPage() {
           ))}
         </div>
 
+        {/* Windows SmartScreen notice */}
+        <div className={`w-full rounded-2xl border px-5 py-4 flex gap-3 items-start ${
+          darkMode ? 'border-amber-500/20 bg-amber-500/5' : 'border-amber-200 bg-amber-50/80'
+        }`}>
+          <span className="text-lg shrink-0 mt-0.5">🛡️</span>
+          <div>
+            <p className={`text-sm font-medium ${darkMode ? 'text-amber-300' : 'text-amber-800'}`}>
+              Windows may show a security warning
+            </p>
+            <p className={`text-xs mt-1 leading-relaxed ${darkMode ? 'text-amber-400/70' : 'text-amber-700/80'}`}>
+              Click <span className="font-semibold">"More info"</span> → <span className="font-semibold">"Run anyway"</span> to proceed. This appears because the app is new and not yet widely distributed — it is completely safe.
+            </p>
+          </div>
+        </div>
+
         {/* Footer nav */}
         <div className={`flex gap-6 text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
           <Link to="/login" className="hover:underline">Sign in</Link>
