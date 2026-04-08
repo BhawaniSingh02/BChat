@@ -489,7 +489,7 @@ export default function ChatPage() {
               <div className="hidden w-20 h-20 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl items-center justify-center mx-auto mb-6 shadow-md">
                 <span className="text-white text-4xl">💬</span>
               </div>
-              <BrandLogo size="lg" stacked className="mb-6" />
+              <BrandLogo size="lg" stacked interactive className="mb-6" />
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your workspace</h2>
               <p className="text-gray-500 mb-8 text-sm leading-relaxed">
                 Connect with others in chat rooms or through direct messages.
