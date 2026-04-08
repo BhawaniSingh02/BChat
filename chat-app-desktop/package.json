@@ -67,7 +67,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "Baaat-Setup-${version}.exe"
     },
     "publish": {
       "provider": "generic",
