@@ -21,6 +21,7 @@ import Modal from '../components/ui/Modal'
 import RoomList from '../components/rooms/RoomList'
 import QuickSwitcher from '../components/ui/QuickSwitcher'
 import UserProfileModal from '../components/ui/UserProfileModal'
+import BrandLogo from '../components/ui/BrandLogo'
 import IncomingCallOverlay from '../components/call/IncomingCallOverlay'
 import ActiveCallView from '../components/call/ActiveCallView'
 import OutgoingCallView from '../components/call/OutgoingCallView'
@@ -380,14 +381,7 @@ export default function ChatPage() {
           <div className="relative overflow-hidden rounded-[28px] border border-white/50 bg-white/88 px-10 py-9 shadow-[0_24px_80px_rgba(15,23,42,0.22)] backdrop-blur-xl">
             <div className="absolute inset-x-8 top-0 h-20 rounded-full bg-gradient-to-r from-emerald-200/50 via-cyan-200/40 to-blue-200/50 blur-2xl" />
             <div className="relative flex flex-col items-center text-center">
-              <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 shadow-[0_18px_45px_rgba(13,148,136,0.35)]">
-                <div className="flex items-center gap-1.5 rounded-full bg-white/18 px-3 py-2 backdrop-blur-sm">
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-white [animation-delay:-0.2s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-white [animation-delay:-0.1s]" />
-                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-white" />
-                </div>
-              </div>
-              <h2 className="text-[28px] font-black tracking-[-0.04em] text-slate-900">Baaat</h2>
+              <BrandLogo size="lg" stacked className="mb-1" />
               <p className="mt-2 text-sm font-medium text-slate-600">Reconnecting your conversations</p>
               <div className="mt-5 flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -484,18 +478,19 @@ export default function ChatPage() {
         ) : roomsLoading ? (
           <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center">
-              <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-gray-500 text-sm">Loading your rooms…</p>
             </div>
           </div>
         ) : (
           /* Welcome / Empty state */
-          <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-green-50/30 p-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 max-w-lg w-full text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
+          <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 p-8">
+            <div className="bg-white/96 rounded-[28px] shadow-[0_20px_60px_rgba(15,23,42,0.08)] border border-slate-200/80 p-10 max-w-lg w-full text-center">
+              <div className="hidden w-20 h-20 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl items-center justify-center mx-auto mb-6 shadow-md">
                 <span className="text-white text-4xl">💬</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Baaat</h2>
+              <BrandLogo size="lg" stacked className="mb-6" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your workspace</h2>
               <p className="text-gray-500 mb-8 text-sm leading-relaxed">
                 Connect with others in chat rooms or through direct messages.
                 {myRooms.length === 0 && ' Create your first room or browse existing ones to get started.'}
@@ -504,10 +499,10 @@ export default function ChatPage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setCreateOpen(true)}
-                  className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-dashed border-green-200 hover:border-green-400 hover:bg-green-50 transition-all group"
+                  className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/70 hover:shadow-[0_16px_36px_rgba(20,184,166,0.12)] group"
                   data-testid="create-room-cta"
                 >
-                  <div className="w-12 h-12 bg-green-100 group-hover:bg-green-200 rounded-xl flex items-center justify-center text-2xl transition-colors">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100 text-2xl text-teal-700 transition-all group-hover:from-teal-500 group-hover:to-cyan-600 group-hover:text-white">
                     🏠
                   </div>
                   <div>
@@ -518,10 +513,10 @@ export default function ChatPage() {
 
                 <button
                   onClick={() => setDiscoverOpen(true)}
-                  className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                  className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50/70 hover:shadow-[0_16px_36px_rgba(8,145,178,0.12)] group"
                   data-testid="browse-rooms-cta"
                 >
-                  <div className="w-12 h-12 bg-blue-100 group-hover:bg-blue-200 rounded-xl flex items-center justify-center text-2xl transition-colors">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl text-cyan-700 transition-all group-hover:from-cyan-500 group-hover:to-sky-600 group-hover:text-white">
                     🔍
                   </div>
                   <div>

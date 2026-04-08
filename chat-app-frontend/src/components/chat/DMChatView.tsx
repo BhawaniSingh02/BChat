@@ -258,11 +258,11 @@ export default function DMChatView({
           )}
         </div>
       ) : (
-        <div className="px-3 md:px-4 py-2.5 bg-[#075e54] flex items-center gap-2 md:gap-3 shadow-md z-10">
+        <div className="px-3 md:px-4 py-2.5 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center gap-2 md:gap-3 shadow-[0_14px_34px_rgba(15,23,42,0.28)] z-10">
           {onBack && (
             <button
               onClick={onBack}
-              className="md:hidden p-1 md:p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+              className="md:hidden p-1 md:p-1.5 text-white/75 hover:text-white rounded-full hover:bg-white/12 transition-colors flex-shrink-0"
               aria-label="Back to sidebar"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -280,14 +280,14 @@ export default function DMChatView({
           <div className="flex-1 min-w-0">
             <button
               onClick={() => onViewProfile?.(otherUser)}
-              className="font-semibold text-sm md:text-base text-white truncate block text-left hover:underline focus:outline-none w-full"
+              className="font-semibold text-sm md:text-base text-white truncate block text-left focus:outline-none w-full"
             >
               {otherUser}
             </button>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-white/60">{online ? 'online' : 'offline'}</p>
+              <p className="text-xs text-white/65">{online ? 'online' : 'offline'}</p>
               {isMuted && (
-                <span className="text-[10px] text-white/50 flex items-center gap-0.5" data-testid="muted-indicator">
+                <span className="text-[10px] text-white/55 flex items-center gap-0.5" data-testid="muted-indicator">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
@@ -296,7 +296,7 @@ export default function DMChatView({
                 </span>
               )}
               {conversation.disappearingMessagesTimer && conversation.disappearingMessagesTimer !== 'OFF' && (
-                <span className="text-[10px] text-white/50 flex items-center gap-0.5" data-testid="disappearing-indicator">
+                <span className="text-[10px] text-white/55 flex items-center gap-0.5" data-testid="disappearing-indicator">
                   ⏱ {conversation.disappearingMessagesTimer}
                 </span>
               )}
@@ -307,7 +307,7 @@ export default function DMChatView({
             {onAudioCall && (
               <button
                 onClick={onAudioCall}
-                className="p-1 md:p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                className="p-1 md:p-1.5 text-white/75 hover:text-white rounded-full hover:bg-white/12 transition-colors"
                 aria-label="Start audio call"
                 data-testid="audio-call-btn"
               >
@@ -320,7 +320,7 @@ export default function DMChatView({
             {onVideoCall && (
               <button
                 onClick={onVideoCall}
-                className="p-1 md:p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                className="p-1 md:p-1.5 text-white/75 hover:text-white rounded-full hover:bg-white/12 transition-colors"
                 aria-label="Start video call"
                 data-testid="video-call-btn"
               >
@@ -333,7 +333,7 @@ export default function DMChatView({
             {onViewCallHistory && (
               <button
                 onClick={onViewCallHistory}
-                className="p-1 md:p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                className="p-1 md:p-1.5 text-white/75 hover:text-white rounded-full hover:bg-white/12 transition-colors"
                 aria-label="View call history"
                 data-testid="call-history-btn"
               >
@@ -345,7 +345,7 @@ export default function DMChatView({
 
             <button
               onClick={() => setShowSettings(true)}
-              className="p-1 md:p-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+              className="p-1 md:p-1.5 text-white/75 hover:text-white rounded-full hover:bg-white/12 transition-colors"
               aria-label="Conversation settings"
               data-testid="conversation-settings-btn"
             >

@@ -12,6 +12,7 @@ import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
 import NotificationBell from '../ui/NotificationBell'
+import BrandLogo from '../ui/BrandLogo'
 
 
 type Tab = 'rooms' | 'dms'
@@ -82,9 +83,9 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
   return (
     <div className="w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full shadow-sm">
       {/* Header */}
-      <div className="px-4 py-3 bg-[#075e54] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_12px_30px_rgba(15,23,42,0.34)]">
         <div className="flex items-center gap-2">
-          <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: '1.35rem', letterSpacing: '-0.02em' }} className="text-white">Baaat</h1>
+          <BrandLogo size="md" tone="light" showIcon={false} interactive className="origin-left scale-x-[1.06]" />
         </div>
         <div className="flex items-center gap-1">
           {/* Global search button — Phase 25 */}
@@ -101,7 +102,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
 
           <button
             onClick={() => tab === 'rooms' ? setDiscoverOpen(true) : setDMSearchOpen(true)}
-            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors text-sm"
+            className="text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
             title={tab === 'rooms' ? 'Discover rooms' : 'New direct message'}
             aria-label={tab === 'rooms' ? 'Discover rooms' : 'New direct message'}
           >
@@ -111,7 +112,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
           </button>
           <button
             onClick={logout}
-            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors text-sm"
+            className="text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
             title="Logout"
             aria-label="Logout"
           >
@@ -127,27 +128,27 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
         <button
           className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
             tab === 'rooms'
-              ? 'text-green-600 bg-white'
+              ? 'text-teal-700 bg-white'
               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
           }`}
           onClick={() => setTab('rooms')}
         >
           Rooms
           {tab === 'rooms' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
           )}
         </button>
         <button
           className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
             tab === 'dms'
-              ? 'text-green-600 bg-white'
+              ? 'text-teal-700 bg-white'
               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
           }`}
           onClick={() => setTab('dms')}
         >
           Messages {unreadDMs > 0 && `(${unreadDMs})`}
           {tab === 'dms' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
           )}
         </button>
       </div>
@@ -177,7 +178,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
                 <p className="text-sm font-medium text-gray-700 mb-1">No conversations yet.</p>
                 <button
                   onClick={() => setDMSearchOpen(true)}
-                  className="mt-2 text-green-600 hover:text-green-700 font-medium text-sm"
+                  className="mt-2 text-teal-700 hover:text-cyan-700 font-medium text-sm transition-colors"
                 >
                   Start a new message
                 </button>
@@ -199,7 +200,7 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
                 ))}
                 <div className="p-4 border-t mt-auto">
                   <button
-                    className="w-full py-2 text-sm text-center text-green-600 hover:text-green-700 font-medium border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                    className="w-full rounded-lg border border-slate-200 py-2 text-center text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                     onClick={() => setDMSearchOpen(true)}
                   >
                     + New Message

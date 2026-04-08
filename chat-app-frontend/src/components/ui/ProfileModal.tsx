@@ -189,9 +189,9 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
       />
 
       {/* Panel */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
         {/* Header gradient */}
-        <div className="h-20 bg-gradient-to-br from-emerald-500 to-green-700 flex-shrink-0" />
+        <div className="h-20 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex-shrink-0" />
 
         {/* Close button */}
         <button
@@ -243,7 +243,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
           <div className="mb-1 flex gap-2 text-xs">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-emerald-600 hover:text-emerald-800 font-medium"
+              className="font-medium text-teal-700 hover:text-cyan-800"
               data-testid="change-photo-btn"
             >
               Change photo
@@ -267,7 +267,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
           </h2>
           <p className="text-xs text-gray-500">@{user.username} · {user.email}</p>
           {user.statusMessage && (
-            <p className="text-xs text-emerald-600 mt-0.5 italic" data-testid="profile-status-display">
+            <p className="mt-0.5 text-xs italic text-teal-700" data-testid="profile-status-display">
               {user.statusMessage}
             </p>
           )}
@@ -282,7 +282,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
               onClick={() => { setTab(t); setError(null); setSuccess(null) }}
               className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors ${
                 tab === t
-                  ? 'text-emerald-600 border-b-2 border-emerald-600'
+                  ? 'text-teal-700 border-b-2 border-teal-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               data-testid={`profile-tab-${t}`}
@@ -296,7 +296,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
           {/* Feedback */}
           {success && (
-            <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2" data-testid="profile-success">
+            <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800" data-testid="profile-success">
               {success}
             </div>
           )}
@@ -317,7 +317,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder={user.username}
                   maxLength={60}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="display-name-input"
                 />
               </div>
@@ -329,7 +329,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   onChange={(e) => setStatusMessage(e.target.value)}
                   placeholder="Hey there! I am using Baaat"
                   maxLength={139}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="status-input"
                 />
               </div>
@@ -341,7 +341,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   placeholder="Tell people a little about yourself"
                   rows={3}
                   maxLength={250}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none"
+                  className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="bio-input"
                 />
                 <p className="text-xs text-gray-400 text-right">{bio.length}/250</p>
@@ -349,7 +349,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
               <button
                 onClick={handleSaveProfile}
                 disabled={saving}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors"
+                className="w-full rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:bg-slate-500"
                 data-testid="save-profile-btn"
               >
                 {saving ? 'Saving…' : 'Save Profile'}
@@ -367,7 +367,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter current password"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="current-password-input"
                 />
               </div>
@@ -378,7 +378,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="new-password-input"
                 />
               </div>
@@ -389,14 +389,14 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat new password"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="confirm-password-input"
                 />
               </div>
               <button
                 onClick={handleChangePassword}
                 disabled={saving || !currentPassword || !newPassword || !confirmPassword}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors"
+                className="w-full rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:bg-slate-500"
                 data-testid="change-password-btn"
               >
                 {saving ? 'Changing…' : 'Change Password'}
@@ -434,7 +434,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
               <button
                 onClick={handleSavePrivacy}
                 disabled={saving}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors"
+                className="w-full rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:bg-slate-500"
                 data-testid="save-privacy-btn"
               >
                 {saving ? 'Saving…' : 'Save Privacy Settings'}
@@ -462,7 +462,7 @@ function PrivacySelect({ label, value, options, onChange, testId }: PrivacySelec
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
+        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
         data-testid={testId}
       >
         {options.map((opt) => (

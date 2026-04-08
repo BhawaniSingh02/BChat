@@ -3,16 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
-
-const logoStyle: React.CSSProperties = {
-  fontFamily: "'Nunito', sans-serif",
-  fontWeight: 900,
-  letterSpacing: '-0.02em',
-}
+import BrandLogo from '../ui/BrandLogo'
 
 export default function LoginForm() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [darkMode, setDarkMode] = useState(false)
   const { login, isLoading, error } = useAuthStore()
   const navigate = useNavigate()
 
@@ -27,85 +23,118 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-green-600 via-green-700 to-teal-700 flex items-center justify-center p-4">
-      <div className="w-full md:max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden md:flex">
+    <div className={`min-h-screen w-full overflow-x-hidden flex items-center justify-center p-4 transition-colors ${
+      darkMode
+        ? 'bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]'
+        : 'bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)]'
+    }`}>
+      <button
+        type="button"
+        onClick={() => setDarkMode((v) => !v)}
+        className={`fixed right-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md transition-colors md:right-6 md:top-6 ${
+          darkMode
+            ? 'border-white/10 bg-slate-900/70 text-slate-100 shadow-[0_12px_30px_rgba(2,6,23,0.35)] hover:bg-slate-800/80'
+            : 'border-white/80 bg-white/88 text-slate-700 shadow-[0_12px_26px_rgba(15,23,42,0.10)] hover:bg-white'
+        }`}
+        aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={darkMode ? 'Light mode' : 'Dark mode'}
+      >
+        {darkMode ? (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+            <circle cx="12" cy="12" r="4.2" />
+            <path strokeLinecap="round" d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.72 5.28l-1.56 1.56M6.84 17.16l-1.56 1.56M18.72 18.72l-1.56-1.56M6.84 6.84L5.28 5.28" />
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.742 13.045a8.088 8.088 0 0 1-9.787-9.787 8.75 8.75 0 1 0 9.787 9.787Z" />
+          </svg>
+        )}
+      </button>
 
-        {/* Left panel — desktop only */}
-        <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-green-500 to-green-700 flex-col items-center justify-center p-10 text-white">
-          <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-            <span className="text-5xl">💬</span>
-          </div>
-          <h1 style={logoStyle} className="text-3xl text-white mb-3">Baaat</h1>
-          <p className="text-green-100 text-center text-sm leading-relaxed">
-            Real-time messaging for teams and communities. Stay connected.
-          </p>
-          <div className="mt-8 space-y-3 w-full">
-            {[
-              { icon: '⚡', text: 'Instant messaging' },
-              { icon: '🔒', text: 'Secure & private' },
-              { icon: '👥', text: 'Group rooms + DMs' },
-            ].map((f) => (
-              <div key={f.text} className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-2.5">
-                <span className="text-xl">{f.icon}</span>
-                <span className="text-sm font-medium">{f.text}</span>
-              </div>
-            ))}
+      <div className={`w-full md:max-w-5xl overflow-hidden rounded-[28px] border backdrop-blur-xl md:flex transition-colors ${
+        darkMode
+          ? 'border-white/10 bg-slate-950/80 shadow-[0_30px_90px_rgba(2,6,23,0.52)]'
+          : 'border-white/70 bg-white/88 shadow-[0_30px_90px_rgba(15,23,42,0.14)]'
+      }`}>
+        <div className={`relative hidden md:flex md:w-[42%] overflow-hidden items-center justify-center p-10 text-white ${
+          darkMode
+            ? 'bg-[linear-gradient(160deg,_#020617_0%,_#0f172a_54%,_#134e4a_100%)]'
+            : 'bg-[linear-gradient(160deg,_#0f172a_0%,_#111827_54%,_#155e75_100%)]'
+        }`}>
+          <div className="absolute -left-16 top-10 h-52 w-52 rounded-full bg-emerald-400/12 blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+
+          <div className="relative px-10 py-12">
+            <BrandLogo size="lg" tone="light" stacked interactive />
           </div>
         </div>
 
-        {/* Form panel */}
-        <div className="w-full md:flex-1 flex flex-col justify-center px-6 py-8 sm:px-8 md:px-12 md:py-12">
-
-          {/* Mobile logo */}
+        <div className={`w-full md:flex-1 flex flex-col justify-center px-5 py-7 sm:px-8 md:px-14 md:py-14 transition-colors ${
+          darkMode ? 'bg-slate-950/34' : 'bg-white/84'
+        }`}>
           <div className="md:hidden flex items-center justify-center gap-3 mb-7">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center shadow-md">
-              <span className="text-white text-lg">💬</span>
-            </div>
-            <h1 style={{ ...logoStyle, fontSize: '1.7rem' }} className="text-gray-900">Baaat</h1>
+            <BrandLogo size="sm" tone={darkMode ? 'light' : 'dark'} />
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Welcome back</h2>
-          <p className="text-gray-500 text-sm mb-6">Sign in to continue chatting</p>
+          <div className="mx-auto w-full max-w-md">
+            <h2 className={`mb-2 text-2xl font-bold tracking-[-0.03em] sm:text-[2rem] ${darkMode ? 'text-white' : 'text-slate-900'}`}>Sign in</h2>
+            <p className={`mb-8 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Continue to Baaat</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm" role="alert">
-                {error}
-              </div>
-            )}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700" role="alert">
+                  {error}
+                </div>
+              )}
 
-            <Input
-              label="Username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              required
-              autoComplete="username"
-              autoFocus
-            />
+              <Input
+                label="Username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                required
+                autoComplete="username"
+                autoFocus
+                className={`h-12 rounded-xl focus:ring-teal-500 ${
+                  darkMode
+                    ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
+                    : 'border-slate-200 bg-slate-50/72'
+                }`}
+              />
 
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              autoComplete="current-password"
-            />
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+                className={`h-12 rounded-xl focus:ring-teal-500 ${
+                  darkMode
+                    ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
+                    : 'border-slate-200 bg-slate-50/72'
+                }`}
+              />
 
-            <Button type="submit" loading={isLoading} className="w-full" size="lg">
-              Sign In
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                loading={isLoading}
+                className="w-full rounded-xl bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-700 shadow-[0_14px_32px_rgba(15,23,42,0.16)]"
+                size="lg"
+              >
+                Sign In
+              </Button>
+            </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-green-600 hover:text-green-700 font-semibold">
-              Sign up free
-            </Link>
-          </p>
+            <p className={`mt-7 text-center text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Don't have an account?{' '}
+              <Link to="/register" className={`font-semibold ${darkMode ? 'text-teal-300 hover:text-white' : 'text-teal-700 hover:text-slate-900'}`}>
+                Sign up free
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

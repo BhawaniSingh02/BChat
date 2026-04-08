@@ -255,12 +255,12 @@ export default function ChatView({
             )}
           </div>
         ) : (
-          <div className="px-3 md:px-4 py-2.5 bg-[#075e54] flex items-center justify-between shadow-md z-10">
+          <div className="px-3 md:px-4 py-2.5 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_14px_34px_rgba(15,23,42,0.28)] z-10">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="md:hidden p-1 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                  className="md:hidden p-1 text-white/75 hover:text-white rounded-full hover:bg-white/12 transition-colors flex-shrink-0"
                   aria-label="Back to sidebar"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -268,22 +268,22 @@ export default function ChatView({
                   </svg>
                 </button>
               )}
-              <div className="w-8 h-8 md:w-9 md:h-9 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-white/12 bg-white/10 flex items-center justify-center flex-shrink-0 shadow-inner shadow-white/5">
                 <span className="text-white font-bold text-sm md:text-base">#</span>
               </div>
               <div className="min-w-0">
                 <h2 className="font-semibold text-white truncate text-sm md:text-[15px]">{room.name}</h2>
                 {room.description ? (
-                  <p className="text-xs text-white/60 truncate">{room.description}</p>
+                  <p className="text-xs text-white/65 truncate">{room.description}</p>
                 ) : (
-                  <p className="text-xs text-white/50">{room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}</p>
+                  <p className="text-xs text-white/55">{room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}</p>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-0 md:gap-1 flex-shrink-0">
               <button
                 onClick={() => setShowSearch(!showSearch)}
-                className={`p-1.5 md:p-2 rounded-full transition-colors ${showSearch ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                className={`p-1.5 md:p-2 rounded-full transition-colors ${showSearch ? 'bg-white/14 text-white shadow-inner shadow-white/5' : 'text-white/72 hover:text-white hover:bg-white/12'}`}
                 aria-label="Search messages"
                 data-testid="search-toggle-btn"
                 title="Search messages"
@@ -294,7 +294,7 @@ export default function ChatView({
               </button>
               <button
                 onClick={() => setShowMembers(!showMembers)}
-                className={`p-1.5 md:p-2 rounded-full transition-colors ${showMembers ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                className={`p-1.5 md:p-2 rounded-full transition-colors ${showMembers ? 'bg-white/14 text-white shadow-inner shadow-white/5' : 'text-white/72 hover:text-white hover:bg-white/12'}`}
                 aria-label="Toggle members panel"
                 data-testid="members-toggle-btn"
                 title="Members"
@@ -306,7 +306,7 @@ export default function ChatView({
               {isAdmin && onOpenSettings && (
                 <button
                   onClick={onOpenSettings}
-                  className="p-1.5 md:p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                  className="p-1.5 md:p-2 text-white/72 hover:text-white hover:bg-white/12 rounded-full transition-colors"
                   title="Room settings"
                   data-testid="room-settings-btn"
                   aria-label="Room settings"
@@ -320,7 +320,7 @@ export default function ChatView({
               {onLeave && (
                 <button
                   onClick={onLeave}
-                  className="p-1.5 md:p-2 text-white/70 hover:text-red-300 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-1.5 md:p-2 text-white/72 hover:text-rose-200 hover:bg-white/12 rounded-full transition-colors"
                   title="Leave room"
                 >
                   <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -22,6 +22,8 @@ import { useChatStore } from '../store/chatStore'
 import { useRoomStore } from '../store/roomStore'
 import { usePresenceStore } from '../store/presenceStore'
 import { useDMStore } from '../store/dmStore'
+import { useNotificationStore } from '../store/notificationStore'
+import { useAuthStore } from '../store/authStore'
 import type { CallEvent } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? '/ws'
@@ -31,20 +33,33 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const subscribedRooms = useRef<Set<string>>(new Set())
 
   const upsertRoomMessage = useChatStore((s) => s.upsertMessage)
+  const roomMessages = useChatStore((s) => s.messages)
   const setTyping = useChatStore((s) => s.setTyping)
   const updateReadBy = useChatStore((s) => s.updateReadBy)
   const incrementUnread = useChatStore((s) => s.incrementUnread)
   const updateRoomLastMessage = useRoomStore((s) => s.updateRoomLastMessage)
   const activeRoomId = useRoomStore((s) => s.activeRoomId)
+  const allRooms = useRoomStore((s) => s.rooms)
+  const myRooms = useRoomStore((s) => s.myRooms)
   const applyPresenceEvent = usePresenceStore((s) => s.applyEvent)
   const upsertDMMessage = useDMStore((s) => s.upsertDMMessage)
+  const dmMessages = useDMStore((s) => s.messages)
   const incrementDMUnread = useDMStore((s) => s.incrementDMUnread)
   const activeDMId = useDMStore((s) => s.activeDMId)
+  const conversations = useDMStore((s) => s.conversations)
+  const addNotification = useNotificationStore((s) => s.addNotification)
+  const currentUsername = useAuthStore((s) => s.user?.username)
 
   const [connected, setConnected] = useState(false)
   const activeRoomIdRef = useRef<string | null>(null)
   const activeDMIdRef = useRef<string | null>(null)
   const onCallEventRef = useRef(onCallEvent)
+  const roomMessagesRef = useRef(roomMessages)
+  const dmMessagesRef = useRef(dmMessages)
+  const roomsRef = useRef(allRooms)
+  const myRoomsRef = useRef(myRooms)
+  const conversationsRef = useRef(conversations)
+  const currentUsernameRef = useRef(currentUsername)
 
   useEffect(() => {
     onCallEventRef.current = onCallEvent
@@ -59,6 +74,30 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   }, [activeDMId])
 
   useEffect(() => {
+    roomMessagesRef.current = roomMessages
+  }, [roomMessages])
+
+  useEffect(() => {
+    dmMessagesRef.current = dmMessages
+  }, [dmMessages])
+
+  useEffect(() => {
+    roomsRef.current = allRooms
+  }, [allRooms])
+
+  useEffect(() => {
+    myRoomsRef.current = myRooms
+  }, [myRooms])
+
+  useEffect(() => {
+    conversationsRef.current = conversations
+  }, [conversations])
+
+  useEffect(() => {
+    currentUsernameRef.current = currentUsername
+  }, [currentUsername])
+
+  useEffect(() => {
     if (!token) return
 
     const stompClient = new Client({
@@ -71,12 +110,25 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
         stompClient.subscribe('/user/queue/messages', (frame) => {
           const message = parseMessage(frame.body)
           if (!message) { console.warn('Invalid DM message frame received:', frame.body); return }
+          const conversationId = message.roomId.startsWith('dm:') ? message.roomId.slice(3) : null
+          const alreadyExists = conversationId
+            ? (dmMessagesRef.current[conversationId] ?? []).some((m) => m.id === message.id)
+            : false
           upsertDMMessage(message)
           // Only increment unread for brand-new messages (not edits/deletes/reactions)
           if (message.roomId.startsWith('dm:') && !message.edited && !message.deleted) {
-            const conversationId = message.roomId.slice(3)
-            if (conversationId !== activeDMIdRef.current) {
+            if (conversationId && conversationId !== activeDMIdRef.current) {
               incrementDMUnread(conversationId)
+            }
+            if (
+              conversationId &&
+              !alreadyExists &&
+              message.sender !== currentUsernameRef.current &&
+              conversationId !== activeDMIdRef.current
+            ) {
+              const conversation = conversationsRef.current.find((c) => c.id === conversationId)
+              const otherUser = conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.senderName ?? message.sender
+              addNotification(message, otherUser)
             }
           }
         })
@@ -129,10 +181,22 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     client.subscribe(`/topic/room/${roomId}`, (frame) => {
       const message = parseMessage(frame.body)
       if (!message) { console.warn('Invalid room message frame received:', frame.body); return }
+      const alreadyExists = (roomMessagesRef.current[message.roomId] ?? []).some((m) => m.id === message.id)
       upsertRoomMessage(message)
       if (!message.deleted) updateRoomLastMessage(roomId, message.timestamp)
       if (message.roomId !== activeRoomIdRef.current) {
         incrementUnread(message.roomId)
+      }
+      if (
+        !alreadyExists &&
+        !message.edited &&
+        !message.deleted &&
+        message.sender !== currentUsernameRef.current &&
+        message.roomId !== activeRoomIdRef.current
+      ) {
+        const room = myRoomsRef.current.find((r) => r.roomId === message.roomId)
+          ?? roomsRef.current.find((r) => r.roomId === message.roomId)
+        addNotification(message, room ? `#${room.name}` : '#Room')
       }
     })
 

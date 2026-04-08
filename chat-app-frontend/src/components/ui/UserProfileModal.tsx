@@ -62,9 +62,9 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
           data-testid="user-profile-backdrop"
         />
 
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div className="relative w-full max-w-sm mx-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
           {/* Header gradient */}
-          <div className="h-20 bg-gradient-to-br from-blue-500 to-indigo-600" />
+          <div className="h-20 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950" />
 
           {/* Close */}
           <button
@@ -101,7 +101,7 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
               {isOwnProfile && (
                 <button
                   onClick={() => setEditOpen(true)}
-                  className="mb-1 text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors"
+                  className="mb-1 flex items-center gap-1 rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 transition-colors hover:bg-cyan-50 hover:text-cyan-800"
                   data-testid="edit-own-profile-btn"
                 >
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -114,7 +114,7 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
 
             {loading && (
               <div className="flex items-center gap-2 py-4">
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
                 <span className="text-sm text-gray-500">Loading profile…</span>
               </div>
             )}
@@ -131,7 +131,7 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
                 <p className="text-sm text-gray-500 mb-1">@{user.username}</p>
 
                 {user.statusMessage && (
-                  <p className="text-xs text-blue-600 mb-2 italic" data-testid="user-profile-status">
+                  <p className="mb-2 text-xs italic text-teal-700" data-testid="user-profile-status">
                     {user.statusMessage}
                   </p>
                 )}
