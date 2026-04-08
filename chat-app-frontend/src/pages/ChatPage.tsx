@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react'
 import type { CallEvent, CallType, Message } from '../types'
 import { useAuthStore } from '../store/authStore'
 import { useRoomStore } from '../store/roomStore'
@@ -48,7 +48,6 @@ export default function ChatPage() {
   } = useCallStore()
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
-  const localStreamRef = useRef<MediaStream | null>(null)
   const audioStopRef = useRef<StopFn | null>(null)
 
   // ── Wake Lock: keep screen on during active calls ─────────────────────────
@@ -99,8 +98,8 @@ export default function ChatPage() {
   // callConvId and callSessionId may be null when the first ICE candidates fire
   // (the PC is created before the CALL_SESSION_CREATED ack arrives from the server).
   // We keep always-current refs and buffer candidates until both IDs are known.
-  const callConvIdRef = useRef<string | null>(null)
-  const callSessionIdRef = useRef<string | null>(null)
+  const callConvIdRef = useRef<string | null>(null) as MutableRefObject<string | null>
+  const callSessionIdRef = useRef<string | null>(null) as MutableRefObject<string | null>
   const iceCandidateBufferRef = useRef<string[]>([])
   callConvIdRef.current = callConvId
   callSessionIdRef.current = callSessionId
@@ -126,11 +125,6 @@ export default function ChatPage() {
         sendIceCandidate(convId, sessionId, offerSdpJson)
       }
     },
-  })
-
-  // Keep localStream ref in sync
-  useEffect(() => {
-    localStreamRef.current = localStream.current
   })
 
   // ── Incoming call events ──────────────────────────────────────────────────
@@ -227,17 +221,17 @@ export default function ChatPage() {
     if (!activeRoomId && !activeDMId && myRooms.length > 0) {
       setActiveRoom(myRooms[0].roomId)
     }
-  }, [myRooms, activeRoomId, activeDMId])
+  }, [myRooms, activeRoomId, activeDMId, setActiveRoom])
 
   // Reset unread badge when entering a room
   useEffect(() => {
     if (activeRoomId) resetUnread(activeRoomId)
-  }, [activeRoomId])
+  }, [activeRoomId, resetUnread])
 
   // Reset DM unread badge when entering a DM conversation
   useEffect(() => {
     if (activeDMId) resetDMUnread(activeDMId)
-  }, [activeDMId])
+  }, [activeDMId, resetDMUnread])
 
   // Global Ctrl+K / Cmd+K handler for quick switcher
   useEffect(() => {
@@ -371,7 +365,7 @@ export default function ChatPage() {
     endCallInStore()
     // Refresh call history for this conversation
     if (callConvId) fetchCallHistory(callConvId)
-  }, [callSessionId, callConvId, sendCallEnd, sendCallCancel, cleanupWebRTC, endCallInStore, fetchCallHistory])
+  }, [callSessionId, callConvId, sendCallEnd, sendCallCancel, cleanupWebRTC, setRemoteStream, endCallInStore, fetchCallHistory])
 
   const showRoom = activeRoom && user && !activeDMId
   const showDM = activeConversation && user && activeDMId
@@ -382,9 +376,26 @@ export default function ChatPage() {
     <div className="flex h-screen w-full bg-gray-100">
       {/* WebSocket connecting indicator — fixed overlay so it never displaces content */}
       {!connected && !apiError && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 text-xs text-amber-700">
-          <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse flex-shrink-0" />
-          Connecting to server…
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/18 backdrop-blur-[2px]">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/50 bg-white/88 px-10 py-9 shadow-[0_24px_80px_rgba(15,23,42,0.22)] backdrop-blur-xl">
+            <div className="absolute inset-x-8 top-0 h-20 rounded-full bg-gradient-to-r from-emerald-200/50 via-cyan-200/40 to-blue-200/50 blur-2xl" />
+            <div className="relative flex flex-col items-center text-center">
+              <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 shadow-[0_18px_45px_rgba(13,148,136,0.35)]">
+                <div className="flex items-center gap-1.5 rounded-full bg-white/18 px-3 py-2 backdrop-blur-sm">
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-white [animation-delay:-0.2s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-white [animation-delay:-0.1s]" />
+                  <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-white" />
+                </div>
+              </div>
+              <h2 className="text-[28px] font-black tracking-[-0.04em] text-slate-900">Baaat</h2>
+              <p className="mt-2 text-sm font-medium text-slate-600">Reconnecting your conversations</p>
+              <div className="mt-5 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse [animation-delay:150ms]" />
+                <span className="h-2 w-2 rounded-full bg-cyan-600 animate-pulse [animation-delay:300ms]" />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

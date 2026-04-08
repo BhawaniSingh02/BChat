@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Message, MessageType, Room } from '../../types'
 import { useChatStore } from '../../store/chatStore'
 import { messagesApi } from '../../api/messages'
@@ -65,15 +65,15 @@ export default function ChatView({
     if (selectedIds.size === 0 && selectionMode) setSelectionMode(false)
   }, [selectedIds.size])
 
+  const clearSelection = useCallback(() => { setSelectionMode(false); setSelectedIds(new Set()) }, [])
+
   // Escape key exits selection mode
   useEffect(() => {
     if (!selectionMode) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') clearSelection() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [selectionMode])
-
-  const clearSelection = () => { setSelectionMode(false); setSelectedIds(new Set()) }
+  }, [selectionMode, clearSelection])
 
   const handleEnterSelectionMode = (msg: Message) => {
     setEditingMessageId(null)
