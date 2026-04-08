@@ -108,6 +108,77 @@ Chat App/
 
 ---
 
+## Deployment & Releasing
+
+### Push any code change to production
+
+```bash
+git add .
+git commit -m "your message"
+git push origin desktop-version
+
+git checkout main
+git merge desktop-version
+git push origin main
+git checkout desktop-version
+```
+
+Vercel auto-deploys the frontend when `main` is updated. Backend deploys automatically on Render.
+
+---
+
+### Release a new desktop app version
+
+**Step 1 — Bump the version** in `chat-app-desktop/package.json`:
+```json
+"version": "1.0.1"
+```
+
+**Step 2 — Commit, tag, and push:**
+```bash
+git add chat-app-desktop/package.json
+git commit -m "bump desktop version to 1.0.1"
+git push origin desktop-version
+
+git checkout main
+git merge desktop-version
+git push origin main
+git checkout desktop-version
+
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+GitHub Actions will automatically:
+- Build `Baaat-Setup-1.0.1.exe` on a Windows runner
+- Upload it to a new GitHub Release
+- All installed apps will silently download the update and prompt users to restart
+
+Watch the build at: `https://github.com/BhawaniSingh02/BChat/actions`
+
+---
+
+### Re-release the same version (if a build failed)
+
+```bash
+git tag -d v1.0.0
+git push origin --delete v1.0.0
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+---
+
+### Run the desktop app locally (development)
+
+```bash
+cd chat-app-desktop
+npm install        # first time only
+npm run dev
+```
+
+---
+
 ## Common Issues
 
 **MongoDB not connecting** — make sure MongoDB is running: `mongod` or start the MongoDB service.

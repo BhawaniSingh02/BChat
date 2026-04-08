@@ -4,7 +4,7 @@ const Store = require('electron-store');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const VERCEL_URL = process.env.VERCEL_URL || 'https://your-app.vercel.app';
+const VERCEL_URL = process.env.VERCEL_URL || 'https://baaat.vercel.app';
 const IS_DEV = process.argv.includes('--dev');
 const store = new Store();
 

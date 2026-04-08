@@ -11,10 +11,7 @@ cd chat-app-desktop
 npm install
 ```
 
-Set your Vercel URL in `.env`:
-```
-VERCEL_URL=https://your-app.vercel.app
-```
+`.env` already has the Vercel URL set — no changes needed.
 
 ---
 
@@ -26,16 +23,42 @@ npm run dev
 
 ---
 
-## Build
+## Releasing a New Version
 
-| Platform | Command |
-|----------|---------|
-| Windows `.exe` | `npm run build:win` |
-| macOS `.dmg` | `npm run build:mac` |
-| Linux `.deb` / `.AppImage` | `npm run build:linux` |
-| All platforms | `npm run build:all` |
+**Never build locally** — GitHub Actions handles it automatically.
 
-Output goes to `dist/`.
+1. Bump `"version"` in `package.json` (e.g. `1.0.0` → `1.0.1`)
+2. Commit, merge to main, and push a tag:
+
+```bash
+git add package.json
+git commit -m "bump version to 1.0.1"
+git push origin desktop-version
+
+git checkout main
+git merge desktop-version
+git push origin main
+git checkout desktop-version
+
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+GitHub Actions builds the `.exe` and uploads it to a GitHub Release automatically.
+Installed apps will auto-update silently within 2 hours.
+
+Watch the build: `https://github.com/BhawaniSingh02/BChat/actions`
+
+---
+
+## Re-releasing the Same Tag (if build failed)
+
+```bash
+git tag -d v1.0.0
+git push origin --delete v1.0.0
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ---
 
