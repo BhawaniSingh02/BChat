@@ -1,5 +1,27 @@
 import { useCallback, useRef, useEffect } from 'react'
 
+// ── Safari detection & H.264 codec preference ─────────────────────────────────
+// Safari does not support VP8/VP9. Reordering codecs to prefer H.264 ensures
+// video calls negotiate a codec both sides understand.
+function isSafari(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+}
+
+function preferH264(pc: RTCPeerConnection): void {
+  if (!isSafari() || typeof RTCRtpSender.getCapabilities !== 'function') return
+  const caps = RTCRtpSender.getCapabilities('video')
+  if (!caps) return
+  const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264')
+  const rest = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264')
+  const preferred = [...h264, ...rest]
+  pc.getTransceivers().forEach(t => {
+    if (t.sender.track?.kind === 'video') {
+      try { t.setCodecPreferences(preferred) } catch { /* unsupported in older Safari */ }
+    }
+  })
+}
+
 // ── ICE server configuration ──────────────────────────────────────────────────
 // STUN: free Google STUN servers for NAT traversal in most networks.
 // TURN: required for ~15% of connections behind symmetric NAT/firewalls.
@@ -185,6 +207,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
 
     const pc = createPeerConnection()
     stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+    preferH264(pc)
 
     const offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
@@ -211,6 +234,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     const offer: RTCSessionDescriptionInit = JSON.parse(offerSdpJson)
     await pc.setRemoteDescription(new RTCSessionDescription(offer))
     await flushPendingIceCandidates()
+    preferH264(pc)
 
     const answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)

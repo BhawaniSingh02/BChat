@@ -1,9 +1,9 @@
-import { memo, useState, useRef, useEffect } from 'react'
+﻿import { memo, useState, useRef, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import type { Message } from '../../types'
 import { formatTime } from '../../utils/date'
 
-const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉']
+const QUICK_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸŽ‰']
 
 const CLOUDINARY_ORIGINS = ['https://res.cloudinary.com', 'https://res-console.cloudinary.com']
 
@@ -113,7 +113,7 @@ function AudioPlayer({ src }: { src: string }) {
 function isMissedCallMessage(content: string): boolean {
   const trimmed = content.trim()
   return (
-    trimmed.startsWith('📞') || trimmed.startsWith('📹')
+    trimmed.startsWith('ðŸ“ž') || trimmed.startsWith('ðŸ“¹')
   ) && /Missed (audio|video) call/i.test(trimmed)
 }
 
@@ -288,7 +288,7 @@ function MessageBubble({
     return () => document.removeEventListener('mousedown', handler)
   }, [showDropdown])
 
-  // Long press (500ms) → selection mode on mobile/touch
+  // Long press (500ms) â†’ selection mode on mobile/touch
   const startLongPress = () => {
     if (selectionMode || editing) return
     wasLongPress.current = false
@@ -394,7 +394,7 @@ function MessageBubble({
       onTouchMove={cancelLongPress}
     >
       <div className="flex items-center gap-2">
-        {/* Checkbox — selection mode (mobile/touch) */}
+        {/* Checkbox â€” selection mode (mobile/touch) */}
         {selectionMode && (
           <div
             className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -490,16 +490,13 @@ function MessageBubble({
                 ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (
                   <>
                     <a href={message.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline">
-                      📎 Download file
+                      ðŸ“Ž Download file
                     </a>
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>
                 ) : isMissedCallMessage(message.content) ? (
                   <>
                     <div className="flex items-center gap-2" data-testid="missed-call-bubble">
-                      <span className="text-lg" aria-hidden="true">
-                        {message.content.startsWith('📹') ? '📹' : '📞'}
-                      </span>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-red-500">{message.content}</p>
                         {onCallBack && !isMine && (
@@ -539,7 +536,7 @@ function MessageBubble({
                   </div>
                 )}
 
-                {/* ── Desktop dropdown trigger (▾ chevron at bubble corner) ── */}
+                {/* â”€â”€ Desktop dropdown trigger (â–¾ chevron at bubble corner) â”€â”€ */}
                 {showDropdownTrigger && (
                   <button
                     ref={dropdownTriggerRef}
@@ -570,7 +567,7 @@ function MessageBubble({
                   </button>
                 )}
 
-                {/* ── Dropdown menu ── */}
+                {/* â”€â”€ Dropdown menu â”€â”€ */}
                 {showDropdown && (
                   <div
                     ref={dropdownRef}
@@ -594,7 +591,7 @@ function MessageBubble({
                       }
                     />
 
-                    {/* Reply in Thread — Phase 27 */}
+                    {/* Reply in Thread â€” Phase 27 */}
                     {!message.threadId && (
                       <MenuItem
                         testId="dropdown-thread"
@@ -608,7 +605,7 @@ function MessageBubble({
                       />
                     )}
 
-                    {/* Copy — text messages only */}
+                    {/* Copy â€” text messages only */}
                     {message.messageType === 'TEXT' && (
                       <MenuItem
                         testId="dropdown-copy"
@@ -658,7 +655,7 @@ function MessageBubble({
                       }
                     />
 
-                    {/* Pin / Unpin — admin only */}
+                    {/* Pin / Unpin â€” admin only */}
                     {isAdmin && (
                       <>
                         <div className="h-px bg-gray-100 my-1" />
@@ -675,7 +672,7 @@ function MessageBubble({
                       </>
                     )}
 
-                    {/* Message Info — own messages */}
+                    {/* Message Info â€” own messages */}
                     {isMine && (
                       <>
                         <div className="h-px bg-gray-100 my-1" />
@@ -692,7 +689,7 @@ function MessageBubble({
                       </>
                     )}
 
-                    {/* Delete — own messages */}
+                    {/* Delete â€” own messages */}
                     {isMine && (
                       <>
                         <div className="h-px bg-gray-100 my-1" />
@@ -713,7 +710,7 @@ function MessageBubble({
                 )}
               </div>
 
-              {/* Thread reply count — Phase 27 */}
+              {/* Thread reply count â€” Phase 27 */}
               {!message.threadId && (message.threadReplyCount ?? 0) > 0 && (
                 <button
                   onClick={selectionMode ? undefined : () => onDropdownAction?.('thread', message)}
@@ -752,7 +749,7 @@ function MessageBubble({
               )}
             </div>
 
-            {/* Emoji reaction button — hover only, not in selection mode */}
+            {/* Emoji reaction button â€” hover only, not in selection mode */}
             {hovered && !editing && !selectionMode && onReact && (
               <div className={`flex items-center self-end mb-1 ${isMine ? 'mr-1' : 'ml-1'}`}>
                 <div className="relative" ref={emojiPickerRef}>
@@ -795,3 +792,4 @@ function MessageBubble({
 }
 
 export default memo(MessageBubble)
+

@@ -28,6 +28,11 @@ import type { CallEvent } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? '/ws'
 
+function notifyDesktop(title: string, body: string, chatId?: string) {
+  if (!window.electronAPI) return
+  window.electronAPI.notify({ title, body, chatId })
+}
+
 export function useWebSocket(token: string | null, onCallEvent?: (event: CallEvent) => void) {
   const clientRef = useRef<Client | null>(null)
   const subscribedRooms = useRef<Set<string>>(new Set())
@@ -129,6 +134,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
               const conversation = conversationsRef.current.find((c) => c.id === conversationId)
               const otherUser = conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.senderName ?? message.sender
               addNotification(message, otherUser)
+              notifyDesktop(otherUser, message.content || 'You have a new message', conversationId)
             }
           }
         })
@@ -137,6 +143,14 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
         stompClient.subscribe('/user/queue/call', (frame) => {
           try {
             const event: CallEvent = JSON.parse(frame.body)
+            if (event?.eventType === 'INCOMING_CALL' && event.fromUsername) {
+              const label = event.callType === 'VIDEO' ? 'video' : 'audio'
+              notifyDesktop(
+                'Incoming call',
+                `${event.fromUsername} is calling you (${label})`,
+                event.conversationId,
+              )
+            }
             if (event?.eventType && onCallEventRef.current) {
               onCallEventRef.current(event)
             }
@@ -197,6 +211,11 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
         const room = myRoomsRef.current.find((r) => r.roomId === message.roomId)
           ?? roomsRef.current.find((r) => r.roomId === message.roomId)
         addNotification(message, room ? `#${room.name}` : '#Room')
+        notifyDesktop(
+          room ? `#${room.name}` : 'Room message',
+          `${message.senderName ?? message.sender}: ${message.content || 'sent a message'}`,
+          message.roomId,
+        )
       }
     })
 

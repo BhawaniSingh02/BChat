@@ -258,6 +258,10 @@ export default function ChatPage() {
     return () => { document.title = 'Baaat' }
   }, [totalRoomUnread, totalDMUnread, callState])
 
+  useEffect(() => {
+    window.electronAPI?.setUnreadCount(totalRoomUnread + totalDMUnread)
+  }, [totalRoomUnread, totalDMUnread])
+
   const activeRoom = myRooms.find((r) => r.roomId === activeRoomId)
     ?? rooms.find((r) => r.roomId === activeRoomId)
   const activeConversation = conversations.find((c) => c.id === activeDMId)
@@ -403,18 +407,6 @@ export default function ChatPage() {
       `}>
         <Sidebar
           onSelectChat={() => setMobileSidebarOpen(false)}
-          onGlobalSearchNavigate={(msg) => {
-            // Navigate to the conversation containing the found message
-            if (msg.roomId.startsWith('dm:')) {
-              const convId = msg.roomId.slice(3)
-              setActiveDM(convId)
-              setActiveRoom(null)
-            } else {
-              setActiveRoom(msg.roomId)
-              setActiveDM(null)
-            }
-            setMobileSidebarOpen(false)
-          }}
         />
       </div>
 

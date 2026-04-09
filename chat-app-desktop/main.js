@@ -84,6 +84,11 @@ function createWindow() {
     },
   });
 
+  // Remove Electron's default top menu bar on Windows/Linux.
+  Menu.setApplicationMenu(null);
+  mainWindow.removeMenu();
+  mainWindow.setMenuBarVisibility(false);
+
   if (state.isMaximized) mainWindow.maximize();
 
   // Persist window state on move/resize

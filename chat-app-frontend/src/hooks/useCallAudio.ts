@@ -11,6 +11,11 @@ function getAudioContext(): AudioContext {
   if (!audioCtx || audioCtx.state === 'closed') {
     audioCtx = new AudioContext()
   }
+  // Safari suspends AudioContext until a user gesture has occurred.
+  // resume() is a no-op when already running, safe to call every time.
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {})
+  }
   return audioCtx
 }
 

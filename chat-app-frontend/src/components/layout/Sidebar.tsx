@@ -4,14 +4,12 @@ import { useRoomStore } from '../../store/roomStore'
 import { useDMStore } from '../../store/dmStore'
 import { usePresenceStore } from '../../store/presenceStore'
 import { useChatStore } from '../../store/chatStore'
-import { useNotificationStore } from '../../store/notificationStore'
 import Avatar from '../ui/Avatar'
 import RoomList from '../rooms/RoomList'
 import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
-import NotificationBell from '../ui/NotificationBell'
 import BrandLogo from '../ui/BrandLogo'
 
 
@@ -35,17 +33,15 @@ function RoomSkeleton() {
 
 interface SidebarProps {
   onSelectChat?: () => void
-  onGlobalSearchNavigate?: (message: import('../../types').Message) => void
 }
 
-export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: SidebarProps) {
+export default function Sidebar({ onSelectChat }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
   const { conversations, activeDMId, setActiveDM, getOrCreateConversation } = useDMStore()
   const dmUnreadCounts = useDMStore((s) => s.dmUnreadCounts)
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
-  const { notifications, markAllRead, markRead } = useNotificationStore()
   const [tab, setTab] = useState<Tab>('dms')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
@@ -98,15 +94,6 @@ export default function Sidebar({ onSelectChat, onGlobalSearchNavigate }: Sideba
           {/* Global search button — Phase 25 */}
          
           {/* Notification bell — Phase 26 */}
-          <NotificationBell
-            notifications={notifications}
-            onMarkAllRead={markAllRead}
-            onClickNotification={(n) => {
-              markRead(n.id)
-              onGlobalSearchNavigate?.(n.message)
-            }}
-          />
-
           <button
             onClick={() => tab === 'rooms' ? setDiscoverOpen(true) : setDMSearchOpen(true)}
             className="text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
