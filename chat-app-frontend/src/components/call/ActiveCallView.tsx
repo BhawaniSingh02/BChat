@@ -268,7 +268,7 @@ export default function ActiveCallView({
             onMouseDown={handleDragStart}
             data-testid="drag-handle"
           >
-            <Avatar name={otherUsername} size="xs" src={otherAvatarUrl} />
+            <Avatar name={otherUsername} size="sm" src={otherAvatarUrl} />
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-xs font-medium truncate leading-none">{otherUsername}</span>
               <span className="text-xs text-emerald-400 font-mono leading-none mt-0.5" data-testid="call-timer">
