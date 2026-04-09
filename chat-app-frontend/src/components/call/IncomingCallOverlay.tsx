@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { CallType } from '../../types'
 import Avatar from '../ui/Avatar'
 
@@ -7,10 +8,13 @@ interface IncomingCallOverlayProps {
   callerAvatarUrl?: string
   onAccept: () => void
   onDecline: () => void
+  /** Seconds before auto-declining. Default: 60. */
+  timeoutSeconds?: number
 }
 
 /**
  * Full-screen overlay shown to the callee when an incoming call arrives.
+ * Automatically declines after `timeoutSeconds` if not answered.
  */
 export default function IncomingCallOverlay({
   callerUsername,
@@ -18,7 +22,28 @@ export default function IncomingCallOverlay({
   callerAvatarUrl,
   onAccept,
   onDecline,
+  timeoutSeconds = 60,
 }: IncomingCallOverlayProps) {
+  const [countdown, setCountdown] = useState(timeoutSeconds)
+  const onDeclineRef = useRef(onDecline)
+  onDeclineRef.current = onDecline
+
+  // Auto-decline when countdown reaches zero
+  useEffect(() => {
+    if (timeoutSeconds <= 0) return
+    const id = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(id)
+          onDeclineRef.current()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [timeoutSeconds])
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/95 text-white"
@@ -36,7 +61,12 @@ export default function IncomingCallOverlay({
       <p className="text-sm text-gray-300 uppercase tracking-widest mb-1">
         Incoming {callType.toLowerCase()} call
       </p>
-      <h2 className="text-2xl font-semibold mb-10">{callerUsername}</h2>
+      <h2 className="text-2xl font-semibold mb-2">{callerUsername}</h2>
+
+      {/* Countdown indicator */}
+      <p className="text-xs text-gray-500 mb-10" data-testid="ring-countdown">
+        Auto-declining in {countdown}s
+      </p>
 
       <div className="flex items-center gap-16">
         {/* Decline */}

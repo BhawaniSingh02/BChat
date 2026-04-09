@@ -20,6 +20,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -297,6 +298,166 @@ class CallServiceTest {
         when(conversationRepository.findById("bad")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> callService.getCallHistory("bad", "alice"))
+                .isInstanceOf(ConversationNotFoundException.class);
+    }
+
+    // ── cancelCallByConversation ───────────────────────────────────────────────
+
+    @Test
+    void cancelCallByConversation_whenRingingSession_setsMissedAndNotifiesCallee() {
+        when(callSessionRepository.findByConversationIdAndStatusIn(eq("conv-1"), any()))
+                .thenReturn(Optional.of(ringingSession));
+        when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        callService.cancelCallByConversation("conv-1", "alice");
+
+        ArgumentCaptor<CallSession> sessionCaptor = ArgumentCaptor.forClass(CallSession.class);
+        verify(callSessionRepository).save(sessionCaptor.capture());
+        assertThat(sessionCaptor.getValue().getStatus()).isEqualTo(CallSession.CallStatus.MISSED);
+        assertThat(sessionCaptor.getValue().getEndedAt()).isNotNull();
+
+        verify(messageRepository).save(any(Message.class));
+        verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call"), any(CallEvent.class));
+    }
+
+    @Test
+    void cancelCallByConversation_whenNoSession_doesNothing() {
+        when(callSessionRepository.findByConversationIdAndStatusIn(anyString(), any()))
+                .thenReturn(Optional.empty());
+
+        callService.cancelCallByConversation("conv-1", "alice");
+
+        verify(callSessionRepository, never()).save(any(CallSession.class));
+        verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
+    }
+
+    @Test
+    void cancelCallByConversation_whenCallerMismatch_doesNothing() {
+        when(callSessionRepository.findByConversationIdAndStatusIn(eq("conv-1"), any()))
+                .thenReturn(Optional.of(ringingSession)); // ringingSession has caller=alice
+
+        callService.cancelCallByConversation("conv-1", "bob"); // bob is not the caller
+
+        verify(callSessionRepository, never()).save(any(CallSession.class));
+        verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
+    }
+
+    // ── expireSessionsForDisconnectedUser ─────────────────────────────────────
+
+    @Test
+    void expireSessionsForDisconnectedUser_activeCall_setsEndedAndNotifiesBothParties() {
+        ringingSession.setStatus(CallSession.CallStatus.ACTIVE);
+        ringingSession.setAnsweredAt(Instant.now().minusSeconds(15));
+        when(callSessionRepository.findAllActiveCallsByParticipant(eq("alice"), any()))
+                .thenReturn(List.of(ringingSession));
+        when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        callService.expireSessionsForDisconnectedUser("alice");
+
+        ArgumentCaptor<CallSession> cap = ArgumentCaptor.forClass(CallSession.class);
+        verify(callSessionRepository).save(cap.capture());
+        assertThat(cap.getValue().getStatus()).isEqualTo(CallSession.CallStatus.ENDED);
+        assertThat(cap.getValue().getDurationSeconds()).isGreaterThanOrEqualTo(14);
+
+        // Both parties notified
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/call"), any(CallEvent.class));
+        verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call"), any(CallEvent.class));
+    }
+
+    @Test
+    void expireSessionsForDisconnectedUser_callerRinging_setsMissedAndPostsSystemMessage() {
+        when(callSessionRepository.findAllActiveCallsByParticipant(eq("alice"), any()))
+                .thenReturn(List.of(ringingSession)); // alice is the caller
+        when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        callService.expireSessionsForDisconnectedUser("alice");
+
+        ArgumentCaptor<CallSession> cap = ArgumentCaptor.forClass(CallSession.class);
+        verify(callSessionRepository).save(cap.capture());
+        assertThat(cap.getValue().getStatus()).isEqualTo(CallSession.CallStatus.MISSED);
+        verify(messageRepository).save(any(Message.class));
+    }
+
+    @Test
+    void expireSessionsForDisconnectedUser_calleeRinging_setsRejected() {
+        when(callSessionRepository.findAllActiveCallsByParticipant(eq("bob"), any()))
+                .thenReturn(List.of(ringingSession)); // bob is the callee
+        when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        callService.expireSessionsForDisconnectedUser("bob");
+
+        ArgumentCaptor<CallSession> cap = ArgumentCaptor.forClass(CallSession.class);
+        verify(callSessionRepository).save(cap.capture());
+        assertThat(cap.getValue().getStatus()).isEqualTo(CallSession.CallStatus.REJECTED);
+        verify(messageRepository, never()).save(any(Message.class));
+    }
+
+    @Test
+    void expireSessionsForDisconnectedUser_noActiveSessions_doesNothing() {
+        when(callSessionRepository.findAllActiveCallsByParticipant(anyString(), any()))
+                .thenReturn(Collections.emptyList());
+
+        callService.expireSessionsForDisconnectedUser("alice");
+
+        verify(callSessionRepository, never()).save(any(CallSession.class));
+        verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
+    }
+
+    // ── answerCall edge cases ─────────────────────────────────────────────────
+
+    @Test
+    void answerCall_throwsWhenSessionIsAlreadyActive() {
+        ringingSession.setStatus(CallSession.CallStatus.ACTIVE);
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+
+        assertThatThrownBy(() -> callService.answerCall("conv-1", "session-1", "bob", "{}"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("no longer ringing");
+    }
+
+    // ── relayMuteStatus ───────────────────────────────────────────────────────
+
+    @Test
+    void relayMuteStatus_fromCaller_notifiesCallee() {
+        ringingSession.setStatus(CallSession.CallStatus.ACTIVE);
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+
+        callService.relayMuteStatus("conv-1", "session-1", "alice", "{\"kind\":\"audio\",\"muted\":true}");
+
+        ArgumentCaptor<CallEvent> cap = ArgumentCaptor.forClass(CallEvent.class);
+        verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call"), cap.capture());
+        assertThat(cap.getValue().getEventType()).isEqualTo(CallEvent.EventType.MUTE_STATUS.name());
+        assertThat(cap.getValue().getPayload()).contains("\"muted\":true");
+    }
+
+    @Test
+    void relayMuteStatus_fromCallee_notifiesCaller() {
+        ringingSession.setStatus(CallSession.CallStatus.ACTIVE);
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+
+        callService.relayMuteStatus("conv-1", "session-1", "bob", "{\"kind\":\"video\",\"muted\":false}");
+
+        ArgumentCaptor<CallEvent> cap = ArgumentCaptor.forClass(CallEvent.class);
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/call"), cap.capture());
+        assertThat(cap.getValue().getEventType()).isEqualTo(CallEvent.EventType.MUTE_STATUS.name());
+    }
+
+    @Test
+    void relayMuteStatus_throwsWhenSessionNotFound() {
+        when(callSessionRepository.findById("bad")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> callService.relayMuteStatus("conv-1", "bad", "alice", "{}"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Call session not found");
+    }
+
+    @Test
+    void relayMuteStatus_throwsWhenNotParticipant() {
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+
+        assertThatThrownBy(() -> callService.relayMuteStatus("conv-1", "session-1", "eve", "{}"))
                 .isInstanceOf(ConversationNotFoundException.class);
     }
 }

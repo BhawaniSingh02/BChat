@@ -117,6 +117,16 @@ public class CallSignalingController {
         callService.cancelCallByConversation(conversationId, principal.getName());
     }
 
+    /** Either side signals a mute/camera status change to the other peer. */
+    @MessageMapping("/call.mute/{conversationId}/{callSessionId}")
+    public void handleMute(
+            @DestinationVariable String conversationId,
+            @DestinationVariable String callSessionId,
+            @Payload CallSignalRequest request,
+            Principal principal) {
+        callService.relayMuteStatus(conversationId, callSessionId, principal.getName(), request.getPayload());
+    }
+
     // ── REST endpoints ────────────────────────────────────────────────────────
 
     /** GET call history for a DM conversation. */

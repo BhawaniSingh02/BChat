@@ -60,6 +60,8 @@ export interface WebRTCHandlers {
   onConnectionClosed: () => void
   /** Called with a new offer SDP when an ICE restart is attempted */
   onIceRestartOffer?: (offerSdpJson: string) => void
+  /** Called whenever the ICE connection state changes — useful for UI indicators */
+  onIceStateChange?: (state: RTCIceConnectionState) => void
 }
 
 export function useWebRTC(handlers: WebRTCHandlers) {
@@ -156,6 +158,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     // ICE connection state — attempt reconnection before giving up
     pc.oniceconnectionstatechange = () => {
       const iceState = pc.iceConnectionState
+      handlersRef.current.onIceStateChange?.(iceState)
 
       if (iceState === 'disconnected') {
         reconnectTimerRef.current = setTimeout(async () => {

@@ -15,6 +15,10 @@ interface CallStore {
   pendingSdp: string | null
   /** Set when remote party is busy on another call */
   busyReason: string | null
+  /** Whether the remote party has muted their microphone */
+  remoteMuted: boolean
+  /** Whether the remote party has turned off their camera */
+  remoteCameraOff: boolean
 
   // History
   callHistory: Record<string, CallSession[]>  // conversationId -> sessions
@@ -32,6 +36,10 @@ interface CallStore {
   callBusy: (reason: string) => void
   /** Called when CALL_SESSION_CREATED ack arrives — sets the sessionId for the outgoing caller */
   setCallSessionId: (id: string) => void
+  /** Update remote party's mute status (received via MUTE_STATUS event) */
+  setRemoteMuted: (muted: boolean) => void
+  /** Update remote party's camera status (received via MUTE_STATUS event) */
+  setRemoteCameraOff: (off: boolean) => void
 
   fetchCallHistory: (conversationId: string) => Promise<void>
 }
@@ -44,6 +52,8 @@ export const useCallStore = create<CallStore>((set) => ({
   callType: null,
   pendingSdp: null,
   busyReason: null,
+  remoteMuted: false,
+  remoteCameraOff: false,
   callHistory: {},
 
   startOutgoingCall: (conversationId, otherUsername, callType) =>
@@ -86,6 +96,8 @@ export const useCallStore = create<CallStore>((set) => ({
       callType: null,
       pendingSdp: null,
       busyReason: null,
+      remoteMuted: false,
+      remoteCameraOff: false,
     }),
 
   callBusy: (reason) =>
@@ -99,6 +111,9 @@ export const useCallStore = create<CallStore>((set) => ({
 
   setCallSessionId: (id) =>
     set({ callSessionId: id }),
+
+  setRemoteMuted: (muted) => set({ remoteMuted: muted }),
+  setRemoteCameraOff: (off) => set({ remoteCameraOff: off }),
 
   fetchCallHistory: async (conversationId) => {
     try {

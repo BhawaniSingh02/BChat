@@ -175,7 +175,7 @@ export interface CallSession {
   durationSeconds: number
 }
 
-export type CallEventType = 'INCOMING_CALL' | 'CALL_SESSION_CREATED' | 'CALL_ANSWERED' | 'ICE_CANDIDATE' | 'CALL_ENDED' | 'CALL_BUSY'
+export type CallEventType = 'INCOMING_CALL' | 'CALL_SESSION_CREATED' | 'CALL_ANSWERED' | 'ICE_CANDIDATE' | 'CALL_ENDED' | 'CALL_BUSY' | 'MUTE_STATUS'
 
 export interface CallEvent {
   eventType: CallEventType

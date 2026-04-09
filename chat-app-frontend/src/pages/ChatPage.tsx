@@ -45,11 +45,14 @@ export default function ChatPage() {
   const {
     callState, callSessionId, conversationId: callConvId, otherUsername: callOtherUser,
     callType, pendingSdp, busyReason, callHistory,
+    remoteMuted, remoteCameraOff,
     startOutgoingCall, receiveIncomingCall, callAnswered, endCall: endCallInStore,
     callBusy, setCallSessionId, fetchCallHistory,
+    setRemoteMuted, setRemoteCameraOff,
   } = useCallStore()
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+  const [iceState, setIceState] = useState<RTCIceConnectionState | null>(null)
   const audioStopRef = useRef<StopFn | null>(null)
 
   // ── Wake Lock: keep screen on during active calls ─────────────────────────
@@ -108,6 +111,7 @@ export default function ChatPage() {
 
   // ── WebRTC ────────────────────────────────────────────────────────────────
   const { startCall: startWebRTCCall, answerCall: answerWebRTCCall, setRemoteAnswer, addIceCandidate, cleanup: cleanupWebRTC, localStream } = useWebRTC({
+    onIceStateChange: (state) => setIceState(state),
     onIceCandidate: (candidateJson) => {
       const convId = callConvIdRef.current
       const sessionId = callSessionIdRef.current
@@ -166,8 +170,17 @@ export default function ChatPage() {
         // Auto-dismiss busy state after 4 seconds
         setTimeout(() => endCallInStore(), 4000)
         break
+
+      case 'MUTE_STATUS':
+        // Remote peer toggled their mic or camera
+        try {
+          const parsed: { kind: 'audio' | 'video'; muted: boolean } = JSON.parse(event.payload ?? '{}')
+          if (parsed.kind === 'audio') setRemoteMuted(parsed.muted)
+          else if (parsed.kind === 'video') setRemoteCameraOff(parsed.muted)
+        } catch { /* ignore malformed */ }
+        break
     }
-  }, [setCallSessionId, receiveIncomingCall, callAnswered, setRemoteAnswer, addIceCandidate, cleanupWebRTC, endCallInStore, callBusy])
+  }, [setCallSessionId, receiveIncomingCall, callAnswered, setRemoteAnswer, addIceCandidate, cleanupWebRTC, endCallInStore, callBusy, setRemoteMuted, setRemoteCameraOff])
 
 
 
@@ -176,6 +189,7 @@ export default function ChatPage() {
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd, sendCallCancel,
+    sendCallMuteStatus,
     sendThreadReply, markDMRead,
     connected,
   } = useWebSocket(token, handleCallEvent)
@@ -357,6 +371,18 @@ export default function ChatPage() {
     endCallInStore()
   }, [callSessionId, callConvId, sendCallEnd, cleanupWebRTC, endCallInStore])
 
+  const handleMuteToggle = useCallback((muted: boolean) => {
+    if (callConvId && callSessionId) {
+      sendCallMuteStatus(callConvId, callSessionId, 'audio', muted)
+    }
+  }, [callConvId, callSessionId, sendCallMuteStatus])
+
+  const handleCameraToggle = useCallback((off: boolean) => {
+    if (callConvId && callSessionId) {
+      sendCallMuteStatus(callConvId, callSessionId, 'video', off)
+    }
+  }, [callConvId, callSessionId, sendCallMuteStatus])
+
   const handleHangUp = useCallback(() => {
     if (callConvId) {
       if (callSessionId) {
@@ -368,6 +394,7 @@ export default function ChatPage() {
     }
     cleanupWebRTC()
     setRemoteStream(null)
+    setIceState(null)
     endCallInStore()
     // Refresh call history for this conversation
     if (callConvId) fetchCallHistory(callConvId)
@@ -626,6 +653,11 @@ export default function ChatPage() {
           remoteStream={remoteStream}
           otherAvatarUrl={cache[callOtherUser]?.avatarUrl}
           onHangUp={handleHangUp}
+          remoteMuted={remoteMuted}
+          remoteCameraOff={remoteCameraOff}
+          iceConnectionState={iceState}
+          onMuteToggle={handleMuteToggle}
+          onCameraToggle={handleCameraToggle}
         />
       )}
 

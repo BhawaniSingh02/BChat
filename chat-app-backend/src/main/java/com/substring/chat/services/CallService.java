@@ -253,6 +253,32 @@ public class CallService {
                 });
     }
 
+    /**
+     * Relay a mute/camera status toggle to the other participant.
+     * Payload JSON: {@code {"kind":"audio","muted":true}} or {@code {"kind":"video","muted":true}}.
+     */
+    public void relayMuteStatus(String conversationId, String callSessionId,
+                                 String senderUsername, String payload) {
+        CallSession session = callSessionRepository.findById(callSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Call session not found: " + callSessionId));
+
+        validateParticipant(session, senderUsername, conversationId);
+
+        String targetUsername = session.getCallerId().equals(senderUsername)
+                ? session.getCalleeId()
+                : session.getCallerId();
+
+        CallEvent event = CallEvent.builder()
+                .eventType(CallEvent.EventType.MUTE_STATUS.name())
+                .callSessionId(callSessionId)
+                .conversationId(conversationId)
+                .fromUsername(senderUsername)
+                .callType(session.getCallType().name())
+                .payload(payload)
+                .build();
+        messagingTemplate.convertAndSendToUser(targetUsername, "/queue/call", event);
+    }
+
     // ── Call history ─────────────────────────────────────────────────────────
 
     public List<CallSessionResponse> getCallHistory(String conversationId, String requestingUser) {

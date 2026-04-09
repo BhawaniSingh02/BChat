@@ -149,12 +149,49 @@ class CallSignalingControllerTest {
         verify(callService).endCall("conv-1", "sess-1", "alice");
     }
 
-    // ── CALL_BUSY event type ──────────────────────────────────────────────────
+    // ── handleMute ────────────────────────────────────────────────────────────
+
+    @Test
+    void handleMute_delegatesToCallService() {
+        CallSignalRequest request = new CallSignalRequest();
+        request.setPayload("{\"kind\":\"audio\",\"muted\":true}");
+
+        controller.handleMute("conv-1", "sess-1", request, principal("alice"));
+
+        verify(callService).relayMuteStatus("conv-1", "sess-1", "alice", "{\"kind\":\"audio\",\"muted\":true}");
+    }
+
+    @Test
+    void handleMute_cameraOff_delegatesToCallService() {
+        CallSignalRequest request = new CallSignalRequest();
+        request.setPayload("{\"kind\":\"video\",\"muted\":true}");
+
+        controller.handleMute("conv-1", "sess-1", request, principal("bob"));
+
+        verify(callService).relayMuteStatus("conv-1", "sess-1", "bob", "{\"kind\":\"video\",\"muted\":true}");
+    }
+
+    // ── handleCancel ──────────────────────────────────────────────────────────
+
+    @Test
+    void handleCancel_delegatesToCallService() {
+        controller.handleCancel("conv-1", principal("alice"));
+
+        verify(callService).cancelCallByConversation("conv-1", "alice");
+    }
+
+    // ── CALL_BUSY / MUTE_STATUS event types ──────────────────────────────────
 
     @Test
     void callBusyEventType_isDefinedInEnum() {
         // Ensure CALL_BUSY is a valid enum constant — prevents silent omissions
         CallEvent.EventType busy = CallEvent.EventType.CALL_BUSY;
         assertThat(busy.name()).isEqualTo("CALL_BUSY");
+    }
+
+    @Test
+    void muteStatusEventType_isDefinedInEnum() {
+        CallEvent.EventType mute = CallEvent.EventType.MUTE_STATUS;
+        assertThat(mute.name()).isEqualTo("MUTE_STATUS");
     }
 }

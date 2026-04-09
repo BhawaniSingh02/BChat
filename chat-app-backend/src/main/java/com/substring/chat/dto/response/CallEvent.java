@@ -29,7 +29,9 @@ public class CallEvent {
         /** One side hung up / rejected. */
         CALL_ENDED,
         /** Callee is already on another call — caller sees busy signal. */
-        CALL_BUSY
+        CALL_BUSY,
+        /** One side toggled their microphone or camera — relay to the other peer for UI indicator. */
+        MUTE_STATUS
     }
 
     /** The kind of event. */

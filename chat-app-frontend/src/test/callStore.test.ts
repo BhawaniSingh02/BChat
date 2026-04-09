@@ -18,6 +18,8 @@ function resetStore() {
     callType: null,
     pendingSdp: null,
     busyReason: null,
+    remoteMuted: false,
+    remoteCameraOff: false,
     callHistory: {},
   })
 }
@@ -140,6 +142,41 @@ describe('callStore', () => {
       const s = useCallStore.getState()
       expect(s.callSessionId).toBeNull()
       expect(s.pendingSdp).toBeNull()
+    })
+  })
+
+  describe('setRemoteMuted', () => {
+    it('sets remoteMuted to true', () => {
+      useCallStore.getState().setRemoteMuted(true)
+      expect(useCallStore.getState().remoteMuted).toBe(true)
+    })
+
+    it('sets remoteMuted to false', () => {
+      useCallStore.setState({ remoteMuted: true })
+      useCallStore.getState().setRemoteMuted(false)
+      expect(useCallStore.getState().remoteMuted).toBe(false)
+    })
+  })
+
+  describe('setRemoteCameraOff', () => {
+    it('sets remoteCameraOff to true', () => {
+      useCallStore.getState().setRemoteCameraOff(true)
+      expect(useCallStore.getState().remoteCameraOff).toBe(true)
+    })
+
+    it('sets remoteCameraOff to false', () => {
+      useCallStore.setState({ remoteCameraOff: true })
+      useCallStore.getState().setRemoteCameraOff(false)
+      expect(useCallStore.getState().remoteCameraOff).toBe(false)
+    })
+  })
+
+  describe('endCall (remote state cleanup)', () => {
+    it('resets remoteMuted on endCall', () => {
+      useCallStore.setState({ remoteMuted: true, remoteCameraOff: true })
+      useCallStore.getState().endCall()
+      expect(useCallStore.getState().remoteMuted).toBe(false)
+      expect(useCallStore.getState().remoteCameraOff).toBe(false)
     })
   })
 

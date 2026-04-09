@@ -358,6 +358,19 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     })
   }, [])
 
+  /** Relay a mute/camera status change to the remote peer. */
+  const sendCallMuteStatus = useCallback((
+    conversationId: string,
+    callSessionId: string,
+    kind: 'audio' | 'video',
+    muted: boolean,
+  ) => {
+    clientRef.current?.publish({
+      destination: `/app/call.mute/${conversationId}/${callSessionId}`,
+      body: JSON.stringify({ payload: JSON.stringify({ kind, muted }) }),
+    })
+  }, [])
+
   // ── Phase 27: Thread replies ─────────────────────────────────────────────
 
   /** Subscribe to live thread reply updates for a root message. */
@@ -392,6 +405,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     editMessage, deleteMessage, reactToMessage,
     editDMMessage, deleteDMMessage, reactToDMMessage,
     sendCallOffer, sendCallAnswer, sendIceCandidate, sendCallEnd, sendCallCancel,
+    sendCallMuteStatus,
     subscribeToThread, sendThreadReply,
     markDMRead,
     isConnected, connected,
