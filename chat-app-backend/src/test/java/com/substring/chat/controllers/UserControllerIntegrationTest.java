@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.substring.chat.dto.request.ChangePasswordRequest;
 import com.substring.chat.dto.request.RegisterRequest;
 import com.substring.chat.dto.request.UpdateProfileRequest;
+import com.substring.chat.dto.request.VerifyEmailOtpRequest;
+import com.substring.chat.entities.User;
 import com.substring.chat.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,25 +35,46 @@ class UserControllerIntegrationTest {
     private UserRepository userRepository;
 
     private String authToken;
+    private String aliceToken;
+    private String searchUserHandle;
+    private String aliceHandle;
 
     @BeforeEach
     void setUp() throws Exception {
         userRepository.deleteAll();
-        authToken = registerAndGetToken("searchuser", "search@example.com", "password123");
-        registerAndGetToken("alice", "alice@example.com", "password123");
-        registerAndGetToken("alicia", "alicia@example.com", "password123");
+        authToken = registerAndGetToken("Search User", "search@example.com", "password123");
+        aliceToken = registerAndGetToken("Alice Smith", "alice@example.com", "password123");
+        registerAndGetToken("Alicia Jones", "alicia@example.com", "password123");
+
+        searchUserHandle = userRepository.findByEmail("search@example.com")
+                .orElseThrow().getUniqueHandle();
+        aliceHandle = userRepository.findByEmail("alice@example.com")
+                .orElseThrow().getUniqueHandle();
     }
 
-    private String registerAndGetToken(String username, String email, String password) throws Exception {
+    private String registerAndGetToken(String displayName, String email, String password) throws Exception {
         RegisterRequest request = new RegisterRequest();
-        request.setUsername(username);
+        request.setDisplayName(displayName);
         request.setEmail(email);
         request.setPassword(password);
 
-        String response = mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        String otp = user.getEmailVerificationToken();
+
+        VerifyEmailOtpRequest verifyRequest = new VerifyEmailOtpRequest();
+        verifyRequest.setEmail(email);
+        verifyRequest.setCode(otp);
+
+        String response = mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(verifyRequest)))
+                .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         return objectMapper.readTree(response).get("token").asText();
@@ -84,32 +107,61 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
-    // ── Get user ───────────────────────────────────────────────────────────────
+    // ── Find by handle ─────────────────────────────────────────────────────────
+
+    @Test
+    void findByHandle_returnsPublicProfileWithoutEmail() throws Exception {
+        mockMvc.perform(get("/api/v1/users/find")
+                        .param("handle", aliceHandle)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uniqueHandle").value(aliceHandle))
+                .andExpect(jsonPath("$.email").doesNotExist());
+    }
+
+    @Test
+    void findByHandle_returnsOwnProfileWithEmail() throws Exception {
+        mockMvc.perform(get("/api/v1/users/find")
+                        .param("handle", searchUserHandle)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uniqueHandle").value(searchUserHandle))
+                .andExpect(jsonPath("$.email").value("search@example.com"));
+    }
+
+    @Test
+    void findByHandle_returns404ForUnknownHandle() throws Exception {
+        mockMvc.perform(get("/api/v1/users/find")
+                        .param("handle", "nonexistent.9999")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── Get user by username/handle path ───────────────────────────────────────
 
     @Test
     void getUser_returnsPublicProfileWithoutEmail() throws Exception {
-        // Email must be hidden from other users — only /me returns email
-        mockMvc.perform(get("/api/v1/users/alice")
+        mockMvc.perform(get("/api/v1/users/" + aliceHandle)
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.username").value(aliceHandle))
                 .andExpect(jsonPath("$.email").doesNotExist());
     }
 
     @Test
     void getUser_ownProfileShowsEmail() throws Exception {
-        // Viewing your own profile via /{username} returns email (same as /me)
-        mockMvc.perform(get("/api/v1/users/searchuser")
+        mockMvc.perform(get("/api/v1/users/" + searchUserHandle)
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("searchuser"))
+                .andExpect(jsonPath("$.username").value(searchUserHandle))
                 .andExpect(jsonPath("$.email").value("search@example.com"));
     }
 
     @Test
     void getUser_profilePhotoHiddenWhenPrivacyNobody() throws Exception {
-        // alice2 sets profilePhotoPrivacy=NOBODY, their avatar hidden from searchuser
-        String alice2Token = registerAndGetToken("alice2", "alice2@example.com", "password123");
+        String alice2Token = registerAndGetToken("Alice Two", "alice2@example.com", "password123");
+        String alice2Handle = userRepository.findByEmail("alice2@example.com").orElseThrow().getUniqueHandle();
+
         UpdateProfileRequest privReq = new UpdateProfileRequest();
         privReq.setProfilePhotoPrivacy("NOBODY");
         mockMvc.perform(patch("/api/v1/users/me")
@@ -118,23 +170,23 @@ class UserControllerIntegrationTest {
                         .header("Authorization", "Bearer " + alice2Token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/users/alice2")
+        mockMvc.perform(get("/api/v1/users/" + alice2Handle)
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("alice2"))
+                .andExpect(jsonPath("$.username").value(alice2Handle))
                 .andExpect(jsonPath("$.avatarUrl").doesNotExist());
     }
 
     @Test
     void getUser_returns404WhenUserNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/users/nonexistentuser")
+        mockMvc.perform(get("/api/v1/users/nonexistent.0000")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void getUser_returns401WithoutToken() throws Exception {
-        mockMvc.perform(get("/api/v1/users/alice"))
+        mockMvc.perform(get("/api/v1/users/" + aliceHandle))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -145,7 +197,7 @@ class UserControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/users/me")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("searchuser"))
+                .andExpect(jsonPath("$.username").value(searchUserHandle))
                 .andExpect(jsonPath("$.email").value("search@example.com"));
     }
 
@@ -160,7 +212,7 @@ class UserControllerIntegrationTest {
     @Test
     void updateMe_updatesDisplayNameAndBio() throws Exception {
         UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setDisplayName("Search User");
+        req.setDisplayName("Search User Updated");
         req.setBio("Integration tester");
         req.setStatusMessage("Testing all the things");
 
@@ -169,7 +221,7 @@ class UserControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(req))
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.displayName").value("Search User"))
+                .andExpect(jsonPath("$.displayName").value("Search User Updated"))
                 .andExpect(jsonPath("$.bio").value("Integration tester"))
                 .andExpect(jsonPath("$.statusMessage").value("Testing all the things"));
     }
@@ -209,7 +261,7 @@ class UserControllerIntegrationTest {
         mockMvc.perform(delete("/api/v1/users/me/avatar")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("searchuser"));
+                .andExpect(jsonPath("$.username").value(searchUserHandle));
     }
 
     @Test
@@ -257,6 +309,26 @@ class UserControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ── Privacy settings ───────────────────────────────────────────────────────
+
+    @Test
+    void getPrivacy_returnsWhoCanMessageSetting() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me/privacy")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.whoCanMessage").value("APPROVED_ONLY"));
+    }
+
+    @Test
+    void updatePrivacy_setsWhoCanMessage() throws Exception {
+        mockMvc.perform(patch("/api/v1/users/me/privacy")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"whoCanMessage\":\"ANYONE\"}")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.whoCanMessage").value("ANYONE"));
     }
 
     // ── Legacy endpoint ────────────────────────────────────────────────────────

@@ -30,6 +30,13 @@ public class UserResponse {
     // Phase 23 — Blocking (only returned for /me, not public profiles)
     private List<String> blockedUsers;
 
+    // Security: email verification
+    private boolean emailVerified;
+
+    // Unique handle & privacy
+    private String uniqueHandle;
+    private String whoCanMessage;
+
     public static UserResponse from(User user) {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
@@ -45,6 +52,9 @@ public class UserResponse {
         response.setCreatedAt(user.getCreatedAt());
         response.setLastSeen(user.getLastSeen());
         response.setBlockedUsers(user.getBlockedUsers() != null ? user.getBlockedUsers() : new ArrayList<>());
+        response.setEmailVerified(user.isEmailVerified());
+        response.setUniqueHandle(user.getUniqueHandle());
+        response.setWhoCanMessage(user.getWhoCanMessage());
         return response;
     }
 }

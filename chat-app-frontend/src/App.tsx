@@ -5,16 +5,28 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ChatPage from './pages/ChatPage'
 import DownloadPage from './pages/DownloadPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 
+/**
+ * Guards authenticated routes. Waits for the initial fetchMe to complete
+ * before deciding — prevents a flash redirect to /login on page refresh
+ * when the user has a valid session cookie.
+ */
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.token)
-  if (!token) return <Navigate to="/login" replace />
+  const user = useAuthStore((s) => s.user)
+  const isInitialized = useAuthStore((s) => s.isInitialized)
+  if (!isInitialized) return null   // still loading — render nothing
+  if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
 function RedirectIfAuth({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.token)
-  if (token) return <Navigate to="/chat" replace />
+  const user = useAuthStore((s) => s.user)
+  const isInitialized = useAuthStore((s) => s.isInitialized)
+  if (!isInitialized) return null   // still loading
+  if (user) return <Navigate to="/chat" replace />
   return <>{children}</>
 }
 
@@ -52,6 +64,9 @@ export default function App() {
             </RedirectIfAuth>
           }
         />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route
           path="/chat"
           element={

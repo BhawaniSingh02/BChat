@@ -95,10 +95,10 @@ public class UserService {
                 .orElse(true);
     }
 
-    public List<UserResponse> searchUsers(String query) {
+    public List<UserResponse> searchUsers(String query, String viewerUsername) {
         return userRepository.findByUsernameContainingIgnoreCase(query)
                 .stream()
-                .map(UserResponse::from)
+                .map(u -> getPublicProfile(u.getUsername(), viewerUsername))
                 .toList();
     }
 
@@ -158,6 +158,42 @@ public class UserService {
             throw new IllegalArgumentException("Current password is incorrect");
         }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // ── Phase — User Discovery & Privacy ────────────────────────────────
+
+    private static final Set<String> VALID_WHO_CAN_MESSAGE = Set.of("ANYONE", "APPROVED_ONLY", "NOBODY");
+
+    /**
+     * Exact-match handle lookup. Returns public profile + contact status.
+     * Returns 404 (throws) if target has whoCanMessage = NOBODY.
+     */
+    public UserResponse findByHandle(String handle, String viewerUsername) {
+        User target = userRepository.findByUniqueHandle(handle)
+                .orElseThrow(() -> new UserNotFoundException(handle));
+
+        if ("NOBODY".equals(target.getWhoCanMessage())
+                && !target.getUsername().equals(viewerUsername)) {
+            throw new UserNotFoundException(handle);
+        }
+
+        return getPublicProfile(target.getUsername(), viewerUsername);
+    }
+
+    public String getWhoCanMessage(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+        return user.getWhoCanMessage() != null ? user.getWhoCanMessage() : "APPROVED_ONLY";
+    }
+
+    public void updateWhoCanMessage(String username, String value) {
+        if (value == null || !VALID_WHO_CAN_MESSAGE.contains(value)) {
+            throw new IllegalArgumentException("Invalid value. Must be one of: ANYONE, APPROVED_ONLY, NOBODY");
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException(username));
+        user.setWhoCanMessage(value);
         userRepository.save(user);
     }
 

@@ -6,7 +6,7 @@ import Input from '../ui/Input'
 import BrandLogo from '../ui/BrandLogo'
 
 export default function LoginForm() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [darkMode, setDarkMode] = useState(false)
   const { login, isLoading, error } = useAuthStore()
@@ -15,7 +15,7 @@ export default function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await login(username, password)
+      await login(email, password)
       navigate('/chat')
     } catch {
       // error set in store
@@ -88,13 +88,13 @@ export default function LoginForm() {
               )}
 
               <Input
-                label="Username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
                 required
-                autoComplete="username"
+                autoComplete="email"
                 autoFocus
                 className={`h-12 rounded-xl focus:ring-teal-500 ${
                   darkMode
@@ -103,20 +103,30 @@ export default function LoginForm() {
                 }`}
               />
 
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                autoComplete="current-password"
-                className={`h-12 rounded-xl focus:ring-teal-500 ${
-                  darkMode
-                    ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
-                    : 'border-slate-200 bg-slate-50/72'
-                }`}
-              />
+              <div>
+                <Input
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  autoComplete="current-password"
+                  className={`h-12 rounded-xl focus:ring-teal-500 ${
+                    darkMode
+                      ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
+                      : 'border-slate-200 bg-slate-50/72'
+                  }`}
+                />
+                <div className="mt-1.5 text-right">
+                  <Link
+                    to="/forgot-password"
+                    className={`text-xs font-medium ${darkMode ? 'text-slate-400 hover:text-teal-300' : 'text-slate-500 hover:text-teal-700'}`}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              </div>
 
               <Button
                 type="submit"

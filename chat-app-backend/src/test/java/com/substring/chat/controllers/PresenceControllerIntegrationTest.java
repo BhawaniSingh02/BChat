@@ -2,6 +2,8 @@ package com.substring.chat.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.substring.chat.dto.request.RegisterRequest;
+import com.substring.chat.dto.request.VerifyEmailOtpRequest;
+import com.substring.chat.entities.User;
 import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.services.PresenceService;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,14 +46,24 @@ class PresenceControllerIntegrationTest {
         presenceService.getOnlineUsers().forEach(u -> presenceService.setOffline(u));
 
         RegisterRequest request = new RegisterRequest();
-        request.setUsername("presenceuser");
+        request.setDisplayName("Presence User");
         request.setEmail("presence@example.com");
         request.setPassword("password123");
 
-        String response = mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User user = userRepository.findByEmail("presence@example.com").orElseThrow();
+        VerifyEmailOtpRequest verifyRequest = new VerifyEmailOtpRequest();
+        verifyRequest.setEmail("presence@example.com");
+        verifyRequest.setCode(user.getEmailVerificationToken());
+
+        String response = mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(verifyRequest)))
+                .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         authToken = objectMapper.readTree(response).get("token").asText();

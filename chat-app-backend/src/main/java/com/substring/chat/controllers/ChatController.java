@@ -33,6 +33,7 @@ import java.util.Map;
 public class ChatController {
 
     private static final String DM_PREFIX = "dm:";
+    private static final int MAX_MESSAGE_LENGTH = 65_536; // 64 KB
 
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageRepository messageRepository;
@@ -47,6 +48,13 @@ public class ChatController {
                             Principal principal) {
         if (!rateLimiter.isAllowed(principal.getName())) {
             log.warn("Rate limit exceeded for user: {}", principal.getName());
+            return;
+        }
+
+        String content = request.getContent();
+        if (content != null && content.length() > MAX_MESSAGE_LENGTH) {
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/errors",
+                    Map.of("error", "Message content exceeds the 64 KB limit"));
             return;
         }
 
@@ -129,6 +137,13 @@ public class ChatController {
     public void sendDirectMessage(@DestinationVariable String conversationId,
                                    @Payload SendDirectMessageRequest request,
                                    Principal principal) {
+        String dmContent = request.getContent();
+        if (dmContent != null && dmContent.length() > MAX_MESSAGE_LENGTH) {
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/errors",
+                    Map.of("error", "Message content exceeds the 64 KB limit"));
+            return;
+        }
+
         conversationRepository.findById(conversationId).ifPresent(conv -> {
             if (!conv.getParticipants().contains(principal.getName())) return;
 

@@ -135,9 +135,9 @@ class UserControllerTest {
     @Test
     void searchUsers_returnsMatchingList() {
         List<UserResponse> results = List.of(userResponse);
-        when(userService.searchUsers("ali")).thenReturn(results);
+        when(userService.searchUsers("ali", "alice")).thenReturn(results);
 
-        ResponseEntity<List<UserResponse>> response = userController.searchUsers("ali");
+        ResponseEntity<List<UserResponse>> response = userController.searchUsers("ali", principal);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).hasSize(1);
@@ -170,5 +170,29 @@ class UserControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         verify(userService).updateProfile("alice", req);
+    }
+
+    @Test
+    void findByHandle_returnsPublicProfile() {
+        UserResponse found = new UserResponse();
+        found.setUsername("alice");
+        found.setUniqueHandle("alice.1234");
+
+        when(userService.findByHandle("alice.1234", "alice")).thenReturn(found);
+
+        ResponseEntity<?> response = userController.findByHandle("alice.1234", principal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(userService).findByHandle("alice.1234", "alice");
+    }
+
+    @Test
+    void getPrivacy_returnsWhoCanMessage() {
+        when(userService.getWhoCanMessage("alice")).thenReturn("APPROVED_ONLY");
+
+        ResponseEntity<java.util.Map<String, String>> response = userController.getPrivacy(principal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).containsEntry("whoCanMessage", "APPROVED_ONLY");
     }
 }

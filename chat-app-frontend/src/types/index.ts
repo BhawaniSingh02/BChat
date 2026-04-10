@@ -1,8 +1,10 @@
 export interface User {
   id: string
-  username: string
+  username: string        // = uniqueHandle for verified users
   email: string
   displayName?: string
+  uniqueHandle?: string
+  whoCanMessage?: 'ANYONE' | 'APPROVED_ONLY' | 'NOBODY'
   bio?: string
   statusMessage?: string
   avatarUrl?: string
@@ -11,6 +13,7 @@ export interface User {
   profilePhotoPrivacy?: 'EVERYONE' | 'NOBODY' | 'CONTACTS'
   createdAt: string
   lastSeen: string
+  emailVerified?: boolean
   // Phase 23 — Blocking (only present on own profile)
   blockedUsers?: string[]
 }
@@ -20,7 +23,22 @@ export interface AuthResponse {
   username: string
   email: string
   userId: string
+  uniqueHandle?: string
+  whoCanMessage?: string
 }
+
+export interface ContactRequest {
+  id: string
+  fromUserId: string
+  toUserId: string
+  fromHandle?: string
+  fromDisplayName?: string
+  fromAvatarUrl?: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  createdAt: string
+}
+
+export type ContactStatus = 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
 
 export interface Room {
   id: string
@@ -117,12 +135,12 @@ export interface CreateRoomRequest {
 }
 
 export interface LoginRequest {
-  username: string
+  email: string
   password: string
 }
 
 export interface RegisterRequest {
-  username: string
+  displayName: string
   email: string
   password: string
 }

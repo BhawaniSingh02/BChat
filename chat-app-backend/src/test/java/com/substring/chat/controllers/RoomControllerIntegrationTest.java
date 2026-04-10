@@ -3,7 +3,9 @@ package com.substring.chat.controllers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.substring.chat.dto.request.CreateRoomRequest;
 import com.substring.chat.dto.request.RegisterRequest;
+import com.substring.chat.dto.request.VerifyEmailOtpRequest;
 import com.substring.chat.entities.Message;
+import com.substring.chat.entities.User;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
 import com.substring.chat.repositories.UserRepository;
@@ -45,6 +47,7 @@ class RoomControllerIntegrationTest {
 
     private String authToken;
     private String secondUserToken;
+    private String authHandle;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -52,20 +55,33 @@ class RoomControllerIntegrationTest {
         roomRepository.deleteAll();
         userRepository.deleteAll();
 
-        authToken = registerAndGetToken("roomuser", "roomuser@example.com", "password123");
-        secondUserToken = registerAndGetToken("roomuser2", "roomuser2@example.com", "password123");
+        authToken = registerAndGetToken("Room User", "roomuser@example.com", "password123");
+        secondUserToken = registerAndGetToken("Room User Two", "roomuser2@example.com", "password123");
+
+        authHandle = userRepository.findByEmail("roomuser@example.com").orElseThrow().getUniqueHandle();
     }
 
-    private String registerAndGetToken(String username, String email, String password) throws Exception {
+    private String registerAndGetToken(String displayName, String email, String password) throws Exception {
         RegisterRequest request = new RegisterRequest();
-        request.setUsername(username);
+        request.setDisplayName(displayName);
         request.setEmail(email);
         request.setPassword(password);
 
-        String response = mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        VerifyEmailOtpRequest verifyRequest = new VerifyEmailOtpRequest();
+        verifyRequest.setEmail(email);
+        verifyRequest.setCode(user.getEmailVerificationToken());
+
+        String response = mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(verifyRequest)))
+                .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         return objectMapper.readTree(response).get("token").asText();
@@ -85,7 +101,7 @@ class RoomControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roomId").value("tech-talk"))
                 .andExpect(jsonPath("$.name").value("Tech Talk"))
-                .andExpect(jsonPath("$.createdBy").value("roomuser"))
+                .andExpect(jsonPath("$.createdBy").value(authHandle))
                 .andExpect(jsonPath("$.memberCount").value(1));
     }
 
@@ -322,7 +338,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void editMessage_returns200WithUpdatedContent() throws Exception {
-        String messageId = createRoomAndSeedMessage("edit-room-1", authToken, "roomuser");
+        String messageId = createRoomAndSeedMessage("edit-room-1", authToken, authHandle);
 
         mockMvc.perform(put("/api/v1/rooms/edit-room-1/messages/" + messageId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -335,7 +351,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void editMessage_returns403WhenNotOwner() throws Exception {
-        String messageId = createRoomAndSeedMessage("edit-room-2", authToken, "roomuser");
+        String messageId = createRoomAndSeedMessage("edit-room-2", authToken, authHandle);
 
         // Join room as second user then try to edit first user's message
         mockMvc.perform(post("/api/v1/rooms/edit-room-2/join")
@@ -369,7 +385,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void deleteMessage_returns200WithDeletedFlagAndPlaceholder() throws Exception {
-        String messageId = createRoomAndSeedMessage("delete-room-1", authToken, "roomuser");
+        String messageId = createRoomAndSeedMessage("delete-room-1", authToken, authHandle);
 
         mockMvc.perform(delete("/api/v1/rooms/delete-room-1/messages/" + messageId)
                         .header("Authorization", "Bearer " + authToken))
@@ -380,7 +396,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void deleteMessage_returns403WhenNotOwner() throws Exception {
-        String messageId = createRoomAndSeedMessage("delete-room-2", authToken, "roomuser");
+        String messageId = createRoomAndSeedMessage("delete-room-2", authToken, authHandle);
 
         mockMvc.perform(post("/api/v1/rooms/delete-room-2/join")
                         .header("Authorization", "Bearer " + secondUserToken))
@@ -393,7 +409,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void editMessage_returns400WithBlankContent() throws Exception {
-        String messageId = createRoomAndSeedMessage("edit-room-4", authToken, "roomuser");
+        String messageId = createRoomAndSeedMessage("edit-room-4", authToken, authHandle);
 
         mockMvc.perform(put("/api/v1/rooms/edit-room-4/messages/" + messageId)
                         .contentType(MediaType.APPLICATION_JSON)

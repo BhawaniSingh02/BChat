@@ -3,6 +3,8 @@ package com.substring.chat.controllers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.substring.chat.dto.request.RegisterRequest;
 import com.substring.chat.dto.request.SendDirectMessageRequest;
+import com.substring.chat.dto.request.VerifyEmailOtpRequest;
+import com.substring.chat.entities.User;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.UserRepository;
@@ -42,6 +44,8 @@ class DirectMessageControllerIntegrationTest {
 
     private String aliceToken;
     private String bobToken;
+    private String aliceHandle;
+    private String bobHandle;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -49,20 +53,34 @@ class DirectMessageControllerIntegrationTest {
         conversationRepository.deleteAll();
         userRepository.deleteAll();
 
-        aliceToken = registerAndGetToken("alice", "alice@example.com", "password123");
-        bobToken = registerAndGetToken("bob", "bob@example.com", "password123");
+        aliceToken = registerAndGetToken("Alice Test", "alice@example.com", "password123");
+        bobToken = registerAndGetToken("Bob Test", "bob@example.com", "password123");
+
+        aliceHandle = userRepository.findByEmail("alice@example.com").orElseThrow().getUniqueHandle();
+        bobHandle = userRepository.findByEmail("bob@example.com").orElseThrow().getUniqueHandle();
     }
 
-    private String registerAndGetToken(String username, String email, String password) throws Exception {
+    private String registerAndGetToken(String displayName, String email, String password) throws Exception {
         RegisterRequest request = new RegisterRequest();
-        request.setUsername(username);
+        request.setDisplayName(displayName);
         request.setEmail(email);
         request.setPassword(password);
 
-        String response = mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        VerifyEmailOtpRequest verifyRequest = new VerifyEmailOtpRequest();
+        verifyRequest.setEmail(email);
+        verifyRequest.setCode(user.getEmailVerificationToken());
+
+        String response = mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(verifyRequest)))
+                .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         return objectMapper.readTree(response).get("token").asText();
@@ -85,24 +103,23 @@ class DirectMessageControllerIntegrationTest {
 
     @Test
     void getOrCreateConversation_createsNewConversation() throws Exception {
-        String response = mockMvc.perform(post("/api/v1/dm/bob")
+        mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").isNotEmpty())
-                .andExpect(jsonPath("$.participants").isArray())
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(jsonPath("$.participants").isArray());
     }
 
     @Test
     void getOrCreateConversation_returnsExistingOnSecondCall() throws Exception {
-        String firstResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String firstResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         String firstId = objectMapper.readTree(firstResponse).get("id").asText();
 
-        String secondResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String secondResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -121,7 +138,7 @@ class DirectMessageControllerIntegrationTest {
 
     @Test
     void sendMessage_persistsMessage() throws Exception {
-        String convResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -137,13 +154,13 @@ class DirectMessageControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(messageRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("Hello Bob!"))
-                .andExpect(jsonPath("$.sender").value("alice"))
+                .andExpect(jsonPath("$.sender").value(aliceHandle))
                 .andExpect(jsonPath("$.roomId").value("dm:" + conversationId));
     }
 
     @Test
     void sendMessage_returns400WithEmptyContent() throws Exception {
-        String convResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -162,7 +179,7 @@ class DirectMessageControllerIntegrationTest {
 
     @Test
     void getMessages_returnsEmptyInitially() throws Exception {
-        String convResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -178,7 +195,7 @@ class DirectMessageControllerIntegrationTest {
 
     @Test
     void getMessages_returnsMessageAfterSend() throws Exception {
-        String convResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -203,10 +220,9 @@ class DirectMessageControllerIntegrationTest {
 
     @Test
     void getMessages_returns404ForNonParticipant() throws Exception {
-        // Create a third user
-        String charlieToken = registerAndGetToken("charlie", "charlie@example.com", "pass123");
+        String charlieToken = registerAndGetToken("Charlie Test", "charlie@example.com", "pass123");
 
-        String convResponse = mockMvc.perform(post("/api/v1/dm/bob")
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -220,7 +236,7 @@ class DirectMessageControllerIntegrationTest {
 
     @Test
     void getMyConversations_returnsConversationAfterCreation() throws Exception {
-        mockMvc.perform(post("/api/v1/dm/bob")
+        mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk());
 

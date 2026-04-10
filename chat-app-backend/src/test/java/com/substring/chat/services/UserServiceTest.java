@@ -48,15 +48,19 @@ class UserServiceTest {
         alice = new User();
         alice.setId("id-alice");
         alice.setUsername("alice");
+        alice.setUniqueHandle("alice.1234");
         alice.setEmail("alice@example.com");
         alice.setPasswordHash("$2a$10$hashed");
+        alice.setWhoCanMessage("APPROVED_ONLY");
         alice.setCreatedAt(Instant.now());
         alice.setLastSeen(Instant.now());
 
         bob = new User();
         bob.setId("id-bob");
         bob.setUsername("bob");
+        bob.setUniqueHandle("bob.5678");
         bob.setEmail("bob@example.com");
+        bob.setWhoCanMessage("APPROVED_ONLY");
         bob.setCreatedAt(Instant.now());
         bob.setLastSeen(Instant.now());
     }
@@ -200,8 +204,10 @@ class UserServiceTest {
     @Test
     void searchUsers_returnsMatchingUsers() {
         when(userRepository.findByUsernameContainingIgnoreCase("al")).thenReturn(List.of(alice));
+        // getPublicProfile does a second findByUsername lookup per result
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
 
-        List<UserResponse> results = userService.searchUsers("al");
+        List<UserResponse> results = userService.searchUsers("al", "bob");
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getUsername()).isEqualTo("alice");
@@ -211,7 +217,7 @@ class UserServiceTest {
     void searchUsers_returnsEmptyWhenNoMatch() {
         when(userRepository.findByUsernameContainingIgnoreCase("xyz")).thenReturn(List.of());
 
-        List<UserResponse> results = userService.searchUsers("xyz");
+        List<UserResponse> results = userService.searchUsers("xyz", "alice");
 
         assertThat(results).isEmpty();
     }
@@ -219,11 +225,26 @@ class UserServiceTest {
     @Test
     void searchUsers_returnsMultipleMatches() {
         when(userRepository.findByUsernameContainingIgnoreCase("b")).thenReturn(List.of(bob));
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
 
-        List<UserResponse> results = userService.searchUsers("b");
+        List<UserResponse> results = userService.searchUsers("b", "alice");
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getUsername()).isEqualTo("bob");
+    }
+
+    @Test
+    void searchUsers_appliesPrivacyFiltering() {
+        // alice has her photo hidden from everyone
+        alice.setProfilePhotoPrivacy("NOBODY");
+        alice.setAvatarUrl("https://example.com/photo.jpg");
+        when(userRepository.findByUsernameContainingIgnoreCase("al")).thenReturn(List.of(alice));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
+
+        List<UserResponse> results = userService.searchUsers("al", "bob");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getAvatarUrl()).isNull();
     }
 
     // ── updateProfile ────────────────────────────────────────────────────────
@@ -392,6 +413,69 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.removeAvatar("nobody"))
                 .isInstanceOf(UserNotFoundException.class);
+    }
+
+    // ── findByHandle ─────────────────────────────────────────────────────────
+
+    @Test
+    void findByHandle_returnsPublicProfileForHandle() {
+        alice.setUniqueHandle("alice.1234");
+        alice.setWhoCanMessage("APPROVED_ONLY");
+        when(userRepository.findByUniqueHandle("alice.1234")).thenReturn(Optional.of(alice));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
+
+        UserResponse response = userService.findByHandle("alice.1234", "bob");
+
+        assertThat(response.getUniqueHandle()).isEqualTo("alice.1234");
+        assertThat(response.getEmail()).isNull(); // hidden from non-self
+    }
+
+    @Test
+    void findByHandle_throwsWhenWhoCanMessageIsNobody() {
+        alice.setUniqueHandle("alice.1234");
+        alice.setWhoCanMessage("NOBODY");
+        when(userRepository.findByUniqueHandle("alice.1234")).thenReturn(Optional.of(alice));
+
+        assertThatThrownBy(() -> userService.findByHandle("alice.1234", "bob"))
+                .isInstanceOf(com.substring.chat.exceptions.UserNotFoundException.class);
+    }
+
+    @Test
+    void findByHandle_returnsOwnProfileEvenWhenNobody() {
+        alice.setUniqueHandle("alice.1234");
+        alice.setWhoCanMessage("NOBODY");
+        when(userRepository.findByUniqueHandle("alice.1234")).thenReturn(Optional.of(alice));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
+
+        // alice looking up herself
+        UserResponse response = userService.findByHandle("alice.1234", "alice");
+        assertThat(response.getEmail()).isEqualTo("alice@example.com");
+    }
+
+    // ── privacy settings ─────────────────────────────────────────────────────
+
+    @Test
+    void updateWhoCanMessage_setsValidValue() {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.updateWhoCanMessage("alice", "ANYONE");
+
+        assertThat(alice.getWhoCanMessage()).isEqualTo("ANYONE");
+    }
+
+    @Test
+    void updateWhoCanMessage_throwsOnInvalidValue() {
+        assertThatThrownBy(() -> userService.updateWhoCanMessage("alice", "INVALID"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void getWhoCanMessage_returnsDefault() {
+        alice.setWhoCanMessage("APPROVED_ONLY");
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
+
+        assertThat(userService.getWhoCanMessage("alice")).isEqualTo("APPROVED_ONLY");
     }
 
     // ── changePassword ───────────────────────────────────────────────────────

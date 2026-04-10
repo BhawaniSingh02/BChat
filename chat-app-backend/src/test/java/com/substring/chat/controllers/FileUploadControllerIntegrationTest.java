@@ -2,6 +2,8 @@ package com.substring.chat.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.substring.chat.dto.request.RegisterRequest;
+import com.substring.chat.dto.request.VerifyEmailOtpRequest;
+import com.substring.chat.entities.User;
 import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.services.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,19 +46,30 @@ class FileUploadControllerIntegrationTest {
     @BeforeEach
     void setUp() throws Exception {
         userRepository.deleteAll();
-        authToken = registerAndGetToken("uploaduser", "upload@example.com", "password123");
+        authToken = registerAndGetToken("Upload User", "upload@example.com", "password123");
     }
 
-    private String registerAndGetToken(String username, String email, String password) throws Exception {
+    private String registerAndGetToken(String displayName, String email, String password) throws Exception {
         RegisterRequest request = new RegisterRequest();
-        request.setUsername(username);
+        request.setDisplayName(displayName);
         request.setEmail(email);
         request.setPassword(password);
 
-        String response = mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        VerifyEmailOtpRequest verifyRequest = new VerifyEmailOtpRequest();
+        verifyRequest.setEmail(email);
+        verifyRequest.setCode(user.getEmailVerificationToken());
+
+        String response = mockMvc.perform(post("/api/v1/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(verifyRequest)))
+                .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
         return objectMapper.readTree(response).get("token").asText();

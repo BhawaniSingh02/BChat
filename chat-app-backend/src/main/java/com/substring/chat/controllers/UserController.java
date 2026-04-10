@@ -67,10 +67,10 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
-    /** Search users by username prefix */
+    /** Search users by username prefix — results are privacy-filtered for the searcher */
     @GetMapping("/search")
-    public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam String q) {
-        return ResponseEntity.ok(userService.searchUsers(q));
+    public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam String q, Principal principal) {
+        return ResponseEntity.ok(userService.searchUsers(q, principal.getName()));
     }
 
     /** Get public profile of any user — privacy settings are enforced */
@@ -85,6 +85,42 @@ public class UserController {
             @RequestBody UpdateProfileRequest request,
             Principal principal) {
         return ResponseEntity.ok(userService.updateProfile(principal.getName(), request));
+    }
+
+    // ── Phase — User Discovery & Privacy ────────────────────────────────
+
+    /**
+     * Find a user by exact uniqueHandle. Blocked if target's whoCanMessage = NOBODY.
+     * Returns the public profile + contactStatus relative to the caller.
+     */
+    @GetMapping("/find")
+    public ResponseEntity<?> findByHandle(@RequestParam String handle, Principal principal) {
+        try {
+            return ResponseEntity.ok(userService.findByHandle(handle, principal.getName()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(java.util.Map.of("detail", e.getMessage()));
+        }
+    }
+
+    /** Get own whoCanMessage privacy setting. */
+    @GetMapping("/me/privacy")
+    public ResponseEntity<java.util.Map<String, String>> getPrivacy(Principal principal) {
+        String setting = userService.getWhoCanMessage(principal.getName());
+        return ResponseEntity.ok(java.util.Map.of("whoCanMessage", setting));
+    }
+
+    /** Update whoCanMessage privacy setting. */
+    @PatchMapping("/me/privacy")
+    public ResponseEntity<?> updatePrivacy(
+            @RequestBody java.util.Map<String, String> body,
+            Principal principal) {
+        String value = body.get("whoCanMessage");
+        try {
+            userService.updateWhoCanMessage(principal.getName(), value);
+            return ResponseEntity.ok(java.util.Map.of("whoCanMessage", value));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("detail", e.getMessage()));
+        }
     }
 
     // ── Phase 23: User Blocking ──────────────────────────────────────────

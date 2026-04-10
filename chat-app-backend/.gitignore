@@ -38,5 +38,6 @@ out/
 
 # Local secrets (never commit real credentials)
 src/main/resources/application-local.properties
+src/main/resources/application-dev.properties
 .env
 .env.local
