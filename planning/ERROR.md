@@ -1,19 +1,10 @@
-PS C:\Users\bhoni\OneDrive\Desktop\Chat App\chat-app-backend> ./gradlew clean build -x test
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-10T18:24:10.965Z ERROR 1 --- [chat-app-backend] [           main] o.s.boot.SpringApplication               : Application run failed
 
-FAILURE: Build failed with an exception.
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'authController' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/classes/!/com/substring/chat/controllers/AuthController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'authService' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/classes/!/com/substring/chat/services/AuthService.class]: Unsatisfied dependency expressed through constructor parameter 7: Error creating bean with name 'emailService': Injection of autowired dependencies failed
 
-* What went wrong:
-Could not determine the dependencies of task ':bootJar'.
-> Could not resolve all dependencies for configuration ':runtimeClasspath'.
-   > Failed to calculate the value of task ':compileJava' property 'javaCompiler'.
-      > Cannot find a Java installation on your machine (Windows 11 10.0 amd64) matching: {languageVersion=21, vendor=any vendor, implementation=vendor-specific, nativeImageCapable=false}. Toolchain download repositories have not been configured.
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'authService' defined in URL [jar:nested:/app/app.jar/!BOOT-INF/classes/!/com/substring/chat/services/AuthService.class]: Unsatisfied dependency expressed through constructor parameter 7: Error creating bean with name 'emailService': Injection of autowired dependencies failed
 
-* Try:
-> Learn more about toolchain auto-detection and auto-provisioning at https://docs.gradle.org/8.14/userguide/toolchains.html#sec:auto_detection.
-> Learn more about toolchain repositories at https://docs.gradle.org/8.14/userguide/toolchains.html#sub:download_repositories.
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'emailService': Injection of autowired dependencies failed
 
-BUILD FAILED in 35s
+Exited with status 1
