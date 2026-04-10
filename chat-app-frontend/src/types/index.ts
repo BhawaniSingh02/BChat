@@ -230,7 +230,8 @@ declare global {
       setAutoLaunch: (enable: boolean) => Promise<void>
       onDeepLink: (callback: (url: string) => void) => void
       onUpdateAvailable: (callback: (info: { version: string }) => void) => void
-      onUpdateDownloaded: (callback: (info: { version: string }) => void) => void
+      onUpdateProgress: (callback: (progress: { percent: number }) => void) => void
+      onUpdateDownloaded: (callback: (info: { version: string; isMandatory?: boolean }) => void) => void
     }
   }
 }

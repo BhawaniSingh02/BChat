@@ -498,44 +498,55 @@ app.on('second-instance', (_event, argv) => {
   }
 });
 
-// ─── Auto Updater Stub ────────────────────────────────────────────────────────
+// ─── Auto Updater ─────────────────────────────────────────────────────────────
 function setupUpdater() {
   if (IS_DEV) return; // never check for updates in dev
 
   try {
     const { autoUpdater } = require('electron-updater');
     const { dialog } = require('electron');
+    const log = require('electron-log');
 
-    autoUpdater.autoDownload = true;       // download silently in background
+    // Write update activity to the same log file as the rest of the app
+    autoUpdater.logger = log;
+    autoUpdater.logger.transports.file.level = 'info';
+
+    autoUpdater.autoDownload = true;        // download silently in background
     autoUpdater.autoInstallOnAppQuit = true; // install when user quits normally
-    autoUpdater.logger = null;
 
     autoUpdater.on('update-available', (info) => {
-      // Notify renderer so it can show a subtle banner if desired
+      log.info(`Update available: v${info.version}`);
       if (mainWindow) mainWindow.webContents.send('update-available', info);
     });
 
+    autoUpdater.on('download-progress', (progress) => {
+      if (mainWindow) mainWindow.webContents.send('update-progress', progress);
+    });
+
     autoUpdater.on('update-downloaded', (info) => {
-      // Update is ready — ask user to restart
+      log.info(`Update downloaded: v${info.version} — isMandatory=${!!info.isMandatory}`);
       if (mainWindow) mainWindow.webContents.send('update-downloaded', info);
+
+      const isMandatory = !!info.isMandatory;
 
       dialog.showMessageBox({
         type: 'info',
         title: 'Update Ready',
         message: `Baaat v${info.version} is ready to install.`,
-        detail: 'Restart now to apply the update, or it will install automatically next time you quit.',
-        buttons: ['Restart Now', 'Later'],
+        detail: isMandatory
+          ? 'This update is required. The app will restart now.'
+          : 'Restart now to apply the update, or it will install automatically next time you quit.',
+        buttons: isMandatory ? ['Restart Now'] : ['Restart Now', 'Later'],
         defaultId: 0,
       }).then(({ response }) => {
-        if (response === 0) {
+        if (response === 0 || isMandatory) {
           autoUpdater.quitAndInstall();
         }
       });
     });
 
     autoUpdater.on('error', (err) => {
-      // Silently ignore — no internet, no release, etc.
-      console.log('Auto-updater error:', err.message);
+      log.warn('Auto-updater error:', err.message);
     });
 
     // Check on startup, then every 2 hours
