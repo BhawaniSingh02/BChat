@@ -35,16 +35,23 @@ function setupMocks(overrides: Partial<ReturnType<typeof authStore.useAuthStore>
     const state = {
       user: baseUser,
       token: 'tok',
+      isInitialized: true,
       isLoading: false,
       error: null,
+      pendingVerificationEmail: null,
       updateProfile: mockUpdateProfile,
       uploadAvatar: mockUploadAvatar,
       removeAvatar: mockRemoveAvatar,
       changePassword: mockChangePassword,
       login: vi.fn(),
       register: vi.fn(),
+      verifyEmailOtp: vi.fn(),
+      resendVerification: vi.fn(),
+      clearError: vi.fn(),
       logout: vi.fn(),
       fetchMe: vi.fn(),
+      forgotPassword: vi.fn(),
+      resetPassword: vi.fn(),
       ...overrides,
     }
     return selector ? (selector as (s: typeof state) => unknown)(state) : state
