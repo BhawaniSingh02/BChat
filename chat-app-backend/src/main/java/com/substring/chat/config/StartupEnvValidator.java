@@ -32,6 +32,12 @@ public class StartupEnvValidator implements ApplicationRunner {
     @Value("${app.frontend-url:}")
     private String frontendUrl;
 
+    @Value("${brevo.api-key:}")
+    private String brevoApiKey;
+
+    @Value("${brevo.sender.email:}")
+    private String brevoSenderEmail;
+
     @Override
     public void run(ApplicationArguments args) {
         List<String> missing = new ArrayList<>();
@@ -41,6 +47,8 @@ public class StartupEnvValidator implements ApplicationRunner {
         if (blank(allowedOrigins)) missing.add("ALLOWED_ORIGINS     (cors.allowed-origins)");
         if (blank(appBaseUrl))    missing.add("APP_BASE_URL        (app.base-url)");
         if (blank(frontendUrl))   missing.add("FRONTEND_URL        (app.frontend-url)");
+        if (blank(brevoApiKey))      missing.add("BREVO_API_KEY       (brevo.api-key)         — email will be disabled without this");
+        if (blank(brevoSenderEmail)) missing.add("BREVO_SENDER_EMAIL  (brevo.sender.email)    — verified sender Gmail address");
 
         if (!missing.isEmpty()) {
             log.error("===========================================================");
