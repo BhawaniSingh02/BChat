@@ -4,6 +4,7 @@ import { useRoomStore } from '../../store/roomStore'
 import { useDMStore } from '../../store/dmStore'
 import { usePresenceStore } from '../../store/presenceStore'
 import { useChatStore } from '../../store/chatStore'
+import { messagesApi } from '../../api/messages'
 import Avatar from '../ui/Avatar'
 import RoomList from '../rooms/RoomList'
 import Modal from '../ui/Modal'
@@ -38,7 +39,7 @@ interface SidebarProps {
 export default function Sidebar({ onSelectChat }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
-  const { conversations, activeDMId, setActiveDM, getOrCreateConversation } = useDMStore()
+  const { conversations, activeDMId, setActiveDM, getOrCreateConversation, removeConversation } = useDMStore()
   const dmUnreadCounts = useDMStore((s) => s.dmUnreadCounts)
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
@@ -46,6 +47,8 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  // Local pin state — pinned conversation IDs float to top of the list
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
 
 
   const handleJoinRoom = async (roomId: string) => {
@@ -76,7 +79,28 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
 
   const totalDMUnread = Object.values(dmUnreadCounts).reduce((a, b) => a + b, 0)
 
+  const handlePinConversation = (conversationId: string) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(conversationId)) next.delete(conversationId)
+      else next.add(conversationId)
+      return next
+    })
+  }
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    // Archive on the backend (hides the conversation) then remove locally.
+    try {
+      await messagesApi.archiveDM(conversationId)
+    } catch { /* ignore if endpoint fails — still remove locally */ }
+    removeConversation(conversationId)
+  }
+
+  // Pinned conversations float to the top; within each group sort by lastMessageAt desc
   const sortedConversations = [...conversations].sort((a, b) => {
+    const aPinned = pinnedIds.has(a.id) ? 0 : 1
+    const bPinned = pinnedIds.has(b.id) ? 0 : 1
+    if (aPinned !== bPinned) return aPinned - bPinned
     if (!a.lastMessageAt && !b.lastMessageAt) return 0
     if (!a.lastMessageAt) return 1
     if (!b.lastMessageAt) return -1
@@ -189,7 +213,10 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
                       conv.participants.find((p) => p !== user?.username) ?? ''
                     )}
                     unreadCount={dmUnreadCounts[conv.id]}
+                    isPinned={pinnedIds.has(conv.id)}
                     onClick={() => handleSelectDM(conv.id)}
+                    onPin={handlePinConversation}
+                    onDelete={handleDeleteConversation}
                   />
                 ))}
                 <div className="p-4 border-t mt-auto">

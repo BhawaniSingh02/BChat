@@ -17,6 +17,7 @@ interface DMState {
   updateLastMessage: (conversationId: string, timestamp: string) => void
   incrementDMUnread: (conversationId: string) => void
   resetDMUnread: (conversationId: string) => void
+  removeConversation: (conversationId: string) => void
 }
 
 export const useDMStore = create<DMState>((set, get) => ({
@@ -108,6 +109,13 @@ export const useDMStore = create<DMState>((set, get) => ({
       conversations: s.conversations.map((c) =>
         c.id === conversationId ? { ...c, lastMessageAt: timestamp } : c
       ),
+    }))
+  },
+
+  removeConversation: (conversationId) => {
+    set((s) => ({
+      conversations: s.conversations.filter((c) => c.id !== conversationId),
+      activeDMId: s.activeDMId === conversationId ? null : s.activeDMId,
     }))
   },
 }))

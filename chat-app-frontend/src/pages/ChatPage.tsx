@@ -550,7 +550,7 @@ export default function ChatPage() {
               {!window.electronAPI && (
                 <Link
                   to="/download"
-                  className="mt-6 flex items-center gap-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-cyan-50/60 px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-[0_12px_28px_rgba(20,184,166,0.10)] group"
+                  className="mt-6 hidden md:flex items-center gap-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-cyan-50/60 px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-[0_12px_28px_rgba(20,184,166,0.10)] group"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-100 to-cyan-100 text-xl transition-all group-hover:from-teal-500 group-hover:to-cyan-600 group-hover:text-white">
                     💻

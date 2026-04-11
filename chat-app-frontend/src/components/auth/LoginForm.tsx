@@ -78,7 +78,7 @@ export default function LoginForm() {
 
           <div className="mx-auto w-full max-w-md">
             <h2 className={`mb-2 text-2xl font-bold tracking-[-0.03em] sm:text-[2rem] ${darkMode ? 'text-white' : 'text-slate-900'}`}>Sign in</h2>
-            <p className={`mb-8 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Continue to Baaat</p>
+            <p className={`mb-8 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>Continue to Baaat</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -96,6 +96,7 @@ export default function LoginForm() {
                 required
                 autoComplete="email"
                 autoFocus
+                labelClassName={darkMode ? 'text-slate-200' : ''}
                 className={`h-12 rounded-xl focus:ring-teal-500 ${
                   darkMode
                     ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
@@ -112,6 +113,7 @@ export default function LoginForm() {
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
+                  labelClassName={darkMode ? 'text-slate-200' : ''}
                   className={`h-12 rounded-xl focus:ring-teal-500 ${
                     darkMode
                       ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
@@ -121,7 +123,7 @@ export default function LoginForm() {
                 <div className="mt-1.5 text-right">
                   <Link
                     to="/forgot-password"
-                    className={`text-xs font-medium ${darkMode ? 'text-slate-400 hover:text-teal-300' : 'text-slate-500 hover:text-teal-700'}`}
+                    className={`text-xs font-medium ${darkMode ? 'text-slate-300 hover:text-teal-300' : 'text-slate-500 hover:text-teal-700'}`}
                   >
                     Forgot password?
                   </Link>
@@ -138,7 +140,7 @@ export default function LoginForm() {
               </Button>
             </form>
 
-            <p className={`mt-7 text-center text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`mt-7 text-center text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>
               Don't have an account?{' '}
               <Link to="/register" className={`font-semibold ${darkMode ? 'text-teal-300 hover:text-white' : 'text-teal-700 hover:text-slate-900'}`}>
                 Sign up free
@@ -146,7 +148,7 @@ export default function LoginForm() {
             </p>
             <Link
               to="/download"
-              className={`mt-4 flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 group ${
+              className={`mt-4 hidden md:flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 group ${
                 darkMode
                   ? 'border-white/10 bg-slate-800/60 hover:border-teal-500/40 hover:bg-slate-800/90 hover:shadow-[0_8px_24px_rgba(20,184,166,0.10)]'
                   : 'border-slate-200 bg-slate-50/80 hover:border-teal-300 hover:bg-teal-50/60 hover:shadow-[0_8px_24px_rgba(20,184,166,0.10)]'

@@ -52,6 +52,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const incrementDMUnread = useDMStore((s) => s.incrementDMUnread)
   const activeDMId = useDMStore((s) => s.activeDMId)
   const conversations = useDMStore((s) => s.conversations)
+  const fetchConversations = useDMStore((s) => s.fetchConversations)
   const addNotification = useNotificationStore((s) => s.addNotification)
   const currentUsername = useAuthStore((s) => s.user?.username)
 
@@ -65,6 +66,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const myRoomsRef = useRef(myRooms)
   const conversationsRef = useRef(conversations)
   const currentUsernameRef = useRef(currentUsername)
+  const fetchConversationsRef = useRef(fetchConversations)
 
   useEffect(() => {
     onCallEventRef.current = onCallEvent
@@ -103,6 +105,10 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   }, [currentUsername])
 
   useEffect(() => {
+    fetchConversationsRef.current = fetchConversations
+  }, [fetchConversations])
+
+  useEffect(() => {
     if (!token) return
 
     const stompClient = new Client({
@@ -120,6 +126,12 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
             ? (dmMessagesRef.current[conversationId] ?? []).some((m) => m.id === message.id)
             : false
           upsertDMMessage(message)
+          // If this message belongs to a conversation the receiver hasn't seen yet
+          // (e.g. a brand-new DM started by another user via search), refresh the
+          // conversation list so the new chat appears immediately in the sidebar.
+          if (conversationId && !conversationsRef.current.find((c) => c.id === conversationId)) {
+            fetchConversationsRef.current()
+          }
           // Only increment unread for brand-new messages (not edits/deletes/reactions)
           if (message.roomId.startsWith('dm:') && !message.edited && !message.deleted) {
             if (conversationId && conversationId !== activeDMIdRef.current) {
@@ -170,7 +182,9 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
       },
       onStompError: (frame) => {
         setConnected(false)
-        console.error('STOMP error:', frame)
+        // Use warn instead of error — STOMP 401/503 on Render cold-start is expected
+        // and should not fill the production console with red errors.
+        console.warn('STOMP error:', frame.headers?.message ?? frame)
       },
       reconnectDelay: 5000,
     })

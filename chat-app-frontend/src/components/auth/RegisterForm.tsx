@@ -133,7 +133,7 @@ export default function RegisterForm() {
                 <h2 className={`mb-2 text-2xl font-bold tracking-[-0.03em] sm:text-[2rem] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                   Create account
                 </h2>
-                <p className={`mb-8 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`mb-8 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>
                   Start with Baaat
                 </p>
 
@@ -154,6 +154,7 @@ export default function RegisterForm() {
                     minLength={1}
                     maxLength={50}
                     autoFocus
+                    labelClassName={darkMode ? 'text-slate-200' : ''}
                     className={`h-12 rounded-xl focus:ring-teal-500 ${
                       darkMode
                         ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
@@ -169,6 +170,7 @@ export default function RegisterForm() {
                     placeholder="you@example.com"
                     required
                     autoComplete="email"
+                    labelClassName={darkMode ? 'text-slate-200' : ''}
                     className={`h-12 rounded-xl focus:ring-teal-500 ${
                       darkMode
                         ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
@@ -185,6 +187,7 @@ export default function RegisterForm() {
                     required
                     minLength={6}
                     autoComplete="new-password"
+                    labelClassName={darkMode ? 'text-slate-200' : ''}
                     className={`h-12 rounded-xl focus:ring-teal-500 ${
                       darkMode
                         ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
@@ -202,7 +205,7 @@ export default function RegisterForm() {
                   </Button>
                 </form>
 
-                <p className={`mt-7 text-center text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`mt-7 text-center text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>
                   Already have an account?{' '}
                   <Link to="/login" className={`font-semibold ${darkMode ? 'text-teal-300 hover:text-white' : 'text-teal-700 hover:text-slate-900'}`}>
                     Sign in
@@ -234,8 +237,8 @@ export default function RegisterForm() {
                 <h2 className={`mb-2 text-2xl font-bold tracking-[-0.03em] sm:text-[2rem] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                   Check your email
                 </h2>
-                <p className={`mb-8 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  We sent a 6-digit code to <span className={`font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{pendingVerificationEmail ?? email}</span>
+                <p className={`mb-8 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>
+                  We sent a 6-digit code to <span className={`font-medium ${darkMode ? 'text-slate-100' : 'text-slate-700'}`}>{pendingVerificationEmail ?? email}</span>
                 </p>
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
@@ -256,6 +259,7 @@ export default function RegisterForm() {
                     required
                     maxLength={6}
                     autoFocus
+                    labelClassName={darkMode ? 'text-slate-200' : ''}
                     className={`h-12 rounded-xl text-center text-xl tracking-widest font-mono focus:ring-teal-500 ${
                       darkMode
                         ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
@@ -280,7 +284,7 @@ export default function RegisterForm() {
                     <button
                       type="button"
                       onClick={handleResend}
-                      className={`text-sm font-medium ${darkMode ? 'text-slate-400 hover:text-teal-300' : 'text-slate-500 hover:text-teal-700'}`}
+                      className={`text-sm font-medium ${darkMode ? 'text-slate-300 hover:text-teal-300' : 'text-slate-500 hover:text-teal-700'}`}
                     >
                       Didn't get it? Resend code
                     </button>
@@ -301,7 +305,7 @@ export default function RegisterForm() {
                 <h2 className={`mb-2 text-2xl font-bold tracking-[-0.03em] sm:text-[2rem] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                   You're in!
                 </h2>
-                <p className={`mb-6 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`mb-6 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>
                   Your account is ready. Here's your unique handle — share it so others can find you.
                 </p>
 
@@ -309,7 +313,7 @@ export default function RegisterForm() {
                   <div className={`mb-6 rounded-xl border px-4 py-3 ${
                     darkMode ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-slate-50'
                   }`}>
-                    <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Your handle</p>
+                    <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>Your handle</p>
                     <p className={`font-mono font-semibold text-lg ${darkMode ? 'text-teal-300' : 'text-teal-700'}`}>
                       @{user.uniqueHandle}
                     </p>

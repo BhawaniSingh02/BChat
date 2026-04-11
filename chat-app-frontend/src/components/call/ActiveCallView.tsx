@@ -74,11 +74,15 @@ export default function ActiveCallView({
 
   useEffect(() => {
     if (minimized) return
+    // The local <video> element is only in the DOM when cameraOff is false.
+    // Re-attaching srcObject here whenever cameraOff changes to false ensures the
+    // preview reappears after a camera toggle without requiring localStream to change.
+    if (cameraOff) return
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream
       localVideoRef.current.play().catch(() => {})
     }
-  }, [localStream, minimized])
+  }, [localStream, minimized, cameraOff])
 
   useEffect(() => {
     if (!remoteStream) { setRemoteHasVideo(false); return }

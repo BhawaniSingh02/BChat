@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { Message } from '../../types'
 import { formatTime } from '../../utils/date'
 
-const QUICK_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸŽ‰']
+const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉']
 
 const CLOUDINARY_ORIGINS = ['https://res.cloudinary.com', 'https://res-console.cloudinary.com']
 
@@ -113,7 +113,7 @@ function AudioPlayer({ src }: { src: string }) {
 function isMissedCallMessage(content: string): boolean {
   const trimmed = content.trim()
   return (
-    trimmed.startsWith('ðŸ“ž') || trimmed.startsWith('ðŸ“¹')
+    trimmed.startsWith('📞') || trimmed.startsWith('📹')
   ) && /Missed (audio|video) call/i.test(trimmed)
 }
 
@@ -490,7 +490,7 @@ function MessageBubble({
                 ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (
                   <>
                     <a href={message.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline">
-                      ðŸ“Ž Download file
+                      ðŸ“Ž 📎 Download file
                     </a>
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>

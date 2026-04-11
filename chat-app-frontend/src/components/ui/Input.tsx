@@ -3,14 +3,15 @@ import type { InputHTMLAttributes } from 'react'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  labelClassName?: string
 }
 
-export default function Input({ label, error, className = '', id, ...props }: InputProps) {
+export default function Input({ label, error, className = '', labelClassName = '', id, ...props }: InputProps) {
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className={`text-sm font-medium text-gray-700 ${labelClassName}`}>
           {label}
         </label>
       )}

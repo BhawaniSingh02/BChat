@@ -46,6 +46,8 @@ export default function DMChatView({
   const online = isOnline(otherUser)
   const fetchUser = useUserCacheStore((s) => s.fetchUser)
   const cache = useUserCacheStore((s) => s.cache)
+  // Prefer displayName from cache so the header shows "Bhawani Singh" not "bhawani.singh.2713"
+  const displayName = cache[otherUser]?.displayName || cache[otherUser]?.username || otherUser
 
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null)
@@ -275,14 +277,14 @@ export default function DMChatView({
             className="focus:outline-none flex-shrink-0"
             aria-label={`View ${otherUser}'s profile`}
           >
-            <Avatar name={otherUser} size="md" online={online} src={cache[otherUser]?.avatarUrl} />
+            <Avatar name={displayName} size="md" online={online} src={cache[otherUser]?.avatarUrl} />
           </button>
           <div className="flex-1 min-w-0">
             <button
               onClick={() => onViewProfile?.(otherUser)}
               className="font-semibold text-sm md:text-base text-white truncate block text-left focus:outline-none w-full"
             >
-              {otherUser}
+              {displayName}
             </button>
             <div className="flex items-center gap-2">
               <p className="text-xs text-white/65">{online ? 'online' : 'offline'}</p>
@@ -383,7 +385,7 @@ export default function DMChatView({
           <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>
-          <span className="text-sm text-gray-500">You blocked {otherUser}.</span>
+          <span className="text-sm text-gray-500">You blocked {displayName}.</span>
           <button
             onClick={() => handleUnblock(otherUser)}
             className="text-sm text-emerald-600 font-medium hover:underline"
@@ -395,7 +397,7 @@ export default function DMChatView({
       ) : (
         <MessageInput
           onSend={onSend}
-          placeholder={`Message ${otherUser}`}
+          placeholder="Message"
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
         />

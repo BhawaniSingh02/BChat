@@ -45,8 +45,15 @@ client.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && isRefreshEndpoint) {
+      // Only dispatch the session-expired event when there was an active in-memory token.
+      // On a fresh page load with no session, tokenProvider.get() is null — dispatching
+      // auth:unauthorized in that case causes a redundant logout() call alongside
+      // fetchMe()'s own catch handler, which generates confusing console noise.
+      const hadToken = tokenProvider.get() !== null
       tokenProvider.set(null)
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      if (hadToken) {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      }
     }
 
     return Promise.reject(error)
