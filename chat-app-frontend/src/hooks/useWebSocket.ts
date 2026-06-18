@@ -24,6 +24,7 @@ import { usePresenceStore } from '../store/presenceStore'
 import { useDMStore } from '../store/dmStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useAuthStore } from '../store/authStore'
+import { isConversationMuted } from '../utils/conversation'
 import type { CallEvent } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? '/ws'
@@ -144,9 +145,13 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
               conversationId !== activeDMIdRef.current
             ) {
               const conversation = conversationsRef.current.find((c) => c.id === conversationId)
-              const otherUser = conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.senderName ?? message.sender
-              addNotification(message, otherUser)
-              notifyDesktop(otherUser, message.content || 'You have a new message', conversationId)
+              // Respect the conversation's mute setting — suppress the in-app and
+              // desktop notification while muted (the unread badge still updates).
+              if (!isConversationMuted(conversation, currentUsernameRef.current)) {
+                const otherUser = conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.senderName ?? message.sender
+                addNotification(message, otherUser)
+                notifyDesktop(otherUser, message.content || 'You have a new message', conversationId)
+              }
             }
           }
         })

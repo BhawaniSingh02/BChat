@@ -54,8 +54,8 @@ vi.mock('../../store/presenceStore', () => ({
 
 import Sidebar from '../../components/layout/Sidebar'
 
-const makeConv = (id: string): DirectConversation => ({
-  id, participants: ['alice', 'bob'], createdAt: '2026-03-28T10:00:00',
+const makeConv = (id: string, over: Partial<DirectConversation> = {}): DirectConversation => ({
+  id, participants: ['alice', 'bob'], createdAt: '2026-03-28T10:00:00', ...over,
 })
 
 describe('Sidebar', () => {
@@ -111,6 +111,22 @@ describe('Sidebar', () => {
     expect(screen.getByTestId('dm-card')).toBeInTheDocument()
   })
 
+  it('hides conversations archived by the current user', async () => {
+    mocks.conversations = [makeConv('c1', { archivedBy: ['alice'] })]
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
+    // The archived conversation is filtered out → empty state shown instead
+    expect(screen.queryByTestId('dm-card')).not.toBeInTheDocument()
+    expect(screen.getByText('No conversations yet.')).toBeInTheDocument()
+  })
+
+  it('still shows conversations archived only by the other user', async () => {
+    mocks.conversations = [makeConv('c1', { archivedBy: ['bob'] })]
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
+    expect(screen.getByTestId('dm-card')).toBeInTheDocument()
+  })
+
   it('shows + New Message button in DMs tab', async () => {
     mocks.conversations = [makeConv('c1')]
     render(<Sidebar />)
@@ -118,10 +134,23 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: '+ New Message' })).toBeInTheDocument()
   })
 
-  it('calls logout when logout button clicked', async () => {
+  it('asks for confirmation before logging out', async () => {
     render(<Sidebar />)
     await userEvent.click(screen.getByLabelText('Logout'))
+    // Should NOT log out immediately — a confirmation is shown first
+    expect(mocks.logout).not.toHaveBeenCalled()
+    expect(screen.getByText('Are you sure you want to log out?')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByTestId('confirm-logout-btn'))
     expect(mocks.logout).toHaveBeenCalledOnce()
+  })
+
+  it('does not log out when confirmation is cancelled', async () => {
+    render(<Sidebar />)
+    await userEvent.click(screen.getByLabelText('Logout'))
+    await userEvent.click(screen.getByTestId('cancel-logout-btn'))
+    expect(mocks.logout).not.toHaveBeenCalled()
+    expect(screen.queryByText('Are you sure you want to log out?')).not.toBeInTheDocument()
   })
 
   it('calls setActiveDM and setActiveRoom(null) when DM card is clicked', async () => {

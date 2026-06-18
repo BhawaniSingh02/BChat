@@ -36,7 +36,7 @@ export default function ChatPage() {
     fetchMyRooms, fetchAllRooms, setActiveRoom, leaveRoom, joinRoom,
     kickMember, pinMessage, unpinMessage,
   } = useRoomStore()
-  const { conversations, activeDMId, fetchConversations, setActiveDM, resetDMUnread } = useDMStore()
+  const { conversations, activeDMId, fetchConversations, setActiveDM, resetDMUnread, updateConversation } = useDMStore()
   const { fetchOnlineUsers } = usePresenceStore()
   const resetUnread = useChatStore((s) => s.resetUnread)
   const cache = useUserCacheStore((s) => s.cache)
@@ -513,6 +513,7 @@ export default function ChatPage() {
             onDeleteMessage={handleDMDeleteMessage}
             onReactMessage={handleDMReactMessage}
             onBack={() => setMobileSidebarOpen(true)}
+            onConversationUpdated={updateConversation}
             onAudioCall={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'AUDIO')}
             onVideoCall={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'VIDEO')}
             onViewCallHistory={async () => { await fetchCallHistory(activeConversation.id); setShowCallHistory(true) }}

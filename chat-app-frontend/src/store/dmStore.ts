@@ -18,6 +18,7 @@ interface DMState {
   incrementDMUnread: (conversationId: string) => void
   resetDMUnread: (conversationId: string) => void
   removeConversation: (conversationId: string) => void
+  updateConversation: (updated: DirectConversation) => void
 }
 
 export const useDMStore = create<DMState>((set, get) => ({
@@ -116,6 +117,14 @@ export const useDMStore = create<DMState>((set, get) => ({
     set((s) => ({
       conversations: s.conversations.filter((c) => c.id !== conversationId),
       activeDMId: s.activeDMId === conversationId ? null : s.activeDMId,
+    }))
+  },
+
+  // Replace a conversation in place after a settings change (mute, archive,
+  // disappearing timer). Keeps the sidebar and chat view in sync immediately.
+  updateConversation: (updated) => {
+    set((s) => ({
+      conversations: s.conversations.map((c) => (c.id === updated.id ? updated : c)),
     }))
   },
 }))

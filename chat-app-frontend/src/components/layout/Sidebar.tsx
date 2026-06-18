@@ -12,6 +12,7 @@ import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
 import BrandLogo from '../ui/BrandLogo'
+import { isConversationArchived } from '../../utils/conversation'
 
 
 type Tab = 'rooms' | 'dms'
@@ -47,6 +48,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   // Local pin state — pinned conversation IDs float to top of the list
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
 
@@ -96,8 +98,13 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
     removeConversation(conversationId)
   }
 
+  // Hide conversations the user has archived from the main list.
+  const visibleConversations = conversations.filter(
+    (c) => !isConversationArchived(c, user?.username),
+  )
+
   // Pinned conversations float to the top; within each group sort by lastMessageAt desc
-  const sortedConversations = [...conversations].sort((a, b) => {
+  const sortedConversations = [...visibleConversations].sort((a, b) => {
     const aPinned = pinnedIds.has(a.id) ? 0 : 1
     const bPinned = pinnedIds.has(b.id) ? 0 : 1
     if (aPinned !== bPinned) return aPinned - bPinned
@@ -129,7 +136,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
             </svg>
           </button>
           <button
-            onClick={logout}
+            onClick={() => setConfirmLogoutOpen(true)}
             className="text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
             title="Logout"
             aria-label="Logout"
@@ -280,7 +287,26 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
 
-     
+      {/* Logout confirmation */}
+      <Modal open={confirmLogoutOpen} onClose={() => setConfirmLogoutOpen(false)} title="Log out">
+        <p className="text-sm text-gray-600">Are you sure you want to log out?</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmLogoutOpen(false)}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors"
+            data-testid="cancel-logout-btn"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { setConfirmLogoutOpen(false); logout() }}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors"
+            data-testid="confirm-logout-btn"
+          >
+            Log out
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

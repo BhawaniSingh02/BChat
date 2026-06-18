@@ -36,6 +36,26 @@ describe('dmStore', () => {
     })
   })
 
+  describe('updateConversation', () => {
+    it('replaces an existing conversation in place (e.g. after mute/archive)', () => {
+      useDMStore.setState({ conversations: [makeConv('conv-1'), makeConv('conv-2')] })
+      const updated: DirectConversation = { ...makeConv('conv-1'), archivedBy: ['alice'] }
+
+      useDMStore.getState().updateConversation(updated)
+
+      const stored = useDMStore.getState().conversations.find((c) => c.id === 'conv-1')
+      expect(stored?.archivedBy).toEqual(['alice'])
+      expect(useDMStore.getState().conversations).toHaveLength(2)
+    })
+
+    it('is a no-op when the conversation id is not present', () => {
+      useDMStore.setState({ conversations: [makeConv('conv-1')] })
+      useDMStore.getState().updateConversation({ ...makeConv('missing'), archivedBy: ['alice'] })
+      expect(useDMStore.getState().conversations).toHaveLength(1)
+      expect(useDMStore.getState().conversations[0].id).toBe('conv-1')
+    })
+  })
+
   describe('getOrCreateConversation', () => {
     it('adds new conversation to list', async () => {
       const conv = makeConv('conv-new')

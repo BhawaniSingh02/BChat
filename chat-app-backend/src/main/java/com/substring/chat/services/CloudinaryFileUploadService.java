@@ -22,7 +22,7 @@ public class CloudinaryFileUploadService implements FileUploadService {
     public UploadResult upload(MultipartFile file) throws Exception {
         Map<?, ?> options = ObjectUtils.asMap(
                 "folder", "bchat",
-                "resource_type", "auto",
+                "resource_type", resolveResourceType(file.getContentType()),
                 "use_filename", true,
                 "unique_filename", true
         );
@@ -39,5 +39,23 @@ public class CloudinaryFileUploadService implements FileUploadService {
         }
 
         return new UploadResult(secureUrl, publicId, resourceType, file.getSize());
+    }
+
+    /**
+     * Choose the Cloudinary resource type from the file's MIME type.
+     *
+     * <p>This matters because {@code resource_type=auto} classifies PDFs (and other
+     * documents) as <strong>image</strong>, and Cloudinary blocks delivery of
+     * PDF/ZIP files through the image resource type by default — the browser then
+     * shows "Failed to load PDF document". Uploading documents as
+     * {@code raw} serves them as plain downloadable files and bypasses that
+     * restriction. Audio is stored under Cloudinary's {@code video} resource type.</p>
+     */
+    static String resolveResourceType(String contentType) {
+        String ct = contentType != null ? contentType.split(";")[0].trim().toLowerCase() : "";
+        if (ct.startsWith("image/")) return "image";
+        if (ct.startsWith("video/")) return "video";
+        if (ct.startsWith("audio/")) return "video"; // Cloudinary stores audio under the video resource type
+        return "raw"; // PDFs, Word docs, text, and anything else → downloadable raw asset
     }
 }
