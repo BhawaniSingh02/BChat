@@ -40,7 +40,7 @@ interface SidebarProps {
 export default function Sidebar({ onSelectChat }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
-  const { conversations, activeDMId, setActiveDM, getOrCreateConversation, removeConversation } = useDMStore()
+  const { conversations, activeDMId, setActiveDM, getOrCreateConversation, removeConversation, updateConversation } = useDMStore()
   const dmUnreadCounts = useDMStore((s) => s.dmUnreadCounts)
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
@@ -49,6 +49,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
+  const [archivedOpen, setArchivedOpen] = useState(false)
   // Local pin state — pinned conversation IDs float to top of the list
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
 
@@ -98,10 +99,28 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
     removeConversation(conversationId)
   }
 
-  // Hide conversations the user has archived from the main list.
+  // Hide conversations the user has archived from the main list…
   const visibleConversations = conversations.filter(
     (c) => !isConversationArchived(c, user?.username),
   )
+  // …and surface them via a dedicated "Archived" entry instead.
+  const archivedConversations = conversations.filter(
+    (c) => isConversationArchived(c, user?.username),
+  )
+
+  const handleUnarchiveChat = async (conversationId: string) => {
+    try {
+      const updated = await messagesApi.unarchiveDM(conversationId)
+      updateConversation(updated)
+    } catch { /* ignore — stays archived if it fails */ }
+  }
+
+  const handleOpenArchivedChat = (conversationId: string) => {
+    setActiveDM(conversationId)
+    setActiveRoom(null)
+    setArchivedOpen(false)
+    onSelectChat?.()
+  }
 
   // Pinned conversations float to the top; within each group sort by lastMessageAt desc
   const sortedConversations = [...visibleConversations].sort((a, b) => {
@@ -195,6 +214,20 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
           )
         ) : (
           <div className="flex flex-col h-full">
+            {/* Archived chats entry (WhatsApp-style) — only when some exist */}
+            {archivedConversations.length > 0 && (
+              <button
+                onClick={() => setArchivedOpen(true)}
+                className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                data-testid="archived-row"
+              >
+                <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                <span className="flex-1 text-sm font-medium text-gray-700">Archived</span>
+                <span className="text-xs text-gray-400">{archivedConversations.length}</span>
+              </button>
+            )}
             {sortedConversations.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-2xl">
@@ -286,6 +319,41 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
       )}
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+
+      {/* Archived chats */}
+      <Modal open={archivedOpen} onClose={() => setArchivedOpen(false)} title="Archived chats">
+        {archivedConversations.length === 0 ? (
+          <p className="text-sm text-gray-500">No archived chats.</p>
+        ) : (
+          <div className="-mx-2 max-h-80 overflow-y-auto">
+            {archivedConversations.map((conv) => {
+              const other = conv.participants.find((p) => p !== user?.username) ?? ''
+              return (
+                <div
+                  key={conv.id}
+                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  data-testid="archived-chat-item"
+                >
+                  <button
+                    onClick={() => handleOpenArchivedChat(conv.id)}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  >
+                    <Avatar name={other} size="sm" online={isOnline(other)} />
+                    <span className="text-sm font-medium text-gray-900 truncate">{other}</span>
+                  </button>
+                  <button
+                    onClick={() => handleUnarchiveChat(conv.id)}
+                    className="text-xs text-teal-700 font-medium hover:underline flex-shrink-0"
+                    data-testid="unarchive-chat-btn"
+                  >
+                    Unarchive
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Modal>
 
       {/* Logout confirmation */}
       <Modal open={confirmLogoutOpen} onClose={() => setConfirmLogoutOpen(false)} title="Log out">

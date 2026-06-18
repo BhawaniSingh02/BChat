@@ -13,6 +13,17 @@ const mocks = vi.hoisted(() => ({
   rooms: { my: [] as Room[], all: [] as Room[] },
   conversations: [] as DirectConversation[],
   dmUnreadCounts: {} as Record<string, number>,
+  updateConversation: vi.fn(),
+  removeConversation: vi.fn(),
+}))
+
+vi.mock('../../api/messages', () => ({
+  messagesApi: {
+    unarchiveDM: vi.fn().mockResolvedValue({
+      id: 'c1', participants: ['alice', 'bob'], createdAt: '2026-03-28T10:00:00', archivedBy: [],
+    }),
+    archiveDM: vi.fn().mockResolvedValue({}),
+  },
 }))
 
 vi.mock('../../store/authStore', () => ({
@@ -43,6 +54,8 @@ vi.mock('../../store/dmStore', () => ({
       setActiveDM: mocks.setActiveDM,
       getOrCreateConversation: mocks.getOrCreate,
       dmUnreadCounts: mocks.dmUnreadCounts,
+      updateConversation: mocks.updateConversation,
+      removeConversation: mocks.removeConversation,
     }
     return selector ? selector(state) : state
   },
@@ -53,6 +66,7 @@ vi.mock('../../store/presenceStore', () => ({
 }))
 
 import Sidebar from '../../components/layout/Sidebar'
+import { messagesApi } from '../../api/messages'
 
 const makeConv = (id: string, over: Partial<DirectConversation> = {}): DirectConversation => ({
   id, participants: ['alice', 'bob'], createdAt: '2026-03-28T10:00:00', ...over,
@@ -125,6 +139,32 @@ describe('Sidebar', () => {
     render(<Sidebar />)
     await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
     expect(screen.getByTestId('dm-card')).toBeInTheDocument()
+  })
+
+  it('shows an Archived entry only when there are archived conversations', async () => {
+    mocks.conversations = [makeConv('c1')]
+    const { unmount } = render(<Sidebar />)
+    expect(screen.queryByTestId('archived-row')).not.toBeInTheDocument()
+    unmount()
+
+    mocks.conversations = [makeConv('c2', { archivedBy: ['alice'] })]
+    render(<Sidebar />)
+    expect(screen.getByTestId('archived-row')).toBeInTheDocument()
+  })
+
+  it('lists archived chats in the archived modal', async () => {
+    mocks.conversations = [makeConv('c1', { archivedBy: ['alice'] })]
+    render(<Sidebar />)
+    await userEvent.click(screen.getByTestId('archived-row'))
+    expect(screen.getByTestId('archived-chat-item')).toBeInTheDocument()
+  })
+
+  it('unarchives a chat from the archived modal', async () => {
+    mocks.conversations = [makeConv('c1', { archivedBy: ['alice'] })]
+    render(<Sidebar />)
+    await userEvent.click(screen.getByTestId('archived-row'))
+    await userEvent.click(screen.getByTestId('unarchive-chat-btn'))
+    expect(messagesApi.unarchiveDM).toHaveBeenCalledWith('c1')
   })
 
   it('shows + New Message button in DMs tab', async () => {

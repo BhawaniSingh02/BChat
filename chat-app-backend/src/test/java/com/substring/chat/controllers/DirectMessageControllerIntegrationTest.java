@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -244,5 +245,49 @@ class DirectMessageControllerIntegrationTest {
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void muteConversation_persistsWithDottedUsernameKey() throws Exception {
+        // Regression: usernames are uniqueHandles containing dots (e.g. "alice.test.1234").
+        // mutedBy is a Map keyed by username; MongoDB rejects dots in map keys unless a
+        // replacement is configured. This used to fail with a 500 ("Failed to mute").
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String conversationId = objectMapper.readTree(convResponse).get("id").asText();
+
+        // aliceHandle contains dots — this is the key that previously broke the save.
+        mockMvc.perform(post("/api/v1/dm/" + conversationId + "/mute")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"duration\":\"ALWAYS\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mutedBy['" + aliceHandle + "']").exists());
+
+        // And it must round-trip from the database (read back the persisted map key).
+        var persisted = conversationRepository.findById(conversationId).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(persisted.getMutedBy()).containsKey(aliceHandle);
+    }
+
+    @Test
+    void unmuteConversation_removesTheUser() throws Exception {
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String conversationId = objectMapper.readTree(convResponse).get("id").asText();
+
+        mockMvc.perform(post("/api/v1/dm/" + conversationId + "/mute")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"duration\":\"8H\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/v1/dm/" + conversationId + "/mute")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mutedBy['" + aliceHandle + "']").doesNotExist());
     }
 }
