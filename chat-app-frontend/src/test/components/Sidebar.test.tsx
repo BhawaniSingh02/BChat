@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   joinRoom: vi.fn(),
   rooms: { my: [] as Room[], all: [] as Room[] },
   conversations: [] as DirectConversation[],
+  dmUnreadCounts: {} as Record<string, number>,
 }))
 
 vi.mock('../../store/authStore', () => ({
@@ -41,7 +42,7 @@ vi.mock('../../store/dmStore', () => ({
       activeDMId: null,
       setActiveDM: mocks.setActiveDM,
       getOrCreateConversation: mocks.getOrCreate,
-      dmUnreadCounts: {},
+      dmUnreadCounts: mocks.dmUnreadCounts,
     }
     return selector ? selector(state) : state
   },
@@ -62,12 +63,14 @@ describe('Sidebar', () => {
     mocks.rooms.my = []
     mocks.rooms.all = []
     mocks.conversations = []
+    mocks.dmUnreadCounts = {}
     vi.clearAllMocks()
   })
 
   it('renders brand name', () => {
     render(<Sidebar />)
-    expect(screen.getByText('Baaat')).toBeInTheDocument()
+    // BrandLogo renders the wordmark letter-by-letter, exposed to AT via aria-label
+    expect(screen.getByLabelText('Baaat')).toBeInTheDocument()
   })
 
   it('renders logged-in user info', () => {
@@ -76,19 +79,20 @@ describe('Sidebar', () => {
     expect(screen.getAllByText('alice@test.com').length).toBeGreaterThan(0)
   })
 
-  it('shows Rooms tab active by default', () => {
+  it('shows the Messages (DMs) tab active by default', () => {
     render(<Sidebar />)
-    expect(screen.getByRole('button', { name: 'Rooms' })).toHaveClass('text-green-600')
+    expect(screen.getByRole('button', { name: /Messages/ })).toHaveClass('text-teal-700')
   })
 
-  it('switches to DMs tab on click', async () => {
+  it('switches to the Rooms tab on click', async () => {
     render(<Sidebar />)
-    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
-    expect(screen.getByRole('button', { name: /Messages/ })).toHaveClass('text-green-600')
+    await userEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+    expect(screen.getByRole('button', { name: 'Rooms' })).toHaveClass('text-teal-700')
   })
 
-  it('shows conversation count on DMs tab', () => {
+  it('shows the total unread DM count on the Messages tab', () => {
     mocks.conversations = [makeConv('c1'), makeConv('c2')]
+    mocks.dmUnreadCounts = { c1: 1, c2: 1 }
     render(<Sidebar />)
     expect(screen.getByText(/Messages \(2\)/)).toBeInTheDocument()
   })

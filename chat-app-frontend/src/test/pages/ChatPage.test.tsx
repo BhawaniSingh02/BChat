@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import type { Room, DirectConversation } from '../../types'
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
@@ -153,6 +154,9 @@ vi.mock('../../components/rooms/RoomList', () => ({
 
 import ChatPage from '../../pages/ChatPage'
 
+// ChatPage renders react-router <Link>s, so it must be wrapped in a Router.
+const renderPage = () => render(<MemoryRouter><ChatPage /></MemoryRouter>)
+
 const makeRoom = (id: string, name: string): Room => ({
   id,
   roomId: id,
@@ -176,12 +180,12 @@ describe('ChatPage', () => {
   })
 
   it('renders sidebar', () => {
-    render(<ChatPage />)
+    renderPage()
     expect(screen.getByTestId('sidebar')).toBeInTheDocument()
   })
 
   it('calls fetchMyRooms, fetchAllRooms, fetchConversations, fetchOnlineUsers on mount', async () => {
-    render(<ChatPage />)
+    renderPage()
     await waitFor(() => {
       expect(mocks.fetchMyRooms).toHaveBeenCalledOnce()
       expect(mocks.fetchAllRooms).toHaveBeenCalledOnce()
@@ -191,28 +195,28 @@ describe('ChatPage', () => {
   })
 
   it('shows welcome screen when no rooms are active', () => {
-    render(<ChatPage />)
-    expect(screen.getByText('Welcome to Baaat')).toBeInTheDocument()
+    renderPage()
+    expect(screen.getByText('Welcome to your workspace')).toBeInTheDocument()
   })
 
   it('shows Create Room CTA on welcome screen', () => {
-    render(<ChatPage />)
+    renderPage()
     expect(screen.getByTestId('create-room-cta')).toBeInTheDocument()
   })
 
   it('shows Browse Rooms CTA on welcome screen', () => {
-    render(<ChatPage />)
+    renderPage()
     expect(screen.getByTestId('browse-rooms-cta')).toBeInTheDocument()
   })
 
   it('opens CreateRoomModal when Create Room CTA is clicked', async () => {
-    render(<ChatPage />)
+    renderPage()
     await userEvent.click(screen.getByTestId('create-room-cta'))
     expect(screen.getByTestId('create-room-modal')).toBeInTheDocument()
   })
 
   it('opens browse rooms modal when Browse Rooms CTA is clicked', async () => {
-    render(<ChatPage />)
+    renderPage()
     await userEvent.click(screen.getByTestId('browse-rooms-cta'))
     expect(screen.getByTestId('modal')).toBeInTheDocument()
   })
@@ -220,20 +224,20 @@ describe('ChatPage', () => {
   it('renders ChatView when a room is active', () => {
     mocks.myRooms = [makeRoom('general', 'General')]
     mocks.activeRoomId = 'general'
-    render(<ChatPage />)
+    renderPage()
     expect(screen.getByTestId('chat-view')).toBeInTheDocument()
     expect(screen.getByText('General')).toBeInTheDocument()
   })
 
   it('shows loading spinner when rooms are loading', () => {
     mocks.isLoading = true
-    render(<ChatPage />)
+    renderPage()
     expect(screen.getByText('Loading your rooms…')).toBeInTheDocument()
   })
 
   it('shows API error banner when data fetch fails', async () => {
     mocks.fetchMyRooms.mockRejectedValueOnce(new Error('Network error'))
-    render(<ChatPage />)
+    renderPage()
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument()
     })
@@ -242,7 +246,7 @@ describe('ChatPage', () => {
 
   it('dismisses API error banner on click', async () => {
     mocks.fetchMyRooms.mockRejectedValueOnce(new Error('Network error'))
-    render(<ChatPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
     await userEvent.click(screen.getByText('Dismiss'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -252,7 +256,7 @@ describe('ChatPage', () => {
     // Pre-populate rooms so the auto-select effect fires on mount
     mocks.myRooms = [makeRoom('general', 'General')]
     mocks.activeRoomId = null
-    render(<ChatPage />)
+    renderPage()
     await waitFor(() => expect(mocks.setActiveRoom).toHaveBeenCalledWith('general'))
   })
 })

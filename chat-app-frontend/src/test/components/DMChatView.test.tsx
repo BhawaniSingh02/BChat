@@ -134,7 +134,7 @@ describe('DMChatView', () => {
         onSend={onSend}
       />
     )
-    expect(screen.getByPlaceholderText('Message bob')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Message')).toBeInTheDocument()
   })
 
   it('shows react button on own message hover when onReactMessage provided', () => {

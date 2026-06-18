@@ -490,7 +490,7 @@ function MessageBubble({
                 ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (
                   <>
                     <a href={message.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline">
-                      ðŸ“Ž 📎 Download file
+                      📎 Download file
                     </a>
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>

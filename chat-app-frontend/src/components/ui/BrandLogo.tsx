@@ -69,7 +69,11 @@ export default function BrandLogo({
   const sizing = sizeMap[size]
 
   return (
-    <div className={`flex ${stacked ? 'flex-col items-center text-center' : 'items-center'} ${sizing.gap} ${interactive ? 'group/logo' : ''} ${className}`}>
+    <div
+      role="img"
+      aria-label="Baaat"
+      className={`flex ${stacked ? 'flex-col items-center text-center' : 'items-center'} ${sizing.gap} ${interactive ? 'group/logo' : ''} ${className}`}
+    >
       {showIcon && (
         <div className={`relative flex ${sizing.icon} items-center justify-center bg-gradient-to-br ${palette.bubble} ${palette.shadow} border ${palette.ring} overflow-hidden transition duration-500 ease-out ${interactive ? 'md:group-hover/logo:-translate-y-1 md:group-hover/logo:rotate-3 md:group-hover/logo:scale-[1.06]' : ''}`}>
           <div className={`absolute inset-x-1.5 top-1.5 h-1/2 rounded-full bg-white/20 blur-md transition duration-500 ${interactive ? 'md:group-hover/logo:opacity-90 md:group-hover/logo:scale-110' : ''}`} />
