@@ -1,4 +1,4 @@
-# BChat
+# Baaat
 
 A real-time chat app built with Spring Boot and React.
 

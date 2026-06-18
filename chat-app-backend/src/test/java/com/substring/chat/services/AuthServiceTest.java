@@ -27,6 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,28 +67,44 @@ class AuthServiceTest {
 
     @Test
     void register_successfullySavesUserAndSendsOtp() {
-        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        User savedUser = new User();
-        savedUser.setId("user-id-1");
-        savedUser.setEmail("alice@example.com");
-        savedUser.setUsername("alice@example.com");
-        savedUser.setDisplayName("Alice Smith");
-        savedUser.setEmailVerified(false);
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
-
-        // register() now returns void — just verify no exception
         authService.register(registerRequest, "127.0.0.1");
+
+        // OTP email is sent and the pending user is persisted
+        verify(emailService).sendOtpEmail(eq("alice@example.com"), eq("Alice Smith"), anyString());
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
     void register_throwsWhenEmailAlreadyExists() {
-        when(userRepository.existsByEmail("alice@example.com")).thenReturn(true);
+        User verified = new User();
+        verified.setEmail("alice@example.com");
+        verified.setEmailVerified(true);
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(verified));
 
         assertThatThrownBy(() -> authService.register(registerRequest, "127.0.0.1"))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessageContaining("alice@example.com");
+        // Must not touch persistence or email for an already-verified account
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void register_doesNotPersistUserWhenEmailDeliveryFails() {
+        // Bug fix: OTP is sent before the user is saved, so a delivery failure
+        // leaves no phantom pending account behind.
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
+        doThrow(new RuntimeException("Email delivery failed. Please try again later."))
+                .when(emailService).sendOtpEmail(anyString(), anyString(), anyString());
+
+        assertThatThrownBy(() -> authService.register(registerRequest, "127.0.0.1"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Email delivery failed");
+        verify(userRepository, never()).save(any(User.class));
     }
 
     // ── verifyEmailOtp ────────────────────────────────────────────────────────

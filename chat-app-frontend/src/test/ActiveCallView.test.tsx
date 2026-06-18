@@ -304,6 +304,47 @@ describe('ActiveCallView', () => {
     expect(mockSetSrcObject).toHaveBeenCalled()
   })
 
+  // ── Remote video reveal (audio-track-arrives-first ordering) ──────────────
+
+  it('shows the avatar placeholder while the remote video has no video track yet', () => {
+    const remoteStream = {
+      getVideoTracks: vi.fn().mockReturnValue([]),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaStream
+    render(<ActiveCallView {...defaultProps} callType="VIDEO" remoteStream={remoteStream} />)
+    expect(screen.getByTestId('remote-video-placeholder')).toBeInTheDocument()
+  })
+
+  it('reveals the remote video once the <video> element reports frames (onLoadedMetadata)', () => {
+    // Mirrors the real bug: audio track arrives first, so getVideoTracks() is empty
+    // on mount and programmatic addTrack() never fires the stream "addtrack" event.
+    // The element's own onLoadedMetadata must flip remoteHasVideo and hide the overlay.
+    const remoteStream = {
+      getVideoTracks: vi.fn().mockReturnValue([]),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaStream
+    render(<ActiveCallView {...defaultProps} callType="VIDEO" remoteStream={remoteStream} />)
+    expect(screen.getByTestId('remote-video-placeholder')).toBeInTheDocument()
+
+    act(() => { fireEvent.loadedMetadata(screen.getByTestId('remote-video')) })
+
+    expect(screen.queryByTestId('remote-video-placeholder')).not.toBeInTheDocument()
+  })
+
+  it('keeps the placeholder when the remote camera is off even after video frames arrive', () => {
+    const remoteStream = {
+      getVideoTracks: vi.fn().mockReturnValue([]),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaStream
+    render(<ActiveCallView {...defaultProps} callType="VIDEO" remoteStream={remoteStream} remoteCameraOff={true} />)
+    act(() => { fireEvent.loadedMetadata(screen.getByTestId('remote-video')) })
+    // remoteCameraOff still forces the placeholder/overlay to remain
+    expect(screen.getByTestId('remote-video-placeholder')).toBeInTheDocument()
+  })
+
   it('video elements are not visible in minimized state', () => {
     render(<ActiveCallView {...defaultProps} callType="VIDEO" />)
     fireEvent.click(screen.getByTestId('minimize-call-btn'))

@@ -191,6 +191,36 @@ class CallServiceTest {
         assertThat(eventCaptor.getValue().getEventType()).isEqualTo(CallEvent.EventType.ICE_CANDIDATE.name());
     }
 
+    @Test
+    void relayIceCandidate_relaysRestartOfferPayloadVerbatim() {
+        // The ICE-restart handshake travels over the same ICE relay channel as
+        // regular candidates. The backend must forward the SDP payload unchanged
+        // so the remote peer can apply the restart offer and answer back.
+        ringingSession.setStatus(CallSession.CallStatus.ACTIVE);
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+
+        String restartOffer = "{\"type\":\"offer\",\"sdp\":\"restart-offer-sdp\"}";
+        callService.relayIceCandidate("conv-1", "session-1", "alice", restartOffer);
+
+        ArgumentCaptor<CallEvent> eventCaptor = ArgumentCaptor.forClass(CallEvent.class);
+        verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call"), eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getEventType()).isEqualTo(CallEvent.EventType.ICE_CANDIDATE.name());
+        assertThat(eventCaptor.getValue().getPayload()).isEqualTo(restartOffer);
+    }
+
+    @Test
+    void relayIceCandidate_relaysRestartAnswerPayloadVerbatim() {
+        ringingSession.setStatus(CallSession.CallStatus.ACTIVE);
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+
+        String restartAnswer = "{\"type\":\"answer\",\"sdp\":\"restart-answer-sdp\"}";
+        callService.relayIceCandidate("conv-1", "session-1", "bob", restartAnswer);
+
+        ArgumentCaptor<CallEvent> eventCaptor = ArgumentCaptor.forClass(CallEvent.class);
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/call"), eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getPayload()).isEqualTo(restartAnswer);
+    }
+
     // ── endCall ───────────────────────────────────────────────────────────────
 
     @Test

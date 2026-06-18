@@ -33,6 +33,7 @@ describe('authStore', () => {
       isLoading: false,
       error: null,
       pendingVerificationEmail: null,
+      justRegistered: false,
     })
     vi.clearAllMocks()
   })
@@ -70,6 +71,19 @@ describe('authStore', () => {
       resolveFn()
       await loginPromise
       expect(useAuthStore.getState().isLoading).toBe(false)
+    })
+
+    it('clears token and user when the follow-up me() fails (no half-authenticated state)', async () => {
+      vi.mocked(authApi.login).mockResolvedValue(mockAuthResponse)
+      vi.mocked(authApi.me).mockRejectedValue(new Error('network blip'))
+
+      await expect(
+        useAuthStore.getState().login('alice@example.com', 'password123')
+      ).rejects.toBeTruthy()
+
+      expect(useAuthStore.getState().token).toBeNull()
+      expect(useAuthStore.getState().user).toBeNull()
+      expect(tokenProvider.get()).toBeNull()
     })
   })
 
@@ -122,6 +136,37 @@ describe('authStore', () => {
       ).rejects.toBeTruthy()
       expect(useAuthStore.getState().error).toBe('Invalid verification code')
     })
+
+    it('sets justRegistered=true on success so the success screen is reachable', async () => {
+      vi.mocked(authApi.verifyEmailOtp).mockResolvedValue(mockAuthResponse)
+      vi.mocked(authApi.me).mockResolvedValue(mockUser)
+
+      await useAuthStore.getState().verifyEmailOtp('alice@example.com', '123456')
+
+      expect(useAuthStore.getState().justRegistered).toBe(true)
+      expect(useAuthStore.getState().user?.uniqueHandle).toBe('alice.1234')
+    })
+
+    it('clears token and leaves justRegistered false when me() fails after verify', async () => {
+      vi.mocked(authApi.verifyEmailOtp).mockResolvedValue(mockAuthResponse)
+      vi.mocked(authApi.me).mockRejectedValue(new Error('network blip'))
+
+      await expect(
+        useAuthStore.getState().verifyEmailOtp('alice@example.com', '123456')
+      ).rejects.toBeTruthy()
+
+      expect(useAuthStore.getState().token).toBeNull()
+      expect(tokenProvider.get()).toBeNull()
+      expect(useAuthStore.getState().justRegistered).toBe(false)
+    })
+  })
+
+  describe('clearJustRegistered', () => {
+    it('resets the flag so later visits to /login or /register redirect normally', () => {
+      useAuthStore.setState({ justRegistered: true })
+      useAuthStore.getState().clearJustRegistered()
+      expect(useAuthStore.getState().justRegistered).toBe(false)
+    })
   })
 
   describe('logout', () => {
@@ -131,6 +176,7 @@ describe('authStore', () => {
         user: mockUser,
         token: 'jwt-token',
         pendingVerificationEmail: 'alice@example.com',
+        justRegistered: true,
       })
 
       useAuthStore.getState().logout()
@@ -138,6 +184,7 @@ describe('authStore', () => {
       expect(useAuthStore.getState().user).toBeNull()
       expect(useAuthStore.getState().token).toBeNull()
       expect(useAuthStore.getState().pendingVerificationEmail).toBeNull()
+      expect(useAuthStore.getState().justRegistered).toBe(false)
       expect(tokenProvider.get()).toBeNull()
     })
   })

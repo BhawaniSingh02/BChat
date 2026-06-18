@@ -8,7 +8,7 @@ import { useChatStore } from '../store/chatStore'
 import { useCallStore } from '../store/callStore'
 
 import { useWebSocket } from '../hooks/useWebSocket'
-import { useWebRTC } from '../hooks/useWebRTC'
+import { useWebRTC, describeMediaError } from '../hooks/useWebRTC'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { startRingtone, startDialTone, playConnectedChime, playHangUpTone, type StopFn } from '../hooks/useCallAudio'
 import Sidebar from '../components/layout/Sidebar'
@@ -53,6 +53,7 @@ export default function ChatPage() {
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [iceState, setIceState] = useState<RTCIceConnectionState | null>(null)
+  const [callError, setCallError] = useState<string | null>(null)
   const audioStopRef = useRef<StopFn | null>(null)
 
   // ── Wake Lock: keep screen on during active calls ─────────────────────────
@@ -129,6 +130,13 @@ export default function ChatPage() {
       const sessionId = callSessionIdRef.current
       if (convId && sessionId) {
         sendIceCandidate(convId, sessionId, offerSdpJson)
+      }
+    },
+    onIceRestartAnswer: (answerSdpJson) => {
+      const convId = callConvIdRef.current
+      const sessionId = callSessionIdRef.current
+      if (convId && sessionId) {
+        sendIceCandidate(convId, sessionId, answerSdpJson)
       }
     },
   })
@@ -346,7 +354,8 @@ export default function ChatPage() {
     try {
       const sdpOffer = await startWebRTCCall(type === 'VIDEO')
       sendCallOffer(conversationId, type, sdpOffer)
-    } catch {
+    } catch (err) {
+      setCallError(describeMediaError(err))
       endCallInStore()
     }
   }, [callState, startOutgoingCall, startWebRTCCall, sendCallOffer, endCallInStore])
@@ -357,8 +366,9 @@ export default function ChatPage() {
       const sdpAnswer = await answerWebRTCCall(pendingSdp, callType === 'VIDEO')
       sendCallAnswer(callConvId, callSessionId, sdpAnswer)
       callAnswered({ eventType: 'CALL_ANSWERED', callSessionId, conversationId: callConvId, fromUsername: user?.username ?? '', callType, payload: sdpAnswer })
-    } catch {
-      // If media acquisition fails, end the call
+    } catch (err) {
+      // If media acquisition fails, surface why and end the call
+      setCallError(describeMediaError(err))
       if (callSessionId && callConvId) sendCallEnd(callConvId, callSessionId)
       cleanupWebRTC()
       endCallInStore()
@@ -451,6 +461,20 @@ export default function ChatPage() {
             <button
               onClick={() => setApiError(null)}
               className="text-red-400 hover:text-red-600 text-sm"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Call Error Banner — media/permission failures */}
+        {callError && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-3" role="alert" aria-live="assertive" data-testid="call-error-banner">
+            <span className="text-amber-500 text-lg">📵</span>
+            <p className="text-sm text-amber-800 flex-1">{callError}</p>
+            <button
+              onClick={() => setCallError(null)}
+              className="text-amber-500 hover:text-amber-700 text-sm"
             >
               Dismiss
             </button>

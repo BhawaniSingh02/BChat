@@ -58,10 +58,35 @@ export interface WebRTCHandlers {
   onRemoteStream: (stream: MediaStream) => void
   /** Called when the peer connection closes unexpectedly */
   onConnectionClosed: () => void
-  /** Called with a new offer SDP when an ICE restart is attempted */
+  /** Called with a new offer SDP when *this* peer initiates an ICE restart */
   onIceRestartOffer?: (offerSdpJson: string) => void
+  /** Called with an answer SDP when *this* peer responds to a remote ICE restart offer */
+  onIceRestartAnswer?: (answerSdpJson: string) => void
   /** Called whenever the ICE connection state changes — useful for UI indicators */
   onIceStateChange?: (state: RTCIceConnectionState) => void
+}
+
+/**
+ * Translate a raw getUserMedia / device error into a user-facing message.
+ * Exported so callers can surface a helpful toast instead of failing silently.
+ */
+export function describeMediaError(err: unknown): string {
+  const name = (err as { name?: string })?.name
+  switch (name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'Camera/microphone permission was denied. Please allow access and try again.'
+    case 'NotFoundError':
+    case 'OverconstrainedError':
+      return 'No camera or microphone was found on this device.'
+    case 'NotReadableError':
+      return 'Your camera or microphone is already in use by another application.'
+    default:
+      if (typeof window !== 'undefined' && window.isSecureContext === false) {
+        return 'Calls require a secure (HTTPS) connection. Open the app over HTTPS or localhost.'
+      }
+      return 'Could not start the call. Check your camera/microphone and try again.'
+  }
 }
 
 export function useWebRTC(handlers: WebRTCHandlers) {
@@ -224,7 +249,13 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     offerSdpJson: string,
     withVideo: boolean,
   ): Promise<string> => {
+    // Preserve any ICE candidates that arrived while the call was still ringing
+    // (before the peer connection existed). cleanup() resets the buffer, so we
+    // capture the array reference first and restore it afterwards — otherwise the
+    // caller's early candidates would be lost and ICE could never connect.
+    const carriedCandidates = pendingIceCandidatesRef.current
     cleanup()
+    pendingIceCandidatesRef.current = carriedCandidates
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: withVideo,
@@ -256,33 +287,68 @@ export function useWebRTC(handlers: WebRTCHandlers) {
   }, [flushPendingIceCandidates])
 
   /**
-   * Add a remote ICE candidate received from the signaling channel.
-   * Also handles re-applied ICE restart answers.
+   * Handle a payload received on the ICE relay channel. This channel carries
+   * three kinds of payload, distinguished by the parsed JSON shape:
+   *   1. A regular ICE candidate ({@code {candidate, sdpMid, ...}})
+   *   2. An ICE-restart offer ({@code {type: 'offer', sdp}}) from the remote peer
+   *   3. An ICE-restart answer ({@code {type: 'answer', sdp}}) from the remote peer
+   *
+   * Candidates that arrive before the peer connection exists or before the
+   * remote description is set are buffered and flushed once negotiation is ready.
+   * This is essential on the callee side, where the caller's candidates start
+   * arriving while the call is still ringing (no peer connection yet).
    */
   const addIceCandidate = useCallback(async (candidateJson: string) => {
-    const pc = pcRef.current
-    if (!pc) return
+    let parsed: RTCSessionDescriptionInit & RTCIceCandidateInit
     try {
-      // Could be an ICE restart answer SDP instead of a candidate
-      const parsed = JSON.parse(candidateJson)
-      if (parsed.type === 'answer') {
-        // ICE restart answer from the remote peer
-        if (pc.signalingState === 'have-local-offer') {
+      parsed = JSON.parse(candidateJson)
+    } catch {
+      return // malformed payload
+    }
+
+    const pc = pcRef.current
+
+    // ── ICE restart answer (we previously sent a restart offer) ──────────────
+    if (parsed.type === 'answer') {
+      if (pc && pc.signalingState === 'have-local-offer') {
+        try {
           await pc.setRemoteDescription(new RTCSessionDescription(parsed))
           clearReconnectTimers()
           await flushPendingIceCandidates()
+        } catch {
+          // restart failed; the disconnect timeout will eventually close the call
         }
-      } else {
-        if (!pc.remoteDescription) {
-          pendingIceCandidatesRef.current.push(parsed as RTCIceCandidateInit)
-          return
-        }
-
-        const candidate = new RTCIceCandidate(parsed)
-        await pc.addIceCandidate(candidate)
       }
+      return
+    }
+
+    // ── ICE restart offer (remote peer is reconnecting) ──────────────────────
+    if (parsed.type === 'offer') {
+      // Can only respond to a restart on an established connection in a stable
+      // state. Ignoring otherwise avoids throwing during glare (both sides restart).
+      if (!pc || pc.signalingState !== 'stable') return
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(parsed))
+        await flushPendingIceCandidates()
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        handlersRef.current.onIceRestartAnswer?.(JSON.stringify(answer))
+      } catch {
+        // restart failed; the disconnect timeout will eventually close the call
+      }
+      return
+    }
+
+    // ── Regular ICE candidate ────────────────────────────────────────────────
+    // Buffer until both the peer connection and its remote description exist.
+    if (!pc || !pc.remoteDescription) {
+      pendingIceCandidatesRef.current.push(parsed)
+      return
+    }
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(parsed))
     } catch {
-      // Benign: candidate may arrive before remote description is set
+      // Benign: stale/duplicate candidate
     }
   }, [clearReconnectTimers, flushPendingIceCandidates])
 

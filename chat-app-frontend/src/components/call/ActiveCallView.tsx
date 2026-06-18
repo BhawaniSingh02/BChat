@@ -100,10 +100,21 @@ export default function ActiveCallView({
       remoteVideoRef.current.play().catch(() => {})
     }
 
-    setRemoteHasVideo(remoteStream.getVideoTracks().length > 0)
-    const onTrackAdded = () => setRemoteHasVideo(remoteStream.getVideoTracks().length > 0)
-    remoteStream.addEventListener('addtrack', onTrackAdded)
-    return () => remoteStream.removeEventListener('addtrack', onTrackAdded)
+    // The remote stream is built by funnelling tracks in via addTrack() (see
+    // useWebRTC). Programmatic addTrack() does NOT dispatch the 'addtrack' event,
+    // so we cannot rely on it alone — when the audio track arrives before the
+    // video track this would leave remoteHasVideo stuck false and the avatar
+    // overlay would permanently cover the (playing) remote video. We therefore
+    // re-evaluate on track changes AND on the <video> element's own events
+    // (onLoadedMetadata / onResize below), which fire reliably once frames flow.
+    const update = () => setRemoteHasVideo(remoteStream.getVideoTracks().length > 0)
+    update()
+    remoteStream.addEventListener('addtrack', update)
+    remoteStream.addEventListener('removetrack', update)
+    return () => {
+      remoteStream.removeEventListener('addtrack', update)
+      remoteStream.removeEventListener('removetrack', update)
+    }
   }, [remoteStream, minimized])
 
   // ── Call timer ─────────────────────────────────────────────────────────────
@@ -381,13 +392,17 @@ export default function ActiveCallView({
                 autoPlay
                 playsInline
                 muted
+                onLoadedMetadata={() => setRemoteHasVideo(true)}
+                onResize={() => {
+                  if ((remoteVideoRef.current?.videoWidth ?? 0) > 0) setRemoteHasVideo(true)
+                }}
                 className="w-full h-full object-cover"
                 data-testid="remote-video"
                 aria-label={`${otherUsername}'s video`}
               />
               {/* Fallback avatar while remote video hasn't started flowing yet, or camera is off */}
               {(!remoteHasVideo || remoteCameraOff) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 gap-2">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 gap-2" data-testid="remote-video-placeholder">
                   <Avatar name={otherUsername} size="xl" src={otherAvatarUrl} />
                   {remoteCameraOff && (
                     <span className="text-xs text-gray-400" data-testid="remote-camera-off-label">Camera off</span>

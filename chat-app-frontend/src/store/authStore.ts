@@ -22,12 +22,20 @@ interface AuthState {
   error: string | null
   /** Email waiting for OTP verification after registration. */
   pendingVerificationEmail: string | null
+  /**
+   * True immediately after a successful OTP verification. Lets the register
+   * route show the "You're in! here's your @handle" success screen instead of
+   * being instantly redirected to /chat by the authenticated-route guard.
+   */
+  justRegistered: boolean
 
   login: (email: string, password: string) => Promise<void>
   register: (displayName: string, email: string, password: string) => Promise<void>
   verifyEmailOtp: (email: string, code: string) => Promise<void>
   resendVerification: (email: string) => Promise<string>
   clearError: () => void
+  /** Clear the justRegistered flag once the user leaves the success screen. */
+  clearJustRegistered: () => void
   logout: () => void
   fetchMe: () => Promise<void>
   forgotPassword: (email: string) => Promise<string>
@@ -45,6 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
   pendingVerificationEmail: null,
+  justRegistered: false,
 
   login: async (email, password) => {
     set({ isLoading: true, error: null })
@@ -56,7 +65,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user })
       useUserCacheStore.getState().seed(user)
     } catch (err: unknown) {
-      set({ error: extractErrorMessage(err, 'Login failed'), isLoading: false })
+      // Clear any partially-set token so we never end up authenticated-but-userless
+      // (e.g. login succeeded but the follow-up /me request failed).
+      tokenProvider.set(null)
+      set({ token: null, user: null, error: extractErrorMessage(err, 'Login failed'), isLoading: false })
       throw err
     }
   },
@@ -86,10 +98,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       tokenProvider.set(data.token)
       set({ token: data.token, pendingVerificationEmail: null, isLoading: false })
       const user = await authApi.me()
-      set({ user })
+      // Set user and justRegistered atomically so the route guard sees both at
+      // once and shows the success screen instead of redirecting to /chat.
+      set({ user, justRegistered: true })
       useUserCacheStore.getState().seed(user)
     } catch (err: unknown) {
-      set({ error: extractErrorMessage(err, 'Verification failed'), isLoading: false })
+      tokenProvider.set(null)
+      set({ token: null, user: null, error: extractErrorMessage(err, 'Verification failed'), isLoading: false })
       throw err
     }
   },
@@ -101,9 +116,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearError: () => set({ error: null }),
 
+  clearJustRegistered: () => set({ justRegistered: false }),
+
   logout: () => {
     tokenProvider.set(null)
-    set({ user: null, token: null, pendingVerificationEmail: null })
+    set({ user: null, token: null, pendingVerificationEmail: null, justRegistered: false })
   },
 
   /**

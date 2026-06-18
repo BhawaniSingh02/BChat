@@ -16,8 +16,13 @@ export default function RegisterForm() {
   const [resendMessage, setResendMessage] = useState('')
   const [darkMode, setDarkMode] = useState(false)
 
-  const { register, verifyEmailOtp, resendVerification, clearError, pendingVerificationEmail, isLoading, error, user } = useAuthStore()
+  const { register, verifyEmailOtp, resendVerification, clearError, clearJustRegistered, pendingVerificationEmail, isLoading, error, user } = useAuthStore()
   const navigate = useNavigate()
+
+  const handleEnterApp = () => {
+    clearJustRegistered()
+    navigate('/chat')
+  }
 
   // Step 1: submit registration details
   const handleRegister = async (e: React.FormEvent) => {
@@ -322,7 +327,7 @@ export default function RegisterForm() {
 
                 <Button
                   type="button"
-                  onClick={() => navigate('/chat')}
+                  onClick={handleEnterApp}
                   className="w-full rounded-xl bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-700 shadow-[0_14px_32px_rgba(15,23,42,0.16)]"
                   size="lg"
                 >

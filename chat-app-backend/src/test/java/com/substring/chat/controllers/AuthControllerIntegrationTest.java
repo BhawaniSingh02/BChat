@@ -14,7 +14,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -87,10 +91,28 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void register_returns409WhenEmailAlreadyExists() throws Exception {
+    void register_returns409WhenVerifiedEmailAlreadyExists() throws Exception {
+        // Fully register AND verify the first account, so the email is taken.
+        registerAndGetToken("First User", "first@example.com", "password123");
+
+        RegisterRequest duplicate = new RegisterRequest();
+        duplicate.setDisplayName("Duplicate User");
+        duplicate.setEmail("first@example.com"); // same, already-verified email
+        duplicate.setPassword("password123");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(duplicate)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void register_allowsReRegisteringAnUnverifiedEmail() throws Exception {
+        // A pending (unverified) account may be re-registered — the OTP is simply
+        // re-issued. This is intended so users who never verified can start over.
         RegisterRequest request = new RegisterRequest();
-        request.setDisplayName("First User");
-        request.setEmail("first@example.com");
+        request.setDisplayName("Pending User");
+        request.setEmail("pending@example.com");
         request.setPassword("password123");
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -98,15 +120,11 @@ class AuthControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        RegisterRequest duplicate = new RegisterRequest();
-        duplicate.setDisplayName("Duplicate User");
-        duplicate.setEmail("first@example.com"); // same email
-        duplicate.setPassword("password123");
-
+        // Same email, still unverified → allowed again (201, not 409)
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(duplicate)))
-                .andExpect(status().isConflict());
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -198,6 +216,29 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void login_setsHttpOnlyAuthCookiesWithDefaultSameSite() throws Exception {
+        registerAndGetToken("Cookie User", "cookie@example.com", "securepass");
+
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("cookie@example.com");
+        loginRequest.setPassword("securepass");
+
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<String> cookies = result.getResponse().getHeaders("Set-Cookie");
+        // Access token cookie: HttpOnly + default SameSite=Strict
+        assertThat(cookies).anySatisfy(c -> assertThat(c)
+                .contains("token=").contains("HttpOnly").contains("SameSite=Strict"));
+        // Refresh cookie: scoped to the refresh endpoint, HttpOnly
+        assertThat(cookies).anySatisfy(c -> assertThat(c)
+                .contains("refreshToken=").contains("Path=/api/v1/auth/refresh").contains("HttpOnly"));
     }
 
     @Test

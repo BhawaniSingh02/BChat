@@ -89,8 +89,11 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function RedirectIfAuth({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user)
   const isInitialized = useAuthStore((s) => s.isInitialized)
+  const justRegistered = useAuthStore((s) => s.justRegistered)
   if (!isInitialized) return null   // still loading
-  if (user) return <Navigate to="/chat" replace />
+  // Don't redirect right after a fresh registration — let RegisterForm show the
+  // "You're in! here's your @handle" success screen before the user continues.
+  if (user && !justRegistered) return <Navigate to="/chat" replace />
   return <>{children}</>
 }
 

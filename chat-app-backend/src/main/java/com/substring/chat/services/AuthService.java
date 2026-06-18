@@ -79,8 +79,11 @@ public class AuthService {
         user.setEmailVerificationToken(otp);
         user.setEmailVerificationExpiry(Instant.now().plusSeconds(15 * 60)); // 15 min
 
-        userRepository.save(user);
+        // Send the OTP first. If delivery fails we deliberately do NOT persist the
+        // user, so a failed registration leaves no phantom pending account behind
+        // and the caller gets a clear "try again" error.
         emailService.sendOtpEmail(user.getEmail(), user.getDisplayName(), otp);
+        userRepository.save(user);
         auditService.log("REGISTER_PENDING", user.getEmail(), ip, "Pending email verification");
     }
 

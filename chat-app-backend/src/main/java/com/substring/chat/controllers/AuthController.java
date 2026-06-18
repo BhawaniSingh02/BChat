@@ -9,6 +9,7 @@ import com.substring.chat.dto.request.VerifyEmailOtpRequest;
 import com.substring.chat.dto.response.AuthResponse;
 import com.substring.chat.dto.response.UserResponse;
 import com.substring.chat.entities.User;
+import com.substring.chat.exceptions.UserAlreadyExistsException;
 import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.services.AuthRateLimiter;
 import com.substring.chat.services.AuthService;
@@ -56,6 +57,22 @@ public class AuthController {
     private boolean cookieSecure;
 
     /**
+     * SameSite policy for auth cookies. Defaults to "Strict" (works when the SPA
+     * is served from the same site as the API). For split-origin deployments
+     * (frontend and backend on different domains) or the Electron desktop build,
+     * set {@code cookie.same-site=None} AND {@code cookie.secure=true} so the
+     * refresh cookie is sent on cross-site requests — otherwise sessions won't
+     * survive a reload. Browsers reject SameSite=None without Secure, so we
+     * force Secure on whenever SameSite=None is configured.
+     */
+    @Value("${cookie.same-site:Strict}")
+    private String cookieSameSite;
+
+    private boolean effectiveCookieSecure() {
+        return cookieSecure || "None".equalsIgnoreCase(cookieSameSite);
+    }
+
+    /**
      * Phase 2: Registration creates a pending user and sends a 6-digit OTP.
      * Does NOT return a JWT — client must proceed to /verify-email.
      */
@@ -72,8 +89,13 @@ public class AuthController {
             authService.register(request, ip);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("message", "Verification code sent to your email. Please check your inbox."));
-        } catch (RuntimeException e) {
+        } catch (UserAlreadyExistsException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("detail", e.getMessage()));
+        } catch (RuntimeException e) {
+            // e.g. email delivery failure — not a conflict; nothing was persisted.
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("detail", e.getMessage()));
         }
@@ -229,7 +251,7 @@ public class AuthController {
     private void setJwtCookie(HttpServletResponse response, String token) {
         ResponseCookie cookie = ResponseCookie.from("token", token)
                 .httpOnly(true).path("/").maxAge(jwtExpiryMs / 1000)
-                .secure(cookieSecure).sameSite("Strict").build();
+                .secure(effectiveCookieSecure()).sameSite(cookieSameSite).build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
@@ -237,21 +259,21 @@ public class AuthController {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", token)
                 .httpOnly(true).path("/api/v1/auth/refresh")
                 .maxAge(refreshExpiryDays * 86_400L)
-                .secure(cookieSecure).sameSite("Strict").build();
+                .secure(effectiveCookieSecure()).sameSite(cookieSameSite).build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private void clearJwtCookie(HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from("token", "")
                 .httpOnly(true).path("/").maxAge(0)
-                .secure(cookieSecure).sameSite("Strict").build();
+                .secure(effectiveCookieSecure()).sameSite(cookieSameSite).build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private void clearRefreshCookie(HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true).path("/api/v1/auth/refresh").maxAge(0)
-                .secure(cookieSecure).sameSite("Strict").build();
+                .secure(effectiveCookieSecure()).sameSite(cookieSameSite).build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
