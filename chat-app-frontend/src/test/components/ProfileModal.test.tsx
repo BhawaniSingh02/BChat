@@ -9,6 +9,7 @@ const mockUser: User = {
   username: 'alice',
   email: 'alice@test.com',
   displayName: 'Alice Smith',
+  uniqueHandle: 'alice',
   bio: 'Hello world',
   statusMessage: 'Hey there!',
   avatarUrl: undefined,
@@ -23,6 +24,7 @@ const mockUpdateProfile = vi.fn()
 const mockUploadAvatar = vi.fn()
 const mockRemoveAvatar = vi.fn()
 const mockChangePassword = vi.fn()
+const mockClaimHandle = vi.fn()
 
 vi.mock('../../store/authStore', () => ({
   useAuthStore: (selector?: (s: unknown) => unknown) => {
@@ -32,12 +34,20 @@ vi.mock('../../store/authStore', () => ({
       uploadAvatar: mockUploadAvatar,
       removeAvatar: mockRemoveAvatar,
       changePassword: mockChangePassword,
+      claimHandle: mockClaimHandle,
     }
     return selector ? selector(state) : state
   },
 }))
 
+vi.mock('../../api/users', () => ({
+  usersApi: {
+    checkHandle: vi.fn(),
+  },
+}))
+
 import ProfileModal from '../../components/ui/ProfileModal'
+import { usersApi } from '../../api/users'
 
 describe('ProfileModal', () => {
   const onClose = vi.fn()
@@ -49,6 +59,8 @@ describe('ProfileModal', () => {
     mockUploadAvatar.mockResolvedValue(undefined)
     mockRemoveAvatar.mockResolvedValue(undefined)
     mockChangePassword.mockResolvedValue(undefined)
+    mockClaimHandle.mockResolvedValue(undefined)
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: true })
   })
 
   // ── Visibility ──────────────────────────────────────────────────────────────
@@ -137,6 +149,65 @@ describe('ProfileModal', () => {
   it('shows bio character count', () => {
     render(<ProfileModal open onClose={onClose} />)
     expect(screen.getByText('11/250')).toBeInTheDocument() // 'Hello world' = 11 chars
+  })
+
+  // ── Username (@handle) editing ───────────────────────────────────────────────
+
+  it('pre-fills the username field with the current handle', () => {
+    render(<ProfileModal open onClose={onClose} />)
+    expect(screen.getByTestId('handle-input')).toHaveValue('alice')
+    expect(screen.getByTestId('handle-hint')).toHaveTextContent('current username')
+  })
+
+  it('save username button is disabled when handle is unchanged', () => {
+    render(<ProfileModal open onClose={onClose} />)
+    expect(screen.getByTestId('save-handle-btn')).toBeDisabled()
+  })
+
+  it('checks availability and enables save when a new handle is free', async () => {
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: true })
+    render(<ProfileModal open onClose={onClose} />)
+    const input = screen.getByTestId('handle-input')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'newname')
+    await waitFor(() => expect(screen.getByTestId('handle-available')).toBeInTheDocument())
+    expect(screen.getByTestId('save-handle-btn')).not.toBeDisabled()
+    expect(usersApi.checkHandle).toHaveBeenCalledWith('newname')
+  })
+
+  it('shows unavailable state and keeps save disabled when handle is taken', async () => {
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: false, reason: 'This username is taken' })
+    render(<ProfileModal open onClose={onClose} />)
+    const input = screen.getByTestId('handle-input')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'taken')
+    await waitFor(() => expect(screen.getByTestId('handle-unavailable')).toBeInTheDocument())
+    expect(screen.getByTestId('handle-hint')).toHaveTextContent('This username is taken')
+    expect(screen.getByTestId('save-handle-btn')).toBeDisabled()
+  })
+
+  it('claims the new handle and shows success', async () => {
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: true })
+    render(<ProfileModal open onClose={onClose} />)
+    const input = screen.getByTestId('handle-input')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'newname')
+    await waitFor(() => expect(screen.getByTestId('save-handle-btn')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('save-handle-btn'))
+    await waitFor(() => expect(mockClaimHandle).toHaveBeenCalledWith('newname'))
+    await waitFor(() => expect(screen.getByTestId('profile-success')).toHaveTextContent('Username updated'))
+  })
+
+  it('shows an error when claiming the handle fails', async () => {
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: true })
+    mockClaimHandle.mockRejectedValueOnce({ response: { data: { detail: 'This username is taken' } } })
+    render(<ProfileModal open onClose={onClose} />)
+    const input = screen.getByTestId('handle-input')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'newname')
+    await waitFor(() => expect(screen.getByTestId('save-handle-btn')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('save-handle-btn'))
+    await waitFor(() => expect(screen.getByTestId('profile-error')).toHaveTextContent('This username is taken'))
   })
 
   // ── Avatar ──────────────────────────────────────────────────────────────────

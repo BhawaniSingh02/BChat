@@ -1,7 +1,10 @@
 import { useRef, useState, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore'
+import { usersApi } from '../../api/users'
 import type { UpdateProfileRequest, ChangePasswordRequest } from '../../types'
 import Avatar from './Avatar'
+
+type HandleStatus = 'current' | 'idle' | 'checking' | 'available' | 'unavailable'
 
 interface ProfileModalProps {
   open: boolean
@@ -18,7 +21,7 @@ const PRIVACY_LABEL: Record<string, string> = {
 
 export default function ProfileModal({ open, onClose }: ProfileModalProps) {
   const user = useAuthStore((s) => s.user)
-  const { updateProfile, uploadAvatar, removeAvatar, changePassword } = useAuthStore()
+  const { updateProfile, uploadAvatar, removeAvatar, changePassword, claimHandle } = useAuthStore()
 
   const [tab, setTab] = useState<Tab>('profile')
   const [saving, setSaving] = useState(false)
@@ -29,6 +32,13 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
   const [displayName, setDisplayName] = useState(user?.displayName ?? '')
   const [bio, setBio] = useState(user?.bio ?? '')
   const [statusMessage, setStatusMessage] = useState(user?.statusMessage ?? '')
+
+  // Username (@handle) editing — separate API call with live availability check
+  const [handle, setHandle] = useState(user?.uniqueHandle ?? '')
+  const [handleStatus, setHandleStatus] = useState<HandleStatus>('current')
+  const [handleReason, setHandleReason] = useState<string | null>(null)
+  const [savingHandle, setSavingHandle] = useState(false)
+  const handleSeq = useRef(0)
 
   // Privacy tab state
   const [lastSeenPrivacy, setLastSeenPrivacy] = useState<'EVERYONE' | 'NOBODY' | 'CONTACTS'>(user?.lastSeenPrivacy ?? 'EVERYONE')
@@ -50,6 +60,9 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
       setDisplayName(user.displayName ?? '')
       setBio(user.bio ?? '')
       setStatusMessage(user.statusMessage ?? '')
+      setHandle(user.uniqueHandle ?? '')
+      setHandleStatus('current')
+      setHandleReason(null)
       setLastSeenPrivacy(user.lastSeenPrivacy ?? 'EVERYONE')
       setOnlinePrivacy(user.onlinePrivacy ?? 'EVERYONE')
       setProfilePhotoPrivacy(user.profilePhotoPrivacy ?? 'EVERYONE')
@@ -67,6 +80,29 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
   useEffect(() => {
     setAvatarPreview(user?.avatarUrl ?? null)
   }, [user?.avatarUrl])
+
+  // Debounced live availability check for the @username field.
+  useEffect(() => {
+    if (!open) return
+    const value = handle.trim().toLowerCase()
+    const current = (user?.uniqueHandle ?? '').toLowerCase()
+    if (value === current) { setHandleStatus('current'); setHandleReason(null); return }
+    if (!value) { setHandleStatus('idle'); setHandleReason(null); return }
+    setHandleStatus('checking')
+    const id = ++handleSeq.current
+    const t = setTimeout(async () => {
+      try {
+        const res = await usersApi.checkHandle(value)
+        if (id !== handleSeq.current) return // superseded by a newer keystroke
+        setHandleStatus(res.available ? 'available' : 'unavailable')
+        setHandleReason(res.available ? null : (res.reason ?? 'Not available'))
+      } catch {
+        if (id !== handleSeq.current) return
+        setHandleStatus('idle')
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [handle, open, user?.uniqueHandle])
 
   if (!open || !user) return null
 
@@ -126,6 +162,23 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
       flashError(e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Failed to save profile')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveUsername() {
+    const value = handle.trim().toLowerCase()
+    if (handleStatus !== 'available' || savingHandle) return
+    setSavingHandle(true)
+    setError(null)
+    try {
+      await claimHandle(value)
+      setHandleStatus('current')
+      flashSuccess('Username updated')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string; message?: string } } }
+      flashError(e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Could not update username')
+    } finally {
+      setSavingHandle(false)
     }
   }
 
@@ -309,6 +362,58 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
           {/* ── Profile Tab ── */}
           {tab === 'profile' && (
             <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
+                <div className="flex items-center rounded-lg border border-gray-200 px-3 focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/20">
+                  <span className="text-gray-400 select-none">@</span>
+                  <input
+                    type="text"
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                    placeholder="username"
+                    maxLength={20}
+                    className="flex-1 bg-transparent px-2 py-2 text-sm focus:outline-none"
+                    aria-label="Username"
+                    data-testid="handle-input"
+                  />
+                  {handleStatus === 'checking' && (
+                    <svg className="h-4 w-4 animate-spin text-gray-300" viewBox="0 0 24 24" fill="none" data-testid="handle-checking">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                  )}
+                  {handleStatus === 'available' && (
+                    <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} data-testid="handle-available">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {handleStatus === 'unavailable' && (
+                    <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} data-testid="handle-unavailable">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-xs" data-testid="handle-hint">
+                    {handleStatus === 'current' && <span className="text-gray-400">This is your current username</span>}
+                    {handleStatus === 'checking' && <span className="text-gray-400">Checking availability…</span>}
+                    {handleStatus === 'available' && <span className="text-emerald-600">@{handle.trim().toLowerCase()} is available</span>}
+                    {handleStatus === 'unavailable' && <span className="text-red-500">{handleReason}</span>}
+                    {handleStatus === 'idle' && <span className="text-gray-400">3–20 chars · letters, numbers, . and _</span>}
+                  </p>
+                  <button
+                    onClick={handleSaveUsername}
+                    disabled={handleStatus !== 'available' || savingHandle}
+                    className="flex-shrink-0 text-xs font-medium text-teal-700 hover:text-teal-800 disabled:text-gray-300 disabled:cursor-not-allowed"
+                    data-testid="save-handle-btn"
+                  >
+                    {savingHandle ? 'Saving…' : 'Save username'}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] leading-tight text-gray-400">
+                  Changing your username frees the old one for others to claim. Your chats and messages stay intact.
+                </p>
+              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Display Name</label>
                 <input
