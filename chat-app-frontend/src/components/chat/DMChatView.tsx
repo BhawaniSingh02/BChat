@@ -46,8 +46,9 @@ export default function DMChatView({
   const online = isOnline(otherUser)
   const fetchUser = useUserCacheStore((s) => s.fetchUser)
   const cache = useUserCacheStore((s) => s.cache)
-  // Prefer displayName from cache so the header shows "Bhawani Singh" not "bhawani.singh.2713"
-  const displayName = cache[otherUser]?.displayName || cache[otherUser]?.username || otherUser
+  // Prefer display name > public @handle so the header never shows the opaque id.
+  const displayName = cache[otherUser]?.displayName
+    || (cache[otherUser]?.uniqueHandle ? `@${cache[otherUser]?.uniqueHandle}` : otherUser)
 
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null)

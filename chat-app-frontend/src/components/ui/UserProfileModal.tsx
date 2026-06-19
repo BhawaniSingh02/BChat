@@ -83,7 +83,7 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
               <div className="flex items-end gap-3">
                 <div className="ring-4 ring-white rounded-full shadow-md">
                   <Avatar
-                    name={username}
+                    name={user?.displayName || user?.uniqueHandle || username}
                     size="xl"
                     online={online}
                     src={user?.avatarUrl ?? undefined}
@@ -126,9 +126,9 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
             {user && !loading && (
               <>
                 <h2 className="text-xl font-bold text-gray-900" data-testid="user-profile-display-name">
-                  {user.displayName || user.username}
+                  {user.displayName || (user.uniqueHandle ? `@${user.uniqueHandle}` : user.username)}
                 </h2>
-                <p className="text-sm text-gray-500 mb-1">@{user.username}</p>
+                <p className="text-sm text-gray-500 mb-1">@{user.uniqueHandle ?? user.username}</p>
 
                 {user.statusMessage && (
                   <p className="mb-2 text-xs italic text-teal-700" data-testid="user-profile-status">

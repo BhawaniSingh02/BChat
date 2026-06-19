@@ -221,7 +221,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
                   data-testid="avatar-preview"
                 />
               ) : (
-                <Avatar name={user.username} size="xl" />
+                <Avatar name={user.displayName || user.uniqueHandle || user.username} size="xl" />
               )}
             </div>
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -263,9 +263,9 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
         {/* Name + handle */}
         <div className="px-6 pt-2 pb-0 flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-900" data-testid="profile-display-name">
-            {user.displayName || user.username}
+            {user.displayName || (user.uniqueHandle ? `@${user.uniqueHandle}` : user.username)}
           </h2>
-          <p className="text-xs text-gray-500">@{user.username} · {user.email}</p>
+          <p className="text-xs text-gray-500">@{user.uniqueHandle ?? user.username} · {user.email}</p>
           {user.statusMessage && (
             <p className="mt-0.5 text-xs italic text-teal-700" data-testid="profile-status-display">
               {user.statusMessage}
