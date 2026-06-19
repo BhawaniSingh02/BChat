@@ -38,6 +38,9 @@ class UserControllerIntegrationTest {
     private String aliceToken;
     private String searchUserHandle;
     private String aliceHandle;
+    // The opaque internal username (principal) — used for /users/{username} path lookups.
+    private String searchUserName;
+    private String aliceUserName;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -46,10 +49,12 @@ class UserControllerIntegrationTest {
         aliceToken = registerAndGetToken("Alice Smith", "alice@example.com", "password123");
         registerAndGetToken("Alicia Jones", "alicia@example.com", "password123");
 
-        searchUserHandle = userRepository.findByEmail("search@example.com")
-                .orElseThrow().getUniqueHandle();
-        aliceHandle = userRepository.findByEmail("alice@example.com")
-                .orElseThrow().getUniqueHandle();
+        User searchUser = userRepository.findByEmail("search@example.com").orElseThrow();
+        User aliceUser = userRepository.findByEmail("alice@example.com").orElseThrow();
+        searchUserHandle = searchUser.getUniqueHandle();
+        aliceHandle = aliceUser.getUniqueHandle();
+        searchUserName = searchUser.getUsername();
+        aliceUserName = aliceUser.getUsername();
     }
 
     private String registerAndGetToken(String displayName, String email, String password) throws Exception {
@@ -77,7 +82,16 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        return objectMapper.readTree(response).get("token").asText();
+        String token = objectMapper.readTree(response).get("token").asText();
+        // New flow: claim a public @handle after verification.
+        String handle = email.split("@")[0].toLowerCase().replaceAll("[^a-z0-9._]", "");
+        if (handle.length() < 3) handle = handle + "user";
+        mockMvc.perform(post("/api/v1/users/me/handle")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"handle\":\"" + handle + "\"}"))
+                .andExpect(status().isOk());
+        return token;
     }
 
     // ── Search ─────────────────────────────────────────────────────────────────
@@ -141,26 +155,26 @@ class UserControllerIntegrationTest {
 
     @Test
     void getUser_returnsPublicProfileWithoutEmail() throws Exception {
-        mockMvc.perform(get("/api/v1/users/" + aliceHandle)
+        mockMvc.perform(get("/api/v1/users/" + aliceUserName)
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(aliceHandle))
+                .andExpect(jsonPath("$.uniqueHandle").value(aliceHandle))
                 .andExpect(jsonPath("$.email").doesNotExist());
     }
 
     @Test
     void getUser_ownProfileShowsEmail() throws Exception {
-        mockMvc.perform(get("/api/v1/users/" + searchUserHandle)
+        mockMvc.perform(get("/api/v1/users/" + searchUserName)
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(searchUserHandle))
+                .andExpect(jsonPath("$.uniqueHandle").value(searchUserHandle))
                 .andExpect(jsonPath("$.email").value("search@example.com"));
     }
 
     @Test
     void getUser_profilePhotoHiddenWhenPrivacyNobody() throws Exception {
         String alice2Token = registerAndGetToken("Alice Two", "alice2@example.com", "password123");
-        String alice2Handle = userRepository.findByEmail("alice2@example.com").orElseThrow().getUniqueHandle();
+        String alice2Name = userRepository.findByEmail("alice2@example.com").orElseThrow().getUsername();
 
         UpdateProfileRequest privReq = new UpdateProfileRequest();
         privReq.setProfilePhotoPrivacy("NOBODY");
@@ -170,10 +184,9 @@ class UserControllerIntegrationTest {
                         .header("Authorization", "Bearer " + alice2Token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/v1/users/" + alice2Handle)
+        mockMvc.perform(get("/api/v1/users/" + alice2Name)
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(alice2Handle))
                 .andExpect(jsonPath("$.avatarUrl").doesNotExist());
     }
 
@@ -197,7 +210,7 @@ class UserControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/users/me")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(searchUserHandle))
+                .andExpect(jsonPath("$.uniqueHandle").value(searchUserHandle))
                 .andExpect(jsonPath("$.email").value("search@example.com"));
     }
 
@@ -261,7 +274,7 @@ class UserControllerIntegrationTest {
         mockMvc.perform(delete("/api/v1/users/me/avatar")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(searchUserHandle));
+                .andExpect(jsonPath("$.uniqueHandle").value(searchUserHandle));
     }
 
     @Test

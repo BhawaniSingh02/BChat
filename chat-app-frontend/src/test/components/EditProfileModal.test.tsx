@@ -41,6 +41,7 @@ function setupMocks(overrides: Partial<ReturnType<typeof authStore.useAuthStore>
       pendingVerificationEmail: null,
       justRegistered: false,
       clearJustRegistered: vi.fn(),
+      claimHandle: vi.fn(),
       updateProfile: mockUpdateProfile,
       uploadAvatar: mockUploadAvatar,
       removeAvatar: mockRemoveAvatar,

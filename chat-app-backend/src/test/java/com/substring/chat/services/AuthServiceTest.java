@@ -110,29 +110,20 @@ class AuthServiceTest {
     // ── verifyEmailOtp ────────────────────────────────────────────────────────
 
     @Test
-    void verifyEmailOtp_successfullyActivatesAndReturnsJwt() {
+    void verifyEmailOtp_activatesWithOpaqueIdentityAndNoHandleYet() {
         User pendingUser = new User();
         pendingUser.setId("user-id-1");
         pendingUser.setEmail("alice@example.com");
         pendingUser.setUsername("alice@example.com");
+        pendingUser.setInternalId("internal-1");
         pendingUser.setDisplayName("Alice Smith");
         pendingUser.setEmailVerified(false);
         pendingUser.setEmailVerificationToken("123456");
         pendingUser.setEmailVerificationExpiry(Instant.now().plusSeconds(300));
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(pendingUser));
-        when(userRepository.existsByUniqueHandle(anyString())).thenReturn(false);
-
-        User activated = new User();
-        activated.setId("user-id-1");
-        activated.setEmail("alice@example.com");
-        activated.setUsername("alice.smith.1234");
-        activated.setUniqueHandle("alice.smith.1234");
-        activated.setDisplayName("Alice Smith");
-        activated.setEmailVerified(true);
-        activated.setWhoCanMessage("APPROVED_ONLY");
-        when(userRepository.save(any(User.class))).thenReturn(activated);
-        when(jwtTokenProvider.generateToken("alice.smith.1234")).thenReturn("jwt-token");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtTokenProvider.generateToken("internal-1")).thenReturn("jwt-token");
 
         RefreshToken fakeRefreshToken = new RefreshToken();
         fakeRefreshToken.setToken("refresh-token-value");
@@ -146,7 +137,9 @@ class AuthServiceTest {
         AuthService.LoginResult result = authService.verifyEmailOtp(req, "127.0.0.1", "TestAgent/1.0");
 
         assertThat(result.authResponse().getToken()).isEqualTo("jwt-token");
-        assertThat(result.authResponse().getUniqueHandle()).isEqualTo("alice.smith.1234");
+        // Identity is the opaque internal id; the public @handle is chosen later (null now).
+        assertThat(result.authResponse().getUsername()).isEqualTo("internal-1");
+        assertThat(result.authResponse().getUniqueHandle()).isNull();
         assertThat(result.refreshToken().getToken()).isEqualTo("refresh-token-value");
     }
 

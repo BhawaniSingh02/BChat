@@ -58,7 +58,8 @@ class RoomControllerIntegrationTest {
         authToken = registerAndGetToken("Room User", "roomuser@example.com", "password123");
         secondUserToken = registerAndGetToken("Room User Two", "roomuser2@example.com", "password123");
 
-        authHandle = userRepository.findByEmail("roomuser@example.com").orElseThrow().getUniqueHandle();
+        // Rooms identify the owner/sender by the (opaque) username/principal, not the public handle.
+        authHandle = userRepository.findByEmail("roomuser@example.com").orElseThrow().getUsername();
     }
 
     private String registerAndGetToken(String displayName, String email, String password) throws Exception {

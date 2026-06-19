@@ -35,8 +35,9 @@ export default function DMConversationCard({
   const otherUser = conversation.participants.find((p) => p !== currentUsername) ?? '?'
   const cachedUser = useUserCacheStore((s) => s.cache[otherUser])
   const avatarUrl = cachedUser?.avatarUrl
-  // Prefer displayName > username from cache > raw participant string
-  const displayName = cachedUser?.displayName || cachedUser?.username || otherUser
+  // Prefer display name > public @handle; never fall back to the opaque internal id.
+  const displayName = cachedUser?.displayName
+    || (cachedUser?.uniqueHandle ? `@${cachedUser.uniqueHandle}` : otherUser)
 
   const [menu, setMenu] = useState<ContextMenuState | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)

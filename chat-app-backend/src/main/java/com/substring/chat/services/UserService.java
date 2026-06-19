@@ -26,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileUploadService fileUploadService;
+    private final HandleService handleService;
 
     /** Full profile — only for the authenticated user themselves (via /me). */
     public UserResponse getUserByUsername(String username) {
@@ -96,10 +97,39 @@ public class UserService {
     }
 
     public List<UserResponse> searchUsers(String query, String viewerUsername) {
-        return userRepository.findByUsernameContainingIgnoreCase(query)
+        if (query == null || query.isBlank()) return List.of();
+        // Search by public @handle or display name — never by the opaque internal username.
+        String q = query.startsWith("@") ? query.substring(1) : query;
+        return userRepository
+                .findByUniqueHandleContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(q, q)
                 .stream()
+                .filter(u -> u.getUniqueHandle() != null)        // skip users who haven't picked a handle yet
                 .map(u -> getPublicProfile(u.getUsername(), viewerUsername))
                 .toList();
+    }
+
+    /**
+     * Check whether a desired @handle is available for the given user
+     * (format-valid and not held by someone else).
+     */
+    public HandleService.Validation checkHandleAvailability(String rawHandle, String currentUsername) {
+        return handleService.checkAvailability(rawHandle, currentUsername);
+    }
+
+    /**
+     * Claim or change the caller's public @handle. Frees their previous handle
+     * automatically (it's simply overwritten, so others can take it).
+     */
+    public UserResponse claimHandle(String currentUsername, String rawHandle) {
+        HandleService.Validation result = handleService.checkAvailability(rawHandle, currentUsername);
+        if (!result.valid()) {
+            throw new IllegalArgumentException(result.reason());
+        }
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UserNotFoundException(currentUsername));
+        user.setUniqueHandle(handleService.normalize(rawHandle));
+        userRepository.save(user);
+        return UserResponse.from(user);
     }
 
     public UserResponse updateProfile(String username, UpdateProfileRequest request) {

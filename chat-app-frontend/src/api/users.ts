@@ -29,4 +29,14 @@ export const usersApi = {
 
   changePassword: (data: ChangePasswordRequest) =>
     client.put<{ message: string }>('/users/me/password', data).then((r) => r.data),
+
+  /** Live availability check for a desired @username. */
+  checkHandle: (handle: string) =>
+    client
+      .get<{ available: boolean; reason?: string }>('/users/handle-available', { params: { handle } })
+      .then((r) => r.data),
+
+  /** Claim or change the current user's @username. */
+  claimHandle: (handle: string) =>
+    client.post<User>('/users/me/handle', { handle }).then((r) => r.data),
 }

@@ -108,10 +108,13 @@ public class AuthService {
             throw new RuntimeException("Verification code has expired. Please request a new one.");
         }
 
-        // Generate a unique handle: {displayNameSlug}.{4-digit-random}
-        String handle = generateUniqueHandle(user.getDisplayName());
-        user.setUniqueHandle(handle);
-        user.setUsername(handle); // update Spring Security principal to uniqueHandle
+        // Identity becomes a stable, opaque id (the internal UUID). The public @handle
+        // (uniqueHandle) is left unset — the user picks it on the next onboarding step.
+        // This keeps the principal/message/routing key immutable while the @handle stays editable.
+        if (user.getInternalId() == null) {
+            user.setInternalId(UUID.randomUUID().toString());
+        }
+        user.setUsername(user.getInternalId());
         user.setEmailVerified(true);
         user.setEmailVerificationToken(null);
         user.setEmailVerificationExpiry(null);

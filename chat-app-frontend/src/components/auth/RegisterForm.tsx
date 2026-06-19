@@ -41,7 +41,9 @@ export default function RegisterForm() {
     const verificationEmail = pendingVerificationEmail ?? email
     try {
       await verifyEmailOtp(verificationEmail, otp)
-      setStep('success')
+      // Account verified but no @username yet — go to the app, where the route
+      // guard presents the "Choose your username" onboarding step.
+      navigate('/chat')
     } catch {
       // error set in store
     }

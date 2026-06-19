@@ -8,6 +8,7 @@ import DownloadPage from './pages/DownloadPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
+import ChooseUsername from './components/auth/ChooseUsername'
 
 // ─── Desktop update banner (only shown inside Electron) ───────────────────────
 function UpdateBanner() {
@@ -83,6 +84,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const isInitialized = useAuthStore((s) => s.isInitialized)
   if (!isInitialized) return null   // still loading — render nothing
   if (!user) return <Navigate to="/login" replace />
+  // Authenticated but hasn't picked a public @username yet → force onboarding.
+  if (!user.uniqueHandle) return <ChooseUsername />
   return <>{children}</>
 }
 

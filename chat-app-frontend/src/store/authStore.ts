@@ -37,6 +37,8 @@ interface AuthState {
   clearError: () => void
   /** Clear the justRegistered flag once the user leaves the success screen. */
   clearJustRegistered: () => void
+  /** Claim or change the public @username; updates the current user on success. */
+  claimHandle: (handle: string) => Promise<void>
   logout: () => void
   fetchMe: () => Promise<void>
   forgotPassword: (email: string) => Promise<string>
@@ -118,6 +120,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearError: () => set({ error: null }),
 
   clearJustRegistered: () => set({ justRegistered: false }),
+
+  claimHandle: async (handle) => {
+    const updated = await usersApi.claimHandle(handle)
+    set({ user: updated })
+    useUserCacheStore.getState().seed(updated)
+  },
 
   logout: () => {
     // Remove this device's push subscription so the logged-out user stops

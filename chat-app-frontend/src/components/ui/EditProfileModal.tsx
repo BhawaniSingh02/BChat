@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { User, UpdateProfileRequest, ChangePasswordRequest } from '../../types'
 import { useAuthStore } from '../../store/authStore'
+import { usersApi } from '../../api/users'
 import Avatar from './Avatar'
 
 type Tab = 'profile' | 'password' | 'privacy'
@@ -27,6 +28,13 @@ export default function EditProfileModal({ user, onClose }: EditProfileModalProp
   const [bio, setBio] = useState(user.bio ?? '')
   const [statusMessage, setStatusMessage] = useState(user.statusMessage ?? '')
 
+  // Username (@handle) editing
+  const [handle, setHandle] = useState(user.uniqueHandle ?? '')
+  const [handleStatus, setHandleStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle')
+  const [handleReason, setHandleReason] = useState<string | null>(null)
+  const [savingHandle, setSavingHandle] = useState(false)
+  const handleSeq = useRef(0)
+
   // Privacy tab state
   const [lastSeenPrivacy, setLastSeenPrivacy] = useState<string>(user.lastSeenPrivacy ?? 'EVERYONE')
   const [onlinePrivacy, setOnlinePrivacy] = useState<string>(user.onlinePrivacy ?? 'EVERYONE')
@@ -41,7 +49,41 @@ export default function EditProfileModal({ user, onClose }: EditProfileModalProp
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl ?? null)
 
-  const { updateProfile, uploadAvatar, removeAvatar, changePassword } = useAuthStore()
+  const { updateProfile, uploadAvatar, removeAvatar, changePassword, claimHandle } = useAuthStore()
+
+  // Debounced @username availability check.
+  useEffect(() => {
+    const value = handle.trim().toLowerCase()
+    if (!value || value === (user.uniqueHandle ?? '')) {
+      setHandleStatus('idle'); setHandleReason(null); return
+    }
+    setHandleStatus('checking')
+    const id = ++handleSeq.current
+    const t = setTimeout(async () => {
+      try {
+        const res = await usersApi.checkHandle(value)
+        if (id !== handleSeq.current) return
+        setHandleStatus(res.available ? 'available' : 'unavailable')
+        setHandleReason(res.available ? null : (res.reason ?? 'Not available'))
+      } catch {
+        if (id === handleSeq.current) setHandleStatus('idle')
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [handle, user.uniqueHandle])
+
+  async function handleSaveUsername() {
+    setSavingHandle(true)
+    try {
+      await claimHandle(handle.trim().toLowerCase())
+      flashSuccess('Username updated')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      flashError(detail ?? 'Could not update username')
+    } finally {
+      setSavingHandle(false)
+    }
+  }
 
   function flashSuccess(msg: string) {
     setSuccess(msg)
@@ -256,6 +298,37 @@ export default function EditProfileModal({ user, onClose }: EditProfileModalProp
 
               {/* Fields */}
               <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
+                  <div className="flex gap-2">
+                    <div className="flex flex-1 items-center px-3 border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400">
+                      <span className="text-gray-400 select-none">@</span>
+                      <input
+                        type="text"
+                        value={handle}
+                        onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                        placeholder="username"
+                        maxLength={20}
+                        className="flex-1 px-2 py-2 bg-transparent text-sm focus:outline-none"
+                        data-testid="username-input"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSaveUsername}
+                      disabled={handleStatus !== 'available' || savingHandle}
+                      className="px-3 py-2 text-sm font-medium rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                      data-testid="save-username-btn"
+                    >
+                      {savingHandle ? '…' : 'Save'}
+                    </button>
+                  </div>
+                  <p className="text-xs mt-1 h-4">
+                    {handleStatus === 'checking' && <span className="text-gray-400">Checking…</span>}
+                    {handleStatus === 'available' && <span className="text-emerald-600">@{handle.trim().toLowerCase()} is available</span>}
+                    {handleStatus === 'unavailable' && <span className="text-red-500">{handleReason}</span>}
+                    {handleStatus === 'idle' && <span className="text-gray-400">People find you by this @username</span>}
+                  </p>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Display Name</label>
                   <input

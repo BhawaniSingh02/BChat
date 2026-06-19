@@ -25,4 +25,12 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByUniqueHandle(String uniqueHandle);
 
     boolean existsByUniqueHandle(String uniqueHandle);
+
+    Optional<User> findByUniqueHandleIgnoreCase(String uniqueHandle);
+
+    boolean existsByUniqueHandleIgnoreCase(String uniqueHandle);
+
+    /** Search by public handle or display name (the opaque username is never searched). */
+    List<User> findByUniqueHandleContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
+            String handle, String displayName);
 }

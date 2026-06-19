@@ -67,10 +67,32 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
-    /** Search users by username prefix — results are privacy-filtered for the searcher */
+    /** Search users by @handle or display name — results are privacy-filtered for the searcher */
     @GetMapping("/search")
     public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam String q, Principal principal) {
         return ResponseEntity.ok(userService.searchUsers(q, principal.getName()));
+    }
+
+    /** Check whether a desired @username is available (live availability for signup/edit). */
+    @GetMapping("/handle-available")
+    public ResponseEntity<Map<String, Object>> handleAvailable(
+            @RequestParam String handle, Principal principal) {
+        var result = userService.checkHandleAvailability(handle, principal.getName());
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("available", result.valid());
+        if (!result.valid()) body.put("reason", result.reason());
+        return ResponseEntity.ok(body);
+    }
+
+    /** Claim or change the caller's public @username. Frees the previous one. */
+    @PostMapping("/me/handle")
+    public ResponseEntity<?> claimHandle(
+            @RequestBody Map<String, String> body, Principal principal) {
+        try {
+            return ResponseEntity.ok(userService.claimHandle(principal.getName(), body.get("handle")));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("detail", e.getMessage()));
+        }
     }
 
     /** Get public profile of any user — privacy settings are enforced */

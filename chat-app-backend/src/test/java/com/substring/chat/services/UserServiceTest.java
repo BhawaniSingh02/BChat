@@ -203,7 +203,8 @@ class UserServiceTest {
 
     @Test
     void searchUsers_returnsMatchingUsers() {
-        when(userRepository.findByUsernameContainingIgnoreCase("al")).thenReturn(List.of(alice));
+        when(userRepository.findByUniqueHandleContainingIgnoreCaseOrDisplayNameContainingIgnoreCase("al", "al"))
+                .thenReturn(List.of(alice));
         // getPublicProfile does a second findByUsername lookup per result
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
 
@@ -215,7 +216,8 @@ class UserServiceTest {
 
     @Test
     void searchUsers_returnsEmptyWhenNoMatch() {
-        when(userRepository.findByUsernameContainingIgnoreCase("xyz")).thenReturn(List.of());
+        when(userRepository.findByUniqueHandleContainingIgnoreCaseOrDisplayNameContainingIgnoreCase("xyz", "xyz"))
+                .thenReturn(List.of());
 
         List<UserResponse> results = userService.searchUsers("xyz", "alice");
 
@@ -224,7 +226,8 @@ class UserServiceTest {
 
     @Test
     void searchUsers_returnsMultipleMatches() {
-        when(userRepository.findByUsernameContainingIgnoreCase("b")).thenReturn(List.of(bob));
+        when(userRepository.findByUniqueHandleContainingIgnoreCaseOrDisplayNameContainingIgnoreCase("b", "b"))
+                .thenReturn(List.of(bob));
         when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
 
         List<UserResponse> results = userService.searchUsers("b", "alice");
@@ -238,7 +241,8 @@ class UserServiceTest {
         // alice has her photo hidden from everyone
         alice.setProfilePhotoPrivacy("NOBODY");
         alice.setAvatarUrl("https://example.com/photo.jpg");
-        when(userRepository.findByUsernameContainingIgnoreCase("al")).thenReturn(List.of(alice));
+        when(userRepository.findByUniqueHandleContainingIgnoreCaseOrDisplayNameContainingIgnoreCase("al", "al"))
+                .thenReturn(List.of(alice));
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
 
         List<UserResponse> results = userService.searchUsers("al", "bob");

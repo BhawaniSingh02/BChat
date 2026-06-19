@@ -60,7 +60,9 @@ class DirectMessageServiceTest {
 
     @Test
     void getOrCreateConversation_returnsExistingConversation() {
-        when(userRepository.existsByUsername("bob")).thenReturn(true);
+        com.substring.chat.entities.User bob = new com.substring.chat.entities.User();
+        bob.setUsername("bob");
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
         when(conversationRepository.findByBothParticipants("alice", "bob"))
                 .thenReturn(Optional.of(existingConversation));
 
@@ -72,7 +74,9 @@ class DirectMessageServiceTest {
 
     @Test
     void getOrCreateConversation_createsNewConversationWhenNotExists() {
-        when(userRepository.existsByUsername("charlie")).thenReturn(true);
+        com.substring.chat.entities.User charlie = new com.substring.chat.entities.User();
+        charlie.setUsername("charlie");
+        when(userRepository.findByUsername("charlie")).thenReturn(Optional.of(charlie));
         when(conversationRepository.findByBothParticipants("alice", "charlie"))
                 .thenReturn(Optional.empty());
 
@@ -93,7 +97,8 @@ class DirectMessageServiceTest {
 
     @Test
     void getOrCreateConversation_throwsWhenOtherUserNotFound() {
-        when(userRepository.existsByUsername("ghost")).thenReturn(false);
+        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+        when(userRepository.findByUniqueHandleIgnoreCase("ghost")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> directMessageService.getOrCreateConversation("alice", "ghost"))
                 .isInstanceOf(UserNotFoundException.class)

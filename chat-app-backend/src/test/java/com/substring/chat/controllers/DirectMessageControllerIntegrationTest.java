@@ -47,6 +47,7 @@ class DirectMessageControllerIntegrationTest {
     private String bobToken;
     private String aliceHandle;
     private String bobHandle;
+    private String aliceUserName; // opaque principal — used as map keys (mutedBy) etc.
 
     @BeforeEach
     void setUp() throws Exception {
@@ -57,7 +58,9 @@ class DirectMessageControllerIntegrationTest {
         aliceToken = registerAndGetToken("Alice Test", "alice@example.com", "password123");
         bobToken = registerAndGetToken("Bob Test", "bob@example.com", "password123");
 
-        aliceHandle = userRepository.findByEmail("alice@example.com").orElseThrow().getUniqueHandle();
+        User alice = userRepository.findByEmail("alice@example.com").orElseThrow();
+        aliceHandle = alice.getUniqueHandle();
+        aliceUserName = alice.getUsername();
         bobHandle = userRepository.findByEmail("bob@example.com").orElseThrow().getUniqueHandle();
     }
 
@@ -84,7 +87,16 @@ class DirectMessageControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        return objectMapper.readTree(response).get("token").asText();
+        String token = objectMapper.readTree(response).get("token").asText();
+        // New flow: claim a public @handle after verification.
+        String handle = email.split("@")[0].toLowerCase().replaceAll("[^a-z0-9._]", "");
+        if (handle.length() < 3) handle = handle + "user";
+        mockMvc.perform(post("/api/v1/users/me/handle")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"handle\":\"" + handle + "\"}"))
+                .andExpect(status().isOk());
+        return token;
     }
 
     @Test
@@ -155,7 +167,7 @@ class DirectMessageControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(messageRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("Hello Bob!"))
-                .andExpect(jsonPath("$.sender").value(aliceHandle))
+                .andExpect(jsonPath("$.sender").value(aliceUserName))
                 .andExpect(jsonPath("$.roomId").value("dm:" + conversationId));
     }
 
@@ -248,27 +260,25 @@ class DirectMessageControllerIntegrationTest {
     }
 
     @Test
-    void muteConversation_persistsWithDottedUsernameKey() throws Exception {
-        // Regression: usernames are uniqueHandles containing dots (e.g. "alice.test.1234").
-        // mutedBy is a Map keyed by username; MongoDB rejects dots in map keys unless a
-        // replacement is configured. This used to fail with a 500 ("Failed to mute").
+    void muteConversation_persistsAndRoundTrips() throws Exception {
+        // mutedBy is a Map keyed by the (opaque) username. The dot-replacement config
+        // keeps it safe even for legacy dotted usernames; here we verify mute persists.
         String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         String conversationId = objectMapper.readTree(convResponse).get("id").asText();
 
-        // aliceHandle contains dots — this is the key that previously broke the save.
         mockMvc.perform(post("/api/v1/dm/" + conversationId + "/mute")
                         .header("Authorization", "Bearer " + aliceToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"duration\":\"ALWAYS\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mutedBy['" + aliceHandle + "']").exists());
+                .andExpect(jsonPath("$.mutedBy['" + aliceUserName + "']").exists());
 
         // And it must round-trip from the database (read back the persisted map key).
         var persisted = conversationRepository.findById(conversationId).orElseThrow();
-        org.assertj.core.api.Assertions.assertThat(persisted.getMutedBy()).containsKey(aliceHandle);
+        org.assertj.core.api.Assertions.assertThat(persisted.getMutedBy()).containsKey(aliceUserName);
     }
 
     @Test
@@ -288,6 +298,6 @@ class DirectMessageControllerIntegrationTest {
         mockMvc.perform(delete("/api/v1/dm/" + conversationId + "/mute")
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mutedBy['" + aliceHandle + "']").doesNotExist());
+                .andExpect(jsonPath("$.mutedBy['" + aliceUserName + "']").doesNotExist());
     }
 }

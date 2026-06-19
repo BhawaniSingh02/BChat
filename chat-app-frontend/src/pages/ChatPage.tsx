@@ -43,6 +43,7 @@ export default function ChatPage() {
   const { fetchOnlineUsers } = usePresenceStore()
   const resetUnread = useChatStore((s) => s.resetUnread)
   const cache = useUserCacheStore((s) => s.cache)
+  const prefetchUsers = useUserCacheStore((s) => s.prefetch)
 
   // Call state
   const {
@@ -249,6 +250,16 @@ export default function ChatPage() {
       setActiveRoom(myRooms[0].roomId)
     }
   }, [myRooms, activeRoomId, activeDMId, setActiveRoom])
+
+  // Prefetch each conversation partner's profile so the DM list shows names/@handles
+  // (participants are stored as opaque ids, resolved to display info via the cache).
+  useEffect(() => {
+    if (!user) return
+    const others = conversations
+      .map((c) => c.participants.find((p) => p !== user.username))
+      .filter((u): u is string => !!u)
+    if (others.length) prefetchUsers(others)
+  }, [conversations, user, prefetchUsers])
 
   // Notifications: ask permission, set up background web push, and handle clicks
   // on background notifications (both browser Notifications and the service worker

@@ -30,10 +30,13 @@ public class DirectMessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
 
-    public DirectConversationResponse getOrCreateConversation(String currentUser, String otherUser) {
-        if (!userRepository.existsByUsername(otherUser)) {
-            throw new UserNotFoundException(otherUser);
-        }
+    public DirectConversationResponse getOrCreateConversation(String currentUser, String otherIdentifier) {
+        // Accept either the stable (opaque) username or the public @handle, and always
+        // store the stable username as the participant so it survives handle changes.
+        User other = userRepository.findByUsername(otherIdentifier)
+                .or(() -> userRepository.findByUniqueHandleIgnoreCase(otherIdentifier))
+                .orElseThrow(() -> new UserNotFoundException(otherIdentifier));
+        String otherUser = other.getUsername();
 
         return conversationRepository.findByBothParticipants(currentUser, otherUser)
                 .map(DirectConversationResponse::from)

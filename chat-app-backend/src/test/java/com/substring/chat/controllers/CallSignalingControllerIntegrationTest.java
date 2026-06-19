@@ -56,12 +56,12 @@ class CallSignalingControllerIntegrationTest {
         aliceToken = registerAndGetToken("Alice Call", "alice_call@example.com", "password123");
         bobToken = registerAndGetToken("Bob Call", "bob_call@example.com", "password123");
 
+        // Calls identify participants by the (opaque) username/principal, not the public handle.
         aliceHandle = userRepository.findByEmail("alice_call@example.com")
-                .orElseThrow().getUniqueHandle();
+                .orElseThrow().getUsername();
         bobHandle = userRepository.findByEmail("bob_call@example.com")
-                .orElseThrow().getUniqueHandle();
+                .orElseThrow().getUsername();
 
-        // Create a DM conversation between alice and bob using their unique handles
         DirectConversation conv = new DirectConversation();
         conv.setParticipants(List.of(aliceHandle, bobHandle));
         conv.setCreatedAt(Instant.now());
@@ -91,7 +91,16 @@ class CallSignalingControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        return objectMapper.readTree(body).get("token").asText();
+        String token = objectMapper.readTree(body).get("token").asText();
+        // New flow: claim a public @handle after verification.
+        String handle = email.split("@")[0].toLowerCase().replaceAll("[^a-z0-9._]", "");
+        if (handle.length() < 3) handle = handle + "user";
+        mockMvc.perform(post("/api/v1/users/me/handle")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"handle\":\"" + handle + "\"}"))
+                .andExpect(status().isOk());
+        return token;
     }
 
     // ── GET /api/v1/calls/{conversationId}/history ──────────────────────────

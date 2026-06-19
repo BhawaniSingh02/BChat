@@ -73,7 +73,22 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        return objectMapper.readTree(response).get("token").asText();
+        String token = objectMapper.readTree(response).get("token").asText();
+        // New flow: the public @handle is chosen after verification. Claim one so the
+        // rest of the test has a searchable, conversation-ready handle.
+        claimHandle(token, email);
+        return token;
+    }
+
+    /** Claim a valid @handle derived from the email's local part. */
+    private void claimHandle(String token, String email) throws Exception {
+        String handle = email.split("@")[0].toLowerCase().replaceAll("[^a-z0-9._]", "");
+        if (handle.length() < 3) handle = handle + "user";
+        mockMvc.perform(post("/api/v1/users/me/handle")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"handle\":\"" + handle + "\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -255,7 +270,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value(user.getUniqueHandle()))
+                .andExpect(jsonPath("$.uniqueHandle").value(user.getUniqueHandle()))
                 .andExpect(jsonPath("$.email").value("meuser@example.com"));
     }
 }

@@ -72,7 +72,7 @@ public class ChatController {
         Message message = new Message();
         message.setRoomId(roomId);
         message.setSender(principal.getName());
-        message.setSenderName(principal.getName());
+        message.setSenderName(resolveSenderName(principal.getName()));
         message.setContent(request.getContent());
         message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
         message.setFileUrl(request.getFileUrl());
@@ -173,7 +173,7 @@ public class ChatController {
             Message message = new Message();
             message.setRoomId(DM_PREFIX + conversationId);
             message.setSender(principal.getName());
-            message.setSenderName(principal.getName());
+            message.setSenderName(resolveSenderName(principal.getName()));
             message.setContent(request.getContent());
             message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
             message.setFileUrl(request.getFileUrl());
@@ -202,6 +202,20 @@ public class ChatController {
                 webPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
             }
         });
+    }
+
+    /**
+     * Resolve a human-friendly sender name for display from the (opaque) username:
+     * prefers displayName, then the public @handle, then the raw username.
+     */
+    private String resolveSenderName(String username) {
+        return userRepository.findByUsername(username)
+                .map(u -> {
+                    if (u.getDisplayName() != null && !u.getDisplayName().isBlank()) return u.getDisplayName();
+                    if (u.getUniqueHandle() != null) return u.getUniqueHandle();
+                    return username;
+                })
+                .orElse(username);
     }
 
     /** Short human-readable preview for a push body (handles empty media messages). */
