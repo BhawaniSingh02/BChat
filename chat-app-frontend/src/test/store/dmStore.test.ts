@@ -24,7 +24,7 @@ const makeDMMessage = (id: string, convId: string, sender = 'alice'): Message =>
 
 describe('dmStore', () => {
   beforeEach(() => {
-    useDMStore.setState({ conversations: [], messages: {}, activeDMId: null, isLoading: false, dmUnreadCounts: {} })
+    useDMStore.setState({ conversations: [], messages: {}, activeDMId: null, isLoading: false, dmUnreadCounts: {}, requests: [] })
     vi.clearAllMocks()
   })
 
@@ -33,6 +33,33 @@ describe('dmStore', () => {
       vi.mocked(dmApi.getConversations).mockResolvedValue([makeConv('conv-1')])
       await useDMStore.getState().fetchConversations()
       expect(useDMStore.getState().conversations).toHaveLength(1)
+    })
+  })
+
+  describe('message requests', () => {
+    it('fetchRequests loads pending requests', async () => {
+      vi.mocked(dmApi.getRequests).mockResolvedValue([{ ...makeConv('r1'), status: 'PENDING', initiatedBy: 'bob' }])
+      await useDMStore.getState().fetchRequests()
+      expect(useDMStore.getState().requests).toHaveLength(1)
+    })
+
+    it('acceptRequest moves it from requests into conversations', async () => {
+      useDMStore.setState({ requests: [{ ...makeConv('r1'), status: 'PENDING', initiatedBy: 'bob' }], conversations: [] })
+      vi.mocked(dmApi.acceptRequest).mockResolvedValue({ ...makeConv('r1'), status: 'ACCEPTED' })
+
+      await useDMStore.getState().acceptRequest('r1')
+
+      expect(useDMStore.getState().requests).toHaveLength(0)
+      expect(useDMStore.getState().conversations.find((c) => c.id === 'r1')?.status).toBe('ACCEPTED')
+    })
+
+    it('declineRequest removes it from requests', async () => {
+      useDMStore.setState({ requests: [{ ...makeConv('r1'), status: 'PENDING', initiatedBy: 'bob' }] })
+      vi.mocked(dmApi.declineRequest).mockResolvedValue(undefined)
+
+      await useDMStore.getState().declineRequest('r1')
+
+      expect(useDMStore.getState().requests).toHaveLength(0)
     })
   })
 

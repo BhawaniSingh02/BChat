@@ -19,6 +19,11 @@ interface DMState {
   resetDMUnread: (conversationId: string) => void
   removeConversation: (conversationId: string) => void
   updateConversation: (updated: DirectConversation) => void
+  // Message requests
+  requests: DirectConversation[]
+  fetchRequests: () => Promise<void>
+  acceptRequest: (conversationId: string) => Promise<void>
+  declineRequest: (conversationId: string) => Promise<void>
 }
 
 export const useDMStore = create<DMState>((set, get) => ({
@@ -27,10 +32,33 @@ export const useDMStore = create<DMState>((set, get) => ({
   activeDMId: null,
   isLoading: false,
   dmUnreadCounts: {},
+  requests: [],
 
   fetchConversations: async () => {
     const conversations = await dmApi.getConversations()
     set({ conversations })
+  },
+
+  fetchRequests: async () => {
+    try {
+      const requests = await dmApi.getRequests()
+      set({ requests })
+    } catch { /* requests are optional — ignore failures */ }
+  },
+
+  acceptRequest: async (conversationId) => {
+    const accepted = await dmApi.acceptRequest(conversationId)
+    set((s) => ({
+      requests: s.requests.filter((r) => r.id !== conversationId),
+      conversations: s.conversations.some((c) => c.id === accepted.id)
+        ? s.conversations.map((c) => (c.id === accepted.id ? accepted : c))
+        : [accepted, ...s.conversations],
+    }))
+  },
+
+  declineRequest: async (conversationId) => {
+    await dmApi.declineRequest(conversationId)
+    set((s) => ({ requests: s.requests.filter((r) => r.id !== conversationId) }))
   },
 
   getOrCreateConversation: async (otherUsername) => {

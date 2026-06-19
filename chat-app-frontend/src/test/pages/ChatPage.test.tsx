@@ -75,6 +75,10 @@ vi.mock('../../store/dmStore', () => ({
       getOrCreateConversation: vi.fn(),
       dmUnreadCounts: {},
       resetDMUnread: vi.fn(),
+      updateConversation: vi.fn(),
+      prefetch: vi.fn(),
+      requests: [],
+      fetchRequests: vi.fn(),
     }
     return selector ? selector(state) : state
   },

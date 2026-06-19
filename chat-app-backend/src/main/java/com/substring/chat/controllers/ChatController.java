@@ -189,6 +189,12 @@ public class ChatController {
             }
 
             Message saved = messageRepository.save(message);
+
+            // Replying to a pending request accepts it.
+            if ("PENDING".equals(conv.getStatus()) && conv.getInitiatedBy() != null
+                    && !principal.getName().equals(conv.getInitiatedBy())) {
+                conv.setStatus("ACCEPTED");
+            }
             conv.setLastMessageAt(saved.getTimestamp());
             conversationRepository.save(conv);
 
@@ -197,8 +203,10 @@ public class ChatController {
                 messagingTemplate.convertAndSendToUser(participant, "/queue/messages", response);
             }
 
-            // Background push to the recipient (service worker suppresses it if focused).
-            if (recipient != null) {
+            // Background push to the recipient — but stay quiet for a not-yet-accepted
+            // message request (the recipient just sees a Requests badge instead).
+            boolean stillPendingRequest = "PENDING".equals(conv.getStatus());
+            if (recipient != null && !stillPendingRequest) {
                 webPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
             }
         });

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   dmUnreadCounts: {} as Record<string, number>,
   updateConversation: vi.fn(),
   removeConversation: vi.fn(),
+  requests: [] as DirectConversation[],
 }))
 
 vi.mock('../../api/messages', () => ({
@@ -56,6 +57,10 @@ vi.mock('../../store/dmStore', () => ({
       dmUnreadCounts: mocks.dmUnreadCounts,
       updateConversation: mocks.updateConversation,
       removeConversation: mocks.removeConversation,
+      requests: mocks.requests,
+      fetchRequests: vi.fn(),
+      acceptRequest: vi.fn(),
+      declineRequest: vi.fn(),
     }
     return selector ? selector(state) : state
   },
@@ -78,6 +83,7 @@ describe('Sidebar', () => {
     mocks.rooms.all = []
     mocks.conversations = []
     mocks.dmUnreadCounts = {}
+    mocks.requests = []
     vi.clearAllMocks()
   })
 

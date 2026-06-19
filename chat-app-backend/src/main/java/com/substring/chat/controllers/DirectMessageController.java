@@ -67,6 +67,32 @@ public class DirectMessageController {
                 directMessageService.sendMessage(conversationId, userDetails.getUsername(), request));
     }
 
+    // ── Message requests (Instagram-style inbox) ────────────────────────────
+
+    /** Pending message requests addressed to the current user. */
+    @GetMapping("/requests")
+    public ResponseEntity<List<DirectConversationResponse>> getRequests(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(directMessageService.getRequestsForUser(userDetails.getUsername()));
+    }
+
+    /** Accept a message request → it becomes a normal conversation. */
+    @PostMapping("/{conversationId}/accept")
+    public ResponseEntity<DirectConversationResponse> acceptRequest(
+            @PathVariable String conversationId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(directMessageService.acceptRequest(conversationId, userDetails.getUsername()));
+    }
+
+    /** Decline a message request → removes the conversation and its messages. */
+    @PostMapping("/{conversationId}/decline")
+    public ResponseEntity<Void> declineRequest(
+            @PathVariable String conversationId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        directMessageService.declineRequest(conversationId, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Phase 20: Mute ───────────────────────────────────────────────────
 
     /** Mute this DM conversation for the authenticated user. */

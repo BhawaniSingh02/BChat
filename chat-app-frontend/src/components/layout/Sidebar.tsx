@@ -12,6 +12,7 @@ import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
 import BrandLogo from '../ui/BrandLogo'
+import MessageRequestsModal from '../chat/MessageRequestsModal'
 import { isConversationArchived } from '../../utils/conversation'
 
 
@@ -41,6 +42,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
   const { conversations, activeDMId, setActiveDM, getOrCreateConversation, removeConversation, updateConversation } = useDMStore()
+  const requests = useDMStore((s) => s.requests)
   const dmUnreadCounts = useDMStore((s) => s.dmUnreadCounts)
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
@@ -50,6 +52,7 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   const [archivedOpen, setArchivedOpen] = useState(false)
+  const [requestsOpen, setRequestsOpen] = useState(false)
   // Local pin state — pinned conversation IDs float to top of the list
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
 
@@ -214,6 +217,27 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
           )
         ) : (
           <div className="flex flex-col h-full">
+            {/* Message requests entry (Instagram-style) — only when some exist */}
+            {requests.length > 0 && (
+              <button
+                onClick={() => setRequestsOpen(true)}
+                className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                data-testid="requests-row"
+              >
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white text-sm">
+                  ✉
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-gray-800">Message requests</span>
+                  <span className="block text-xs text-gray-400">
+                    {requests.length} pending
+                  </span>
+                </div>
+                <span className="flex-shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-teal-600 text-white text-xs font-semibold flex items-center justify-center">
+                  {requests.length}
+                </span>
+              </button>
+            )}
             {/* Archived chats entry (WhatsApp-style) — only when some exist */}
             {archivedConversations.length > 0 && (
               <button
@@ -321,6 +345,14 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
       )}
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+
+      {/* Message requests */}
+      <MessageRequestsModal
+        open={requestsOpen}
+        onClose={() => setRequestsOpen(false)}
+        currentUsername={user?.username ?? ''}
+        onOpenConversation={handleSelectDM}
+      />
 
       {/* Archived chats */}
       <Modal open={archivedOpen} onClose={() => setArchivedOpen(false)} title="Archived chats">

@@ -282,6 +282,57 @@ class DirectMessageControllerIntegrationTest {
     }
 
     @Test
+    void messageRequest_pendingForRecipient_thenAcceptPromotesToInbox() throws Exception {
+        // Bob defaults to APPROVED_ONLY, so Alice's first DM becomes a pending request.
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+        String conversationId = objectMapper.readTree(convResponse).get("id").asText();
+
+        // Bob: not in main inbox, but present in Requests.
+        mockMvc.perform(get("/api/v1/dm").header("Authorization", "Bearer " + bobToken))
+                .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/v1/dm/requests").header("Authorization", "Bearer " + bobToken))
+                .andExpect(jsonPath("$.length()").value(1));
+
+        // Alice (the initiator): the sent request stays in her main inbox.
+        mockMvc.perform(get("/api/v1/dm").header("Authorization", "Bearer " + aliceToken))
+                .andExpect(jsonPath("$.length()").value(1));
+
+        // Bob accepts → it becomes a normal conversation.
+        mockMvc.perform(post("/api/v1/dm/" + conversationId + "/accept")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/v1/dm").header("Authorization", "Bearer " + bobToken))
+                .andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(get("/api/v1/dm/requests").header("Authorization", "Bearer " + bobToken))
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void messageRequest_declineRemovesIt() throws Exception {
+        String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String conversationId = objectMapper.readTree(convResponse).get("id").asText();
+
+        mockMvc.perform(post("/api/v1/dm/" + conversationId + "/decline")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/dm/requests").header("Authorization", "Bearer " + bobToken))
+                .andExpect(jsonPath("$.length()").value(0));
+        // Declining the only request also removed the conversation for the initiator.
+        mockMvc.perform(get("/api/v1/dm").header("Authorization", "Bearer " + aliceToken))
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void unmuteConversation_removesTheUser() throws Exception {
         String convResponse = mockMvc.perform(post("/api/v1/dm/" + bobHandle)
                         .header("Authorization", "Bearer " + aliceToken))

@@ -40,6 +40,7 @@ export default function ChatPage() {
     kickMember, pinMessage, unpinMessage,
   } = useRoomStore()
   const { conversations, activeDMId, fetchConversations, setActiveDM, resetDMUnread, updateConversation } = useDMStore()
+  const fetchRequests = useDMStore((s) => s.fetchRequests)
   const { fetchOnlineUsers } = usePresenceStore()
   const resetUnread = useChatStore((s) => s.resetUnread)
   const cache = useUserCacheStore((s) => s.cache)
@@ -240,9 +241,10 @@ export default function ChatPage() {
       if (results.some((r) => r.status === 'rejected')) {
         setApiError('Could not connect to server. Make sure the backend is running on port 8080.')
       }
+      fetchRequests()  // load pending message requests (best-effort)
     }
     load()
-  }, [fetchMyRooms, fetchAllRooms, fetchConversations, fetchOnlineUsers])
+  }, [fetchMyRooms, fetchAllRooms, fetchConversations, fetchOnlineUsers, fetchRequests])
 
   // Auto-select first room when rooms load and nothing is selected
   useEffect(() => {

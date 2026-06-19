@@ -30,6 +30,12 @@ public class DirectConversation {
     private Instant createdAt;
     private Instant lastMessageAt;
 
+    // Message requests (Instagram-style). ACCEPTED = normal chat; PENDING = the
+    // recipient hasn't accepted the initiator's first message yet (shows in their
+    // Requests inbox). Defaults to ACCEPTED so existing conversations are unaffected.
+    private String status = "ACCEPTED";   // ACCEPTED | PENDING
+    private String initiatedBy;           // username (opaque id) of the requester, when PENDING
+
     // Phase 20 — Mute & Archive
     private Map<String, Instant> mutedBy = new HashMap<>();  // username -> muted until (null = forever)
     private List<String> archivedBy = new ArrayList<>();      // usernames who archived this conversation

@@ -117,6 +117,9 @@ export interface DirectConversation {
   archivedBy?: string[]
   // Phase 21 — Disappearing
   disappearingMessagesTimer?: 'OFF' | '24H' | '7D' | '90D'
+  // Message requests
+  status?: 'ACCEPTED' | 'PENDING'
+  initiatedBy?: string
 }
 
 export interface TypingEvent {

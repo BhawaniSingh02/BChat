@@ -38,24 +38,82 @@ public class DirectMessageService {
                 .orElseThrow(() -> new UserNotFoundException(otherIdentifier));
         String otherUser = other.getUsername();
 
-        return conversationRepository.findByBothParticipants(currentUser, otherUser)
-                .map(DirectConversationResponse::from)
-                .orElseGet(() -> {
-                    DirectConversation conv = new DirectConversation();
-                    List<String> participants = new ArrayList<>();
-                    participants.add(currentUser);
-                    participants.add(otherUser);
-                    conv.setParticipants(participants);
-                    conv.setCreatedAt(Instant.now());
-                    return DirectConversationResponse.from(conversationRepository.save(conv));
-                });
+        var existing = conversationRepository.findByBothParticipants(currentUser, otherUser);
+        if (existing.isPresent()) {
+            return DirectConversationResponse.from(existing.get());
+        }
+
+        // New conversation — decide whether it's an accepted chat or a pending request,
+        // based on the recipient's privacy setting (whoCanMessage).
+        String whoCanMessage = other.getWhoCanMessage() != null ? other.getWhoCanMessage() : "APPROVED_ONLY";
+        boolean self = currentUser.equals(otherUser);
+        if ("NOBODY".equals(whoCanMessage) && !self) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This user isn't accepting new messages");
+        }
+        boolean autoAccept = self || "ANYONE".equals(whoCanMessage);
+
+        DirectConversation conv = new DirectConversation();
+        List<String> participants = new ArrayList<>();
+        participants.add(currentUser);
+        participants.add(otherUser);
+        conv.setParticipants(participants);
+        conv.setCreatedAt(Instant.now());
+        if (autoAccept) {
+            conv.setStatus("ACCEPTED");
+        } else {
+            conv.setStatus("PENDING");
+            conv.setInitiatedBy(currentUser);
+        }
+        return DirectConversationResponse.from(conversationRepository.save(conv));
     }
 
+    /** Main inbox — excludes message requests addressed TO this user (those go to the Requests inbox). */
     public List<DirectConversationResponse> getConversationsForUser(String username) {
         return conversationRepository.findByParticipantsContaining(username)
                 .stream()
+                .filter(c -> !isIncomingRequest(c, username))
                 .map(DirectConversationResponse::from)
                 .toList();
+    }
+
+    /** Pending message requests addressed to this user (from people they haven't accepted). */
+    public List<DirectConversationResponse> getRequestsForUser(String username) {
+        return conversationRepository.findByParticipantsContaining(username)
+                .stream()
+                .filter(c -> isIncomingRequest(c, username))
+                .map(DirectConversationResponse::from)
+                .toList();
+    }
+
+    /** Accept a message request — promotes it to a normal conversation. */
+    public DirectConversationResponse acceptRequest(String conversationId, String username) {
+        DirectConversation conv = requireIncomingRequest(conversationId, username);
+        conv.setStatus("ACCEPTED");
+        return DirectConversationResponse.from(conversationRepository.save(conv));
+    }
+
+    /** Decline a message request — removes the conversation and its messages. */
+    public void declineRequest(String conversationId, String username) {
+        DirectConversation conv = requireIncomingRequest(conversationId, username);
+        messageRepository.deleteByRoomId("dm:" + conversationId);
+        conversationRepository.delete(conv);
+    }
+
+    private boolean isIncomingRequest(DirectConversation c, String username) {
+        return "PENDING".equals(c.getStatus())
+                && c.getInitiatedBy() != null
+                && !username.equals(c.getInitiatedBy())
+                && c.getParticipants().contains(username);
+    }
+
+    private DirectConversation requireIncomingRequest(String conversationId, String username) {
+        DirectConversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+        if (!isIncomingRequest(conv, username)) {
+            // Not a pending request addressed to this user — don't reveal details.
+            throw new ConversationNotFoundException(conversationId);
+        }
+        return conv;
     }
 
     public Page<MessageResponse> getMessages(String conversationId, String requestingUser, int page, int size) {
@@ -109,6 +167,11 @@ public class DirectMessageService {
 
         Message saved = messageRepository.save(message);
 
+        // Replying to a pending request accepts it.
+        if ("PENDING".equals(conv.getStatus()) && conv.getInitiatedBy() != null
+                && !senderUsername.equals(conv.getInitiatedBy())) {
+            conv.setStatus("ACCEPTED");
+        }
         conv.setLastMessageAt(saved.getTimestamp());
         conversationRepository.save(conv);
 

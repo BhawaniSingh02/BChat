@@ -49,7 +49,7 @@ export default function UserSearchModal({
           type="text"
           value={query}
           onChange={(e) => search(e.target.value)}
-          placeholder="Search users by username…"
+          placeholder="Search by name or @username…"
           className="w-full bg-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           autoFocus
           aria-label="Search users"
@@ -63,22 +63,26 @@ export default function UserSearchModal({
             <p className="text-center text-sm text-gray-400 py-4">No users found</p>
           )}
           {!isSearching && !query && (
-            <p className="text-center text-sm text-gray-400 py-4">Type a username to search</p>
+            <p className="text-center text-sm text-gray-400 py-4">Type a name or @username to search</p>
           )}
-          {results.map((user) => (
-            <button
-              key={user.id}
-              className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
-              onClick={() => handleSelect(user.username)}
-              data-testid="user-search-result"
-            >
-              <Avatar name={user.username} size="sm" online={isOnline(user.username)} />
-              <div>
-                <p className="text-sm font-medium text-gray-900">{user.username}</p>
-                <p className="text-xs text-gray-500">{user.email}</p>
-              </div>
-            </button>
-          ))}
+          {results.map((user) => {
+            const handle = user.uniqueHandle ? `@${user.uniqueHandle}` : user.username
+            const primary = user.displayName || handle
+            return (
+              <button
+                key={user.id}
+                className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                onClick={() => handleSelect(user.username)}
+                data-testid="user-search-result"
+              >
+                <Avatar name={user.displayName || user.uniqueHandle || user.username} size="sm" online={isOnline(user.username)} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{primary}</p>
+                  {user.displayName && <p className="text-xs text-gray-500 truncate">{handle}</p>}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     </Modal>

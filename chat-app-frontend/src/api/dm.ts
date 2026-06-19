@@ -17,4 +17,14 @@ export const dmApi = {
     client
       .post<Message>(`/dm/${conversationId}/messages`, { content })
       .then((r) => r.data),
+
+  // ── Message requests ──────────────────────────────────────────────────
+  getRequests: () =>
+    client.get<DirectConversation[]>('/dm/requests').then((r) => r.data),
+
+  acceptRequest: (conversationId: string) =>
+    client.post<DirectConversation>(`/dm/${conversationId}/accept`).then((r) => r.data),
+
+  declineRequest: (conversationId: string) =>
+    client.post<void>(`/dm/${conversationId}/decline`).then((r) => r.data),
 }

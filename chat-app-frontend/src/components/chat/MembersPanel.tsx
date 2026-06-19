@@ -96,7 +96,7 @@ function MemberRow({ member, online, onViewProfile, isAdmin, canKick, onKick }: 
         className="flex items-center gap-3 flex-1 min-w-0 text-left focus:outline-none"
       >
         <div className="relative flex-shrink-0">
-          <Avatar name={member.username} size="sm" online={online} />
+          <Avatar name={member.displayName || member.uniqueHandle || member.username} size="sm" online={online} />
           {isAdmin && (
             <span
               className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-400 rounded-full flex items-center justify-center"
@@ -111,11 +111,11 @@ function MemberRow({ member, online, onViewProfile, isAdmin, canKick, onKick }: 
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
-            {member.displayName || member.username}
+            {member.displayName || (member.uniqueHandle ? `@${member.uniqueHandle}` : member.username)}
             {isAdmin && <span className="ml-1 text-[10px] text-amber-500 font-semibold">Admin</span>}
           </p>
-          {member.displayName && (
-            <p className="text-xs text-gray-400 truncate">@{member.username}</p>
+          {member.displayName && member.uniqueHandle && (
+            <p className="text-xs text-gray-400 truncate">@{member.uniqueHandle}</p>
           )}
         </div>
       </button>

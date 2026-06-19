@@ -26,12 +26,18 @@ public class DirectConversationResponse {
     // Phase 21 — Disappearing messages
     private String disappearingMessagesTimer;
 
+    // Message requests
+    private String status;
+    private String initiatedBy;
+
     public static DirectConversationResponse from(DirectConversation conv) {
         DirectConversationResponse response = new DirectConversationResponse();
         response.setId(conv.getId());
         response.setParticipants(conv.getParticipants());
         response.setCreatedAt(conv.getCreatedAt());
         response.setLastMessageAt(conv.getLastMessageAt());
+        response.setStatus(conv.getStatus() != null ? conv.getStatus() : "ACCEPTED");
+        response.setInitiatedBy(conv.getInitiatedBy());
         response.setMutedBy(conv.getMutedBy() != null ? conv.getMutedBy() : new HashMap<>());
         response.setArchivedBy(conv.getArchivedBy() != null ? conv.getArchivedBy() : new ArrayList<>());
         response.setDisappearingMessagesTimer(conv.getDisappearingMessagesTimer() != null

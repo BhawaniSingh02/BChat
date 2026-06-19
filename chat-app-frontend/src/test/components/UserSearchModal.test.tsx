@@ -27,7 +27,7 @@ describe('UserSearchModal', () => {
 
   it('shows placeholder prompt initially', () => {
     render(<UserSearchModal {...defaultProps} />)
-    expect(screen.getByText('Type a username to search')).toBeInTheDocument()
+    expect(screen.getByText('Type a name or @username to search')).toBeInTheDocument()
   })
 
   it('does not render when closed', () => {

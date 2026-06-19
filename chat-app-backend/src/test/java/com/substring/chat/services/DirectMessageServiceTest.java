@@ -201,4 +201,100 @@ class DirectMessageServiceTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getContent()).isEqualTo("hi");
     }
+
+    // ── Message requests ──────────────────────────────────────────────────────
+
+    private com.substring.chat.entities.User userWith(String username, String whoCanMessage) {
+        com.substring.chat.entities.User u = new com.substring.chat.entities.User();
+        u.setUsername(username);
+        u.setWhoCanMessage(whoCanMessage);
+        return u;
+    }
+
+    private DirectConversation pendingConv(String id, String initiator, String recipient) {
+        DirectConversation c = new DirectConversation();
+        c.setId(id);
+        c.setParticipants(new ArrayList<>(List.of(initiator, recipient)));
+        c.setStatus("PENDING");
+        c.setInitiatedBy(initiator);
+        return c;
+    }
+
+    @Test
+    void getOrCreate_createsPendingRequest_whenRecipientApprovedOnly() {
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWith("bob", "APPROVED_ONLY")));
+        when(conversationRepository.findByBothParticipants("alice", "bob")).thenReturn(Optional.empty());
+        when(conversationRepository.save(any(DirectConversation.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DirectConversationResponse resp = directMessageService.getOrCreateConversation("alice", "bob");
+
+        assertThat(resp.getStatus()).isEqualTo("PENDING");
+        assertThat(resp.getInitiatedBy()).isEqualTo("alice");
+    }
+
+    @Test
+    void getOrCreate_autoAccepts_whenRecipientAllowsAnyone() {
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWith("bob", "ANYONE")));
+        when(conversationRepository.findByBothParticipants("alice", "bob")).thenReturn(Optional.empty());
+        when(conversationRepository.save(any(DirectConversation.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DirectConversationResponse resp = directMessageService.getOrCreateConversation("alice", "bob");
+
+        assertThat(resp.getStatus()).isEqualTo("ACCEPTED");
+        assertThat(resp.getInitiatedBy()).isNull();
+    }
+
+    @Test
+    void getOrCreate_throwsWhenRecipientAcceptsNobody() {
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWith("bob", "NOBODY")));
+        when(conversationRepository.findByBothParticipants("alice", "bob")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> directMessageService.getOrCreateConversation("alice", "bob"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void requestsAndInbox_areSeparated() {
+        DirectConversation req = pendingConv("c1", "alice", "bob");
+        when(conversationRepository.findByParticipantsContaining("bob")).thenReturn(List.of(req));
+        when(conversationRepository.findByParticipantsContaining("alice")).thenReturn(List.of(req));
+
+        // Recipient: request shows in Requests, NOT in the main inbox.
+        assertThat(directMessageService.getRequestsForUser("bob")).hasSize(1);
+        assertThat(directMessageService.getConversationsForUser("bob")).isEmpty();
+        // Initiator: their sent request stays in their main inbox, not in Requests.
+        assertThat(directMessageService.getConversationsForUser("alice")).hasSize(1);
+        assertThat(directMessageService.getRequestsForUser("alice")).isEmpty();
+    }
+
+    @Test
+    void acceptRequest_promotesToAccepted_forRecipientOnly() {
+        DirectConversation req = pendingConv("c1", "alice", "bob");
+        when(conversationRepository.findById("c1")).thenReturn(Optional.of(req));
+        when(conversationRepository.save(any(DirectConversation.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DirectConversationResponse resp = directMessageService.acceptRequest("c1", "bob");
+        assertThat(resp.getStatus()).isEqualTo("ACCEPTED");
+    }
+
+    @Test
+    void acceptRequest_rejectsTheInitiator() {
+        DirectConversation req = pendingConv("c1", "alice", "bob");
+        when(conversationRepository.findById("c1")).thenReturn(Optional.of(req));
+
+        // The initiator cannot accept their own request.
+        assertThatThrownBy(() -> directMessageService.acceptRequest("c1", "alice"))
+                .isInstanceOf(ConversationNotFoundException.class);
+    }
+
+    @Test
+    void declineRequest_deletesConversationAndMessages() {
+        DirectConversation req = pendingConv("c1", "alice", "bob");
+        when(conversationRepository.findById("c1")).thenReturn(Optional.of(req));
+
+        directMessageService.declineRequest("c1", "bob");
+
+        verify(messageRepository).deleteByRoomId("dm:c1");
+        verify(conversationRepository).delete(req);
+    }
 }

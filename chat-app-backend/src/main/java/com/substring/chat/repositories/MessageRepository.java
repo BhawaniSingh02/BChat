@@ -29,4 +29,7 @@ public interface MessageRepository extends MongoRepository<Message, String> {
 
     // Phase 27 — cursor pagination: messages before a given timestamp
     Page<Message> findByRoomIdAndTimestampBeforeOrderByTimestampDesc(String roomId, Instant before, Pageable pageable);
+
+    // Message requests — remove all messages when a request is declined
+    void deleteByRoomId(String roomId);
 }

@@ -55,6 +55,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const activeDMId = useDMStore((s) => s.activeDMId)
   const conversations = useDMStore((s) => s.conversations)
   const fetchConversations = useDMStore((s) => s.fetchConversations)
+  const fetchRequests = useDMStore((s) => s.fetchRequests)
   const addNotification = useNotificationStore((s) => s.addNotification)
   const currentUsername = useAuthStore((s) => s.user?.username)
 
@@ -69,6 +70,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const conversationsRef = useRef(conversations)
   const currentUsernameRef = useRef(currentUsername)
   const fetchConversationsRef = useRef(fetchConversations)
+  const fetchRequestsRef = useRef(fetchRequests)
 
   useEffect(() => {
     onCallEventRef.current = onCallEvent
@@ -111,6 +113,10 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   }, [fetchConversations])
 
   useEffect(() => {
+    fetchRequestsRef.current = fetchRequests
+  }, [fetchRequests])
+
+  useEffect(() => {
     if (!token) return
 
     const stompClient = new Client({
@@ -128,11 +134,15 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
             ? (dmMessagesRef.current[conversationId] ?? []).some((m) => m.id === message.id)
             : false
           upsertDMMessage(message)
-          // If this message belongs to a conversation the receiver hasn't seen yet
-          // (e.g. a brand-new DM started by another user via search), refresh the
-          // conversation list so the new chat appears immediately in the sidebar.
-          if (conversationId && !conversationsRef.current.find((c) => c.id === conversationId)) {
+          // A message for a conversation that isn't in the accepted inbox is either a
+          // brand-new accepted chat or a pending message request. Refresh both lists,
+          // and stay QUIET (no unread badge, no toast/push) — message requests must
+          // not notify; the Requests badge surfaces them instead.
+          const inAcceptedInbox = !!(conversationId && conversationsRef.current.find((c) => c.id === conversationId))
+          if (conversationId && !inAcceptedInbox) {
             fetchConversationsRef.current()
+            fetchRequestsRef.current?.()
+            return
           }
           // Only increment unread for brand-new messages (not edits/deletes/reactions)
           if (message.roomId.startsWith('dm:') && !message.edited && !message.deleted) {
