@@ -46,9 +46,13 @@ export default function DMChatView({
   const online = isOnline(otherUser)
   const fetchUser = useUserCacheStore((s) => s.fetchUser)
   const cache = useUserCacheStore((s) => s.cache)
-  // Prefer display name > public @handle so the header never shows the opaque id.
-  const displayName = cache[otherUser]?.displayName
-    || (cache[otherUser]?.uniqueHandle ? `@${cache[otherUser]?.uniqueHandle}` : otherUser)
+  // Prefer display name > public @handle. While the profile is still loading
+  // (not yet in cache), show a neutral placeholder instead of the opaque id so
+  // the header never flashes the raw internal username.
+  const cachedOther = cache[otherUser]
+  const displayName = cachedOther
+    ? (cachedOther.displayName || (cachedOther.uniqueHandle ? `@${cachedOther.uniqueHandle}` : otherUser))
+    : '…'
 
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null)

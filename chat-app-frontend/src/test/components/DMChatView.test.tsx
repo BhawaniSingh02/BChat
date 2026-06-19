@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import DMChatView from '../../components/chat/DMChatView'
-import type { DirectConversation, Message } from '../../types'
+import { useUserCacheStore } from '../../store/userCacheStore'
+import type { DirectConversation, Message, User } from '../../types'
 
 // Mock stores at module level
 const mockFetchMessages = vi.fn()
@@ -33,6 +34,11 @@ const makeConv = (): DirectConversation => ({
   createdAt: '2026-03-28T10:00:00',
 })
 
+const bob: User = {
+  id: 'b', username: 'bob', email: 'bob@e.com', displayName: 'bob',
+  uniqueHandle: 'bob', createdAt: '', lastSeen: '',
+}
+
 const makeMsg = (id: string): Message => ({
   id,
   roomId: 'dm:conv-1',
@@ -53,6 +59,7 @@ describe('DMChatView', () => {
     mockIsOnline.mockReturnValue(false)
     mockFetchMessages.mockReset()
     onSend.mockReset()
+    useUserCacheStore.setState({ cache: { bob }, fetching: new Set() })
   })
 
   it('renders the other participants name in the header', () => {

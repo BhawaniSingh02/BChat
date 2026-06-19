@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DMConversationCard from '../../components/chat/DMConversationCard'
-import type { DirectConversation } from '../../types'
+import { useUserCacheStore } from '../../store/userCacheStore'
+import type { DirectConversation, User } from '../../types'
 
 const makeConv = (id: string, participants = ['alice', 'bob'], lastMessageAt?: string): DirectConversation => ({
   id,
@@ -11,15 +12,24 @@ const makeConv = (id: string, participants = ['alice', 'bob'], lastMessageAt?: s
   ...(lastMessageAt ? { lastMessageAt } : {}),
 })
 
+const bob: User = {
+  id: 'b', username: 'bob', email: 'bob@e.com', displayName: 'Bob Tester',
+  uniqueHandle: 'bob', createdAt: '', lastSeen: '',
+}
+
 describe('DMConversationCard', () => {
-  it('renders the other participant name', () => {
+  beforeEach(() => {
+    useUserCacheStore.setState({ cache: { bob }, fetching: new Set() })
+  })
+
+  it('renders the other participant display name from cache', () => {
     render(
       <DMConversationCard
         conversation={makeConv('conv-1')}
         currentUsername="alice"
       />
     )
-    expect(screen.getByText('bob')).toBeInTheDocument()
+    expect(screen.getByText('Bob Tester')).toBeInTheDocument()
   })
 
   it('does not render current user name', () => {
@@ -102,14 +112,16 @@ describe('DMConversationCard', () => {
     expect(card).toBeInTheDocument()
   })
 
-  it('handles unknown participant gracefully', () => {
-    const conv: DirectConversation = { id: 'conv-1', participants: ['alice'], createdAt: '2026-03-28T10:00:00' }
+  it('shows a placeholder (not the opaque id) while the profile is still loading', () => {
+    useUserCacheStore.setState({ cache: {}, fetching: new Set() })
     render(
       <DMConversationCard
-        conversation={conv}
+        conversation={makeConv('conv-1')}
         currentUsername="alice"
       />
     )
-    expect(screen.getAllByText('?').length).toBeGreaterThan(0)
+    // bob is not in the cache yet → never render the raw internal id
+    expect(screen.queryByText('bob')).not.toBeInTheDocument()
+    expect(screen.getAllByText('…').length).toBeGreaterThan(0)
   })
 })

@@ -640,7 +640,7 @@ export default function ChatPage() {
 
               {user && (
                 <p className="text-xs text-gray-400 mt-4">
-                  Signed in as <span className="font-medium text-gray-600">{user.username}</span>
+                  Signed in as <span className="font-medium text-gray-600">{user.uniqueHandle ? `@${user.uniqueHandle}` : user.displayName || user.username}</span>
                 </p>
               )}
             </div>
