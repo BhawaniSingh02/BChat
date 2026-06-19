@@ -26,6 +26,9 @@ import IncomingCallOverlay from '../components/call/IncomingCallOverlay'
 import ActiveCallView from '../components/call/ActiveCallView'
 import OutgoingCallView from '../components/call/OutgoingCallView'
 import CallHistoryPanel from '../components/call/CallHistoryPanel'
+import NotificationToaster from '../components/ui/NotificationToaster'
+import { ensureNotificationPermission } from '../utils/browserNotify'
+import { registerServiceWorker, subscribeToPush, initPushNavigationBridge } from '../utils/push'
 import { useUserCacheStore } from '../store/userCacheStore'
 import { Link } from 'react-router-dom'
 
@@ -246,6 +249,38 @@ export default function ChatPage() {
       setActiveRoom(myRooms[0].roomId)
     }
   }, [myRooms, activeRoomId, activeDMId, setActiveRoom])
+
+  // Notifications: ask permission, set up background web push, and handle clicks
+  // on background notifications (both browser Notifications and the service worker
+  // dispatch a `notification:navigate` CustomEvent).
+  useEffect(() => {
+    registerServiceWorker()
+    ensureNotificationPermission().then((perm) => {
+      if (perm === 'granted') subscribeToPush()
+    })
+    const cleanupBridge = initPushNavigationBridge()
+
+    const navigate = (detail?: { conversationId?: string; roomId?: string }) => {
+      if (detail?.conversationId) {
+        setActiveDM(detail.conversationId); setActiveRoom(null); setMobileSidebarOpen(false)
+      } else if (detail?.roomId) {
+        setActiveRoom(detail.roomId); setActiveDM(null); setMobileSidebarOpen(false)
+      }
+    }
+    const handler = (e: Event) => navigate((e as CustomEvent).detail)
+    window.addEventListener('notification:navigate', handler)
+
+    // Cold-open from a notification click (service worker opened /chat?cid=…/?rid=…)
+    const params = new URLSearchParams(window.location.search)
+    const cid = params.get('cid')
+    const rid = params.get('rid')
+    if (cid || rid) {
+      navigate({ conversationId: cid ?? undefined, roomId: rid ?? undefined })
+      window.history.replaceState({}, '', '/chat')
+    }
+
+    return () => { window.removeEventListener('notification:navigate', handler); cleanupBridge() }
+  }, [setActiveDM, setActiveRoom])
 
   // Reset unread badge when entering a room
   useEffect(() => {
@@ -709,6 +744,9 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
+      {/* Premium in-app message notifications */}
+      <NotificationToaster />
     </div>
   )
 }

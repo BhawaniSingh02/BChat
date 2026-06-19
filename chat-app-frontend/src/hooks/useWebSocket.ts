@@ -25,6 +25,7 @@ import { useDMStore } from '../store/dmStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useAuthStore } from '../store/authStore'
 import { isConversationMuted } from '../utils/conversation'
+import { presentIncomingNotification, messagePreview } from '../utils/notify'
 import type { CallEvent } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? '/ws'
@@ -150,7 +151,12 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
               if (!isConversationMuted(conversation, currentUsernameRef.current)) {
                 const otherUser = conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.senderName ?? message.sender
                 addNotification(message, otherUser)
-                notifyDesktop(otherUser, message.content || 'You have a new message', conversationId)
+                presentIncomingNotification({
+                  title: otherUser,
+                  body: messagePreview(message.content, message.messageType),
+                  avatarName: otherUser,
+                  conversationId: conversationId ?? undefined,
+                })
               }
             }
           }
@@ -229,12 +235,17 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
       ) {
         const room = myRoomsRef.current.find((r) => r.roomId === message.roomId)
           ?? roomsRef.current.find((r) => r.roomId === message.roomId)
-        addNotification(message, room ? `#${room.name}` : '#Room')
-        notifyDesktop(
-          room ? `#${room.name}` : 'Room message',
-          `${message.senderName ?? message.sender}: ${message.content || 'sent a message'}`,
-          message.roomId,
-        )
+        const label = room ? `#${room.name}` : '#Room'
+        addNotification(message, label)
+        // Respect the room's mute setting — suppress toast/sound/desktop while muted.
+        if (!isConversationMuted(room, currentUsernameRef.current)) {
+          presentIncomingNotification({
+            title: label,
+            body: `${message.senderName ?? message.sender}: ${messagePreview(message.content, message.messageType)}`,
+            avatarName: message.senderName ?? message.sender,
+            roomId: message.roomId,
+          })
+        }
       }
     })
 

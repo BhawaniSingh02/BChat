@@ -51,6 +51,8 @@ export interface Room {
   memberCount: number
   createdAt: string
   lastMessageAt?: string
+  // Phase 20 — per-user mute (username -> ISO date muted until)
+  mutedBy?: Record<string, string>
 }
 
 export interface UpdateRoomRequest {

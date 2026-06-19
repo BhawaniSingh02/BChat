@@ -4,6 +4,7 @@ import { authApi } from '../api/auth'
 import { usersApi } from '../api/users'
 import { useUserCacheStore } from './userCacheStore'
 import { tokenProvider } from '../api/tokenProvider'
+import { unsubscribeFromPush } from '../utils/push'
 
 interface ApiError {
   response?: { data?: { detail?: string; message?: string } }
@@ -119,6 +120,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearJustRegistered: () => set({ justRegistered: false }),
 
   logout: () => {
+    // Remove this device's push subscription so the logged-out user stops
+    // receiving notifications here (best-effort, fire-and-forget).
+    void unsubscribeFromPush()
     tokenProvider.set(null)
     set({ user: null, token: null, pendingVerificationEmail: null, justRegistered: false })
   },

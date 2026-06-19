@@ -4,6 +4,7 @@ import {
   startDialTone,
   playConnectedChime,
   playHangUpTone,
+  playMessageChime,
 } from '../hooks/useCallAudio'
 
 // Web Audio API is not available in jsdom — mock AudioContext
@@ -95,6 +96,21 @@ describe('playHangUpTone', () => {
     playHangUpTone()
     mockCtx.state = 'running'
     expect(mockCtx.createOscillator.mock.calls.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('playMessageChime', () => {
+  it('plays a chime and throttles rapid repeats', () => {
+    mockCtx.createOscillator.mockClear()
+    mockCtx.state = 'running'
+
+    playMessageChime()
+    const afterFirst = mockCtx.createOscillator.mock.calls.length
+    expect(afterFirst).toBeGreaterThanOrEqual(1)
+
+    // Immediate repeat should be throttled — no new oscillators created.
+    playMessageChime()
+    expect(mockCtx.createOscillator.mock.calls.length).toBe(afterFirst)
   })
 })
 

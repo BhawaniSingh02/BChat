@@ -110,3 +110,21 @@ export function playHangUpTone(): void {
   playTone(400, 0.15, 0.2, 'sine', 0.15)
   playTone(250, 0.20, 0.2, 'sine', 0.3)
 }
+
+// Minimum gap between message chimes so a burst of messages doesn't stack into noise.
+const MESSAGE_CHIME_THROTTLE_MS = 1500
+let lastMessageChimeAt = 0
+
+/**
+ * The signature Baaat message tone — a soft, warm two-note rise (D5 → A5).
+ * Deliberately gentle and short so it feels premium, never cheap or jarring.
+ * Throttled so a rapid burst of incoming messages chimes at most once.
+ */
+export function playMessageChime(): void {
+  const now = Date.now()
+  if (now - lastMessageChimeAt < MESSAGE_CHIME_THROTTLE_MS) return
+  lastMessageChimeAt = now
+  // Triangle waves at low gain read as smooth/rounded rather than beepy.
+  playTone(587.33, 0.16, 0.13, 'triangle', 0)      // D5
+  playTone(880.0, 0.22, 0.12, 'triangle', 0.085)   // A5 — overlaps for a seamless rise
+}

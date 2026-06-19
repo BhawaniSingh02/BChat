@@ -12,6 +12,7 @@ import com.substring.chat.repositories.RoomRepository;
 import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.entities.Room;
 import com.substring.chat.services.MessageRateLimiter;
+import com.substring.chat.services.WebPushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -41,6 +42,7 @@ public class ChatController {
     private final DirectConversationRepository conversationRepository;
     private final MessageRateLimiter rateLimiter;
     private final UserRepository userRepository;
+    private final WebPushService webPushService;
 
     @MessageMapping("/chat.sendMessage/{roomId}")
     public void sendMessage(@DestinationVariable String roomId,
@@ -87,6 +89,16 @@ public class ChatController {
         roomRepository.save(room);
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId, MessageResponse.from(saved));
+
+        // Background push to every other member (their service worker suppresses it
+        // if the app is focused). Best-effort and async.
+        String roomLabel = "#" + room.getName();
+        String roomBody = principal.getName() + ": " + pushPreview(saved);
+        for (String member : room.getMembers()) {
+            if (!member.equals(principal.getName())) {
+                webPushService.sendToUser(member, roomLabel, roomBody, null, roomId);
+            }
+        }
     }
 
     @MessageMapping("/chat.addUser/{roomId}")
@@ -184,7 +196,25 @@ public class ChatController {
             for (String participant : conv.getParticipants()) {
                 messagingTemplate.convertAndSendToUser(participant, "/queue/messages", response);
             }
+
+            // Background push to the recipient (service worker suppresses it if focused).
+            if (recipient != null) {
+                webPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
+            }
         });
+    }
+
+    /** Short human-readable preview for a push body (handles empty media messages). */
+    private String pushPreview(Message message) {
+        String content = message.getContent();
+        if (content != null && !content.isBlank()) return content;
+        return switch (message.getMessageType()) {
+            case IMAGE -> "📷 Photo";
+            case FILE -> "📎 File";
+            case AUDIO -> "🎤 Voice message";
+            case VIDEO -> "🎬 Video";
+            default -> "New message";
+        };
     }
 
     private Instant computeDisappearsAt(String timer) {

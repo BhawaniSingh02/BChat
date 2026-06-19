@@ -5,7 +5,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -21,6 +23,8 @@ public class RoomResponse {
     private Instant createdAt;
     private Instant lastMessageAt;
     private int memberCount;
+    // Phase 20 — per-user mute (username -> muted until)
+    private Map<String, Instant> mutedBy;
 
     public static RoomResponse from(Room room) {
         RoomResponse response = new RoomResponse();
@@ -34,6 +38,7 @@ public class RoomResponse {
         response.setCreatedAt(room.getCreatedAt());
         response.setLastMessageAt(room.getLastMessageAt());
         response.setMemberCount(room.getMembers() != null ? room.getMembers().size() : 0);
+        response.setMutedBy(room.getMutedBy() != null ? room.getMutedBy() : new HashMap<>());
         return response;
     }
 }
