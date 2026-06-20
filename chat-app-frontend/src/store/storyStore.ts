@@ -1,0 +1,61 @@
+import { create } from 'zustand'
+import type { CreateStoryRequest, Story, StoryGroup } from '../types'
+import { storiesApi } from '../api/stories'
+
+interface StoryState {
+  groups: StoryGroup[]
+  loaded: boolean
+  fetchFeed: () => Promise<void>
+  createStory: (req: CreateStoryRequest) => Promise<void>
+  markViewed: (storyId: string) => Promise<void>
+  deleteStory: (storyId: string) => Promise<void>
+}
+
+export const useStoryStore = create<StoryState>((set, get) => ({
+  groups: [],
+  loaded: false,
+
+  fetchFeed: async () => {
+    try {
+      const groups = await storiesApi.getFeed()
+      set({ groups, loaded: true })
+    } catch {
+      set({ loaded: true })
+    }
+  },
+
+  createStory: async (req) => {
+    await storiesApi.create(req)
+    await get().fetchFeed()
+  },
+
+  markViewed: async (storyId) => {
+    // Optimistically flag the story as viewed and recompute the group's unviewed state.
+    set((s) => ({
+      groups: s.groups.map((g) => {
+        if (!g.stories.some((st) => st.id === storyId)) return g
+        const stories = g.stories.map((st) =>
+          st.id === storyId ? { ...st, viewedByMe: true } : st,
+        )
+        return { ...g, stories, hasUnviewed: stories.some((st) => !st.viewedByMe) }
+      }),
+    }))
+    try {
+      await storiesApi.markViewed(storyId)
+    } catch { /* best-effort */ }
+  },
+
+  deleteStory: async (storyId) => {
+    await storiesApi.remove(storyId)
+    set((s) => ({
+      groups: s.groups
+        .map((g) => ({ ...g, stories: g.stories.filter((st) => st.id !== storyId) }))
+        .filter((g) => g.stories.length > 0),
+    }))
+  },
+}))
+
+/** A flat list of all stories in feed order (for navigating across authors). */
+export function flattenStories(groups: StoryGroup[]): Story[] {
+  return groups.flatMap((g) => g.stories)
+}

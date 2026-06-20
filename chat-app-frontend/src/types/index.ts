@@ -126,6 +126,36 @@ export interface DirectConversation {
   initiatedBy?: string
 }
 
+// Stories (24h ephemeral status)
+export type StoryType = 'TEXT' | 'IMAGE'
+
+export interface Story {
+  id: string
+  authorId: string
+  type: StoryType
+  content?: string
+  mediaUrl?: string
+  backgroundColor?: string
+  createdAt: string
+  expiresAt: string
+  viewedByMe: boolean
+  viewerCount: number
+}
+
+export interface StoryGroup {
+  authorId: string
+  stories: Story[]
+  hasUnviewed: boolean
+  lastStoryAt: string
+}
+
+export interface CreateStoryRequest {
+  type: StoryType
+  content?: string
+  mediaUrl?: string
+  backgroundColor?: string
+}
+
 export interface TypingEvent {
   roomId: string
   username: string

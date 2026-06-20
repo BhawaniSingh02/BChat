@@ -74,6 +74,10 @@ vi.mock('../../api/calls', () => ({
   callsApi: { getMyCallHistory: vi.fn().mockResolvedValue([]), getCallHistory: vi.fn().mockResolvedValue([]) },
 }))
 
+vi.mock('../../api/stories', () => ({
+  storiesApi: { getFeed: vi.fn().mockResolvedValue([]), create: vi.fn(), markViewed: vi.fn(), getViewers: vi.fn(), remove: vi.fn() },
+}))
+
 import Sidebar from '../../components/layout/Sidebar'
 import { messagesApi } from '../../api/messages'
 

@@ -92,6 +92,15 @@ body {
   border-color: transparent #202c33 transparent transparent;
 }
 
+/* Story viewer progress bar fill */
+@keyframes storyProgress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+.story-progress {
+  animation: storyProgress 5s linear forwards;
+}
+
 /* Smooth message entrance */
 @keyframes msgIn {
   from { opacity: 0; transform: translateY(6px) scale(0.97); }

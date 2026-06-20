@@ -10,6 +10,7 @@ import RoomList from '../rooms/RoomList'
 import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
 import CallLogList from '../call/CallLogList'
+import StoriesBar from '../story/StoriesBar'
 import UserSearchModal from '../ui/UserSearchModal'
 import SettingsModal from '../ui/SettingsModal'
 import BrandLogo from '../ui/BrandLogo'
@@ -249,6 +250,8 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
           />
         ) : (
           <div className="flex flex-col h-full">
+            {/* Stories bar (WhatsApp/Insta-style status) */}
+            <StoriesBar currentUsername={user?.username ?? ''} />
             {/* Filter chips (WhatsApp-style) — only when there are conversations */}
             {sortedConversations.length > 0 && (
               <div className="flex gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-800">
