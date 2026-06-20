@@ -107,6 +107,26 @@ describe('SettingsModal', () => {
     expect(screen.queryByTestId('settings-logout-confirm')).not.toBeInTheDocument()
   })
 
+  it('drills into a section and back (mobile menu list ↔ section)', () => {
+    renderModal()
+    const rail = screen.getByTestId('settings-rail')
+    const detail = screen.getByTestId('settings-detail')
+    // List view: rail shown, detail hidden on mobile.
+    expect(rail.className).toContain('flex')
+    expect(detail.className).toContain('hidden md:flex')
+
+    fireEvent.click(screen.getByTestId('settings-nav-privacy'))
+    // Drilled in: rail hidden on mobile, detail shown, with a back button + title.
+    expect(rail.className).toContain('hidden md:flex')
+    expect(detail.className).toContain('flex')
+    expect(screen.getByTestId('settings-back')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('settings-back'))
+    // Back to the list.
+    expect(detail.className).toContain('hidden md:flex')
+    expect(rail.className).toContain('flex')
+  })
+
   it('closes via the close button and backdrop', () => {
     renderModal()
     fireEvent.click(screen.getByTestId('settings-close'))

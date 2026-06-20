@@ -100,6 +100,11 @@ body {
 .story-progress {
   animation: storyProgress 5s linear forwards;
 }
+/* Pause the fill when the viewer is paused. A dedicated, more-specific rule that
+   comes after `.story-progress` so it isn't reset by the `animation` shorthand. */
+.story-progress.is-paused {
+  animation-play-state: paused;
+}
 
 /* Smooth message entrance */
 @keyframes msgIn {

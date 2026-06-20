@@ -22,16 +22,24 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
-  const [paused, setPaused] = useState(false)
+  const [replyFocused, setReplyFocused] = useState(false)
+  const [manualPaused, setManualPaused] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showViewers, setShowViewers] = useState(false)
+  const [viewers, setViewers] = useState<string[]>([])
+  const [viewersLoading, setViewersLoading] = useState(false)
   const markViewed = useStoryStore((s) => s.markViewed)
   const deleteStory = useStoryStore((s) => s.deleteStory)
   const cache = useUserCacheStore((s) => s.cache)
+  const prefetch = useUserCacheStore((s) => s.prefetch)
 
   const group = groups[groupIndex]
   const story = group?.stories[storyIndex]
 
-  // goNext/goPrev are recreated whenever the indices change, so the timer effect
-  // below always closes over fresh state — no refs needed.
+  // Auto-advance is suspended while: composing a reply, manually paused, or the
+  // viewers sheet is open.
+  const isPaused = replyFocused || manualPaused || showViewers || confirmDelete
+
   const goNext = useCallback(() => {
     const g = groups[groupIndex]
     if (g && storyIndex < g.stories.length - 1) {
@@ -61,26 +69,33 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
     }
   }, [story, currentUsername, markViewed])
 
-  // Auto-advance, restarted on each story. Paused while composing a reply.
+  // Auto-advance, restarted on each story; suspended when paused.
   useEffect(() => {
-    if (!story || paused) return
+    if (!story || isPaused) return
     const t = setTimeout(goNext, STORY_DURATION)
     return () => clearTimeout(t)
-  }, [groupIndex, storyIndex, story, goNext, paused])
+  }, [groupIndex, storyIndex, story, goNext, isPaused])
 
-  // Reset the reply box when the story changes.
-  useEffect(() => { setReplyText(''); setSent(false) }, [groupIndex, storyIndex])
+  // Reset transient per-story state when the story changes.
+  useEffect(() => {
+    setReplyText('')
+    setSent(false)
+    setManualPaused(false)
+    setShowViewers(false)
+    setConfirmDelete(false)
+  }, [groupIndex, storyIndex])
 
   // Keyboard controls.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') { if (showViewers) setShowViewers(false); else onClose() }
       else if (e.key === 'ArrowRight') goNext()
       else if (e.key === 'ArrowLeft') goPrev()
+      else if (e.key === ' ') setManualPaused((p) => !p)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, goNext, goPrev])
+  }, [onClose, goNext, goPrev, showViewers])
 
   if (!group || !story) return null
 
@@ -90,6 +105,7 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
 
   const handleDelete = async () => {
     const wasOnly = group.stories.length <= 1
+    setConfirmDelete(false)
     await deleteStory(story.id)
     if (wasOnly) onClose()
     else setStoryIndex((si) => Math.max(0, si - 1))
@@ -106,6 +122,20 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
       setTimeout(() => setSent(false), 2000)
     } catch { /* ignore — user can retry */ }
     finally { setSending(false) }
+  }
+
+  const openViewers = async () => {
+    setShowViewers(true)
+    setViewersLoading(true)
+    try {
+      const list = await storiesApi.getViewers(story.id)
+      setViewers(list)
+      if (list.length) prefetch(list)
+    } catch {
+      setViewers([])
+    } finally {
+      setViewersLoading(false)
+    }
   }
 
   const atFirst = groupIndex === 0 && storyIndex === 0
@@ -131,7 +161,7 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
             <div key={s.id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
               <div
                 key={i === storyIndex ? `${groupIndex}-${storyIndex}` : `static-${i}`}
-                className={`h-full bg-white ${i < storyIndex ? 'w-full' : i === storyIndex ? `story-progress ${paused ? '[animation-play-state:paused]' : ''}` : 'w-0'}`}
+                className={`h-full bg-white ${i < storyIndex ? 'w-full' : i === storyIndex ? `story-progress ${isPaused ? 'is-paused' : ''}` : 'w-0'}`}
               />
             </div>
           ))}
@@ -144,8 +174,21 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
             <p className="truncate text-sm font-semibold text-white">{name}</p>
             <p className="text-xs text-white/70">{formatRelative(story.createdAt)}</p>
           </div>
+          {/* Pause / play */}
+          <button
+            onClick={() => setManualPaused((p) => !p)}
+            className="text-white/80 hover:text-white"
+            aria-label={manualPaused ? 'Play story' : 'Pause story'}
+            data-testid="story-pause-btn"
+          >
+            {manualPaused ? (
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            ) : (
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
+            )}
+          </button>
           {isOwn && (
-            <button onClick={handleDelete} className="text-white/80 hover:text-white" aria-label="Delete story" data-testid="story-delete-btn">
+            <button onClick={() => setConfirmDelete(true)} className="text-white/80 hover:text-white" aria-label="Delete story" data-testid="story-delete-btn">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
@@ -176,16 +219,20 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
         <button className="absolute bottom-20 left-0 top-0 z-10 w-1/3 cursor-default" onClick={goPrev} aria-label="Previous" data-testid="story-prev-zone" />
         <button className="absolute bottom-20 right-0 top-0 z-10 w-2/3 cursor-default" onClick={goNext} aria-label="Next" data-testid="story-next-zone" />
 
-        {/* Bottom bar: seen count for own stories, reply box for others' */}
+        {/* Bottom bar: viewers button for own stories, reply box for others' */}
         {isOwn ? (
           <div className="absolute bottom-5 left-0 right-0 z-20 flex justify-center">
-            <span className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm text-white" data-testid="story-seen-count">
+            <button
+              onClick={openViewers}
+              className="flex items-center gap-1.5 rounded-full bg-black/40 px-4 py-2 text-sm text-white transition-colors hover:bg-black/60"
+              data-testid="story-seen-count"
+            >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              {story.viewerCount}
-            </span>
+              {story.viewerCount} {story.viewerCount === 1 ? 'view' : 'views'}
+            </button>
           </div>
         ) : (
           <div className="absolute bottom-0 left-0 right-0 z-20 p-3">
@@ -194,8 +241,8 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
               <input
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                onFocus={() => setPaused(true)}
-                onBlur={() => setPaused(false)}
+                onFocus={() => setReplyFocused(true)}
+                onBlur={() => setReplyFocused(false)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleReply() }}
                 placeholder={`Reply to ${name}…`}
                 className="flex-1 rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
@@ -212,6 +259,78 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation */}
+        {confirmDelete && (
+          <div
+            className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+            onClick={() => setConfirmDelete(false)}
+            data-testid="story-delete-confirm"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[20rem] overflow-hidden rounded-3xl border border-white/10 bg-[#202c33]/95 p-6 text-center shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
+            >
+              <h3 className="text-lg font-semibold text-white">Delete story?</h3>
+              <p className="mx-auto mt-1.5 max-w-[15rem] text-sm leading-relaxed text-gray-400">
+                This story will be removed for everyone who can see it.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-semibold text-gray-100 transition-colors hover:bg-white/15"
+                  data-testid="story-delete-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition-colors hover:bg-red-600"
+                  data-testid="story-delete-confirm-btn"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Viewers sheet (WhatsApp-style "Viewed by" list) */}
+        {showViewers && (
+          <div className="absolute inset-0 z-30 flex flex-col" data-testid="story-viewers-sheet">
+            <button className="flex-1 cursor-default" onClick={() => setShowViewers(false)} aria-label="Close viewers" />
+            <div className="max-h-[65%] overflow-hidden rounded-t-2xl bg-[#1a242b] shadow-2xl">
+              <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+                <h3 className="text-sm font-semibold text-gray-100">
+                  Viewed by {viewers.length}
+                </h3>
+                <button onClick={() => setShowViewers(false)} className="text-gray-400 hover:text-gray-200" aria-label="Close" data-testid="story-viewers-close">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              <div className="max-h-[calc(65vh-3rem)] overflow-y-auto py-1">
+                {viewersLoading ? (
+                  <p className="px-4 py-6 text-center text-sm text-gray-400">Loading…</p>
+                ) : viewers.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-sm text-gray-400" data-testid="story-viewers-empty">No views yet</p>
+                ) : (
+                  viewers.map((vid) => {
+                    const vu = cache[vid]
+                    const vname = vu?.displayName || (vu?.uniqueHandle ? `@${vu.uniqueHandle}` : '…')
+                    return (
+                      <div key={vid} className="flex items-center gap-3 px-4 py-2.5" data-testid="story-viewer-row">
+                        <Avatar name={vname} size="sm" src={vu?.avatarUrl ?? undefined} />
+                        <span className="truncate text-sm text-gray-100">{vname}</span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
           </div>
         )}

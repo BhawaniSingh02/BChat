@@ -9,7 +9,10 @@ vi.mock('../../store/storyStore', () => ({
     selector({ markViewed, deleteStory }),
 }))
 vi.mock('../../api/stories', () => ({
-  storiesApi: { reply: vi.fn().mockResolvedValue(undefined) },
+  storiesApi: {
+    reply: vi.fn().mockResolvedValue(undefined),
+    getViewers: vi.fn().mockResolvedValue([]),
+  },
 }))
 
 import StoryViewer from '../../components/story/StoryViewer'
@@ -61,12 +64,24 @@ describe('StoryViewer', () => {
     expect(screen.getByTestId('story-delete-btn')).toBeInTheDocument()
   })
 
-  it('deletes an own single story and closes', async () => {
+  it('confirms before deleting, then deletes an own single story and closes', async () => {
     const onClose = vi.fn()
     render(<StoryViewer groups={[makeGroup('me', 's1')]} startGroupIndex={0} currentUsername="me" onClose={onClose} />)
     fireEvent.click(screen.getByTestId('story-delete-btn'))
+    // confirmation appears; nothing deleted yet
+    expect(screen.getByTestId('story-delete-confirm')).toBeInTheDocument()
+    expect(deleteStory).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('story-delete-confirm-btn'))
     await waitFor(() => expect(deleteStory).toHaveBeenCalledWith('s1'))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('cancels delete without removing the story', () => {
+    render(<StoryViewer groups={[makeGroup('me', 's1')]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('story-delete-btn'))
+    fireEvent.click(screen.getByTestId('story-delete-cancel'))
+    expect(screen.queryByTestId('story-delete-confirm')).not.toBeInTheDocument()
+    expect(deleteStory).not.toHaveBeenCalled()
   })
 
   it('shows a reply box for others’ stories and sends a reply', async () => {
@@ -81,5 +96,34 @@ describe('StoryViewer', () => {
   it('does not show a reply box on your own story', () => {
     render(<StoryViewer groups={[makeGroup('me', 's1')]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
     expect(screen.queryByTestId('story-reply-input')).not.toBeInTheDocument()
+  })
+
+  it('has a pause/play toggle that flips its label', () => {
+    render(<StoryViewer groups={[makeGroup('bob', 's1')]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    const btn = screen.getByTestId('story-pause-btn')
+    expect(btn).toHaveAttribute('aria-label', 'Pause story')
+    fireEvent.click(btn)
+    expect(screen.getByTestId('story-pause-btn')).toHaveAttribute('aria-label', 'Play story')
+  })
+
+  it('opens the viewers list with resolved names on tapping the view count', async () => {
+    const alice: User = { id: 'a', username: 'alice', email: 'a@e.com', displayName: 'Alice', uniqueHandle: 'alice', createdAt: '', lastSeen: '' }
+    useUserCacheStore.setState({ cache: { alice }, fetching: new Set() })
+    vi.mocked(storiesApi.getViewers).mockResolvedValue(['alice'])
+
+    render(<StoryViewer groups={[makeGroup('me', 's1')]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('story-seen-count'))
+
+    await waitFor(() => expect(storiesApi.getViewers).toHaveBeenCalledWith('s1'))
+    expect(await screen.findByTestId('story-viewers-sheet')).toBeInTheDocument()
+    expect(await screen.findByText('Alice')).toBeInTheDocument()
+    expect(screen.getByTestId('story-viewer-row')).toBeInTheDocument()
+  })
+
+  it('shows an empty state in the viewers list when no one has viewed', async () => {
+    vi.mocked(storiesApi.getViewers).mockResolvedValue([])
+    render(<StoryViewer groups={[makeGroup('me', 's1')]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('story-seen-count'))
+    expect(await screen.findByTestId('story-viewers-empty')).toBeInTheDocument()
   })
 })

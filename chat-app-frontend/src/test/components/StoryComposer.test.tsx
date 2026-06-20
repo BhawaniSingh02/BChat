@@ -16,6 +16,9 @@ describe('StoryComposer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     create.mockResolvedValue(undefined)
+    // jsdom doesn't implement object URLs — stub them for the image preview.
+    URL.createObjectURL = vi.fn(() => 'blob:preview')
+    URL.revokeObjectURL = vi.fn()
   })
 
   it('does not render when closed', () => {
@@ -40,13 +43,36 @@ describe('StoryComposer', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
-  it('uploads and posts an image story', async () => {
+  it('shows a preview after selecting a photo and does NOT upload until Share', () => {
+    render(<StoryComposer open onClose={vi.fn()} />)
+    const file = new File(['x'], 'pic.png', { type: 'image/png' })
+    fireEvent.change(screen.getByTestId('story-image-input'), { target: { files: [file] } })
+    // Preview + caption appear; nothing uploaded/posted yet
+    expect(screen.getByTestId('story-image-preview')).toBeInTheDocument()
+    expect(screen.getByTestId('story-caption-input')).toBeInTheDocument()
+    expect(uploadApi.uploadFile).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('uploads and posts the image with a caption when Share is tapped', async () => {
     const onClose = vi.fn()
     render(<StoryComposer open onClose={onClose} />)
     const file = new File(['x'], 'pic.png', { type: 'image/png' })
     fireEvent.change(screen.getByTestId('story-image-input'), { target: { files: [file] } })
+    fireEvent.change(screen.getByTestId('story-caption-input'), { target: { value: 'my caption' } })
+    fireEvent.click(screen.getByTestId('story-post-btn'))
     await waitFor(() => expect(uploadApi.uploadFile).toHaveBeenCalled())
-    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: 'IMAGE', mediaUrl: 'https://cdn/x.png' })))
+    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: 'IMAGE', mediaUrl: 'https://cdn/x.png', content: 'my caption' })))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('can remove the selected photo and return to text mode', () => {
+    render(<StoryComposer open onClose={vi.fn()} />)
+    const file = new File(['x'], 'pic.png', { type: 'image/png' })
+    fireEvent.change(screen.getByTestId('story-image-input'), { target: { files: [file] } })
+    expect(screen.getByTestId('story-image-preview')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('story-image-remove'))
+    expect(screen.queryByTestId('story-image-preview')).not.toBeInTheDocument()
+    expect(screen.getByTestId('story-text-input')).toBeInTheDocument()
   })
 })
