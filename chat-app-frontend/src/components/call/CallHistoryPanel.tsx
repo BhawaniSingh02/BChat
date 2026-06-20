@@ -46,9 +46,9 @@ function CallStatusIcon({ status }: { status: CallSession['status'] }) {
 export default function CallHistoryPanel({ sessions, currentUsername, onClose }: CallHistoryPanelProps) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50" data-testid="call-history-panel">
-      <div className="bg-white rounded-xl shadow-2xl w-80 max-h-[70vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-800">Call History</h2>
+      <div className="bg-white dark:bg-[#1a242b] rounded-xl shadow-2xl w-80 max-h-[70vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-200">Call History</h2>
           <button onClick={onClose} aria-label="Close call history" data-testid="close-history-btn"
             className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -70,7 +70,7 @@ export default function CallHistoryPanel({ sessions, currentUsername, onClose }:
               return (
                 <div
                   key={session.id}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50"
+                  className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
                   data-testid={`call-history-item-${session.id}`}
                 >
                   <CallStatusIcon status={session.status} />
@@ -85,7 +85,7 @@ export default function CallHistoryPanel({ sessions, currentUsername, onClose }:
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                         </svg>
                       )}
-                      <span className="text-sm font-medium text-gray-800 capitalize">
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 capitalize">
                         {isOutgoing ? 'Outgoing' : 'Incoming'} {session.callType.toLowerCase()}
                       </span>
                     </div>

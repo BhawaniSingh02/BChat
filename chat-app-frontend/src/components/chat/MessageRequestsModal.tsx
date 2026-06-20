@@ -74,7 +74,7 @@ export default function MessageRequestsModal({
 
         {requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-2xl mb-3">📨</div>
+            <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-2xl mb-3">📨</div>
             <p className="text-sm font-medium text-gray-700">No message requests</p>
             <p className="text-xs text-gray-400 mt-1">Requests from people you don't follow show up here.</p>
           </div>
@@ -89,7 +89,7 @@ export default function MessageRequestsModal({
                 <div key={r.id} className="flex items-start gap-3 px-2 py-3" data-testid="message-request-item">
                   <Avatar name={u?.displayName || u?.uniqueHandle || username} size="md" src={u?.avatarUrl} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{name}</p>
                     {handle && u?.displayName && <p className="text-xs text-gray-400 truncate">{handle}</p>}
                     <p className="text-sm text-gray-500 truncate mt-0.5">
                       {previews[r.id] ?? 'wants to send you a message'}
@@ -106,7 +106,7 @@ export default function MessageRequestsModal({
                       <button
                         onClick={() => handleDecline(r.id)}
                         disabled={busyId === r.id}
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 transition disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition disabled:opacity-50"
                         data-testid="decline-request-btn"
                       >
                         Decline

@@ -69,6 +69,14 @@ describe('SettingsModal', () => {
     expect(screen.getByTestId('online-privacy')).toBeInTheDocument()
   })
 
+  it('shows the Chats panel with the theme picker', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('settings-nav-chats'))
+    expect(screen.getByTestId('theme-option-light')).toBeInTheDocument()
+    expect(screen.getByTestId('theme-option-dark')).toBeInTheDocument()
+    expect(screen.getByTestId('theme-option-system')).toBeInTheDocument()
+  })
+
   it('switches the right pane to Keyboard shortcuts', () => {
     renderModal()
     fireEvent.click(screen.getByTestId('settings-nav-shortcuts'))

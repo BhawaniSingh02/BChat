@@ -178,7 +178,7 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
       </button>
 
       {/* Waveform + timer */}
-      <div className="flex-1 flex items-center gap-2 bg-white rounded-3xl px-4 py-2 shadow-sm min-w-0">
+      <div className="flex-1 flex items-center gap-2 bg-white dark:bg-[#2a3942] rounded-3xl px-4 py-2 shadow-sm min-w-0">
         {/* Animated waveform bars */}
         <div className="flex items-center gap-0.5 h-8" aria-hidden>
           {waveform.map((h, i) => (
@@ -224,7 +224,7 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-red-500 absolute bottom-14 left-4 right-4 bg-white/90 rounded px-2 py-1 shadow" data-testid="voice-error">
+        <p className="text-xs text-red-500 absolute bottom-14 left-4 right-4 bg-white/90 dark:bg-[#1a242b]/95 rounded px-2 py-1 shadow" data-testid="voice-error">
           {error}
         </p>
       )}

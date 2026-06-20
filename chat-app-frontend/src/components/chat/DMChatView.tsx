@@ -180,10 +180,10 @@ export default function DMChatView({
     <div className="flex flex-col h-full">
       {/* Header — swaps to selection action bar */}
       {selectionMode ? (
-        <div className="px-2 py-2 bg-white flex items-center gap-1 shadow-md z-10 border-b border-gray-100" data-testid="selection-action-bar">
+        <div className="px-2 py-2 bg-white dark:bg-[#1a242b] flex items-center gap-1 shadow-md z-10 border-b border-gray-100 dark:border-gray-800" data-testid="selection-action-bar">
           <button
             onClick={clearSelection}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors"
             aria-label="Cancel selection"
             data-testid="cancel-selection-btn"
           >
@@ -192,7 +192,7 @@ export default function DMChatView({
             </svg>
           </button>
 
-          <span className="text-sm font-semibold text-gray-800 flex-1 ml-1" data-testid="selection-count">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex-1 ml-1" data-testid="selection-count">
             {selectedIds.size} selected
           </span>
 
@@ -386,7 +386,7 @@ export default function DMChatView({
       )}
 
       {isBlocked ? (
-        <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-center gap-2" data-testid="blocked-banner">
+        <div className="px-4 py-3 bg-gray-50 dark:bg-[#1a242b] border-t border-gray-200 dark:border-gray-800 flex items-center justify-center gap-2" data-testid="blocked-banner">
           <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>

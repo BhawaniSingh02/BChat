@@ -130,7 +130,7 @@ export default function QuickSwitcher({
       />
 
       {/* Panel */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-200">
+      <div className="relative bg-white dark:bg-[#1a242b] rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
           <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

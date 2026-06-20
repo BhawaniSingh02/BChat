@@ -34,7 +34,7 @@ export default function StarredMessagesPanel({ onClose, currentUsername: _curren
   }
 
   return (
-    <div className="flex flex-col h-full bg-white" data-testid="starred-messages-panel">
+    <div className="flex flex-col h-full bg-white dark:bg-[#111b21]" data-testid="starred-messages-panel">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-[#075e54] text-white flex-shrink-0">
         <button onClick={onClose} className="hover:opacity-80 transition-opacity" aria-label="Close starred messages">

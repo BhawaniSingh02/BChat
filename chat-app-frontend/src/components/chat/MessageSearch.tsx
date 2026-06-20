@@ -48,7 +48,7 @@ export default function MessageSearch({ messages, onClose, onScrollTo }: Message
 
   return (
     <div
-      className="border-b border-gray-200 bg-white"
+      className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-[#111b21]"
       data-testid="message-search"
     >
       {/* Search bar */}

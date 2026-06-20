@@ -61,10 +61,10 @@ export default function ForwardMessageModal({ message, onClose }: ForwardMessage
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50"
       data-testid="forward-modal"
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] flex flex-col">
+      <div className="bg-white dark:bg-[#1a242b] rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-          <h3 className="font-semibold text-gray-900">Forward Message</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Forward Message</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

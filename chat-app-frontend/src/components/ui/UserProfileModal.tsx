@@ -62,7 +62,7 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
           data-testid="user-profile-backdrop"
         />
 
-        <div className="relative w-full max-w-sm mx-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
+        <div className="relative w-full max-w-sm mx-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-gray-700 dark:bg-[#1a242b]">
           {/* Header gradient */}
           <div className="h-20 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950" />
 

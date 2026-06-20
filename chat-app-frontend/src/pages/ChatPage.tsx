@@ -464,7 +464,7 @@ export default function ChatPage() {
   const hasActiveChat = !!(showRoom || showDM)
 
   return (
-    <div className="flex h-screen w-full bg-gray-100">
+    <div className="flex h-screen w-full bg-gray-100 dark:bg-[#0b141a]">
       {/* WebSocket connecting indicator — fixed overlay so it never displaces content */}
       {!connected && !apiError && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/18 backdrop-blur-[2px]">
@@ -578,13 +578,13 @@ export default function ChatPage() {
           </div>
         ) : (
           /* Welcome / Empty state */
-          <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 p-8">
-            <div className="bg-white/96 rounded-[28px] shadow-[0_20px_60px_rgba(15,23,42,0.08)] border border-slate-200/80 p-10 max-w-lg w-full text-center">
+          <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 dark:from-[#0b141a] dark:via-[#0b141a] dark:to-[#0d1b22] p-8">
+            <div className="bg-white/96 dark:bg-[#1a242b] rounded-[28px] shadow-[0_20px_60px_rgba(15,23,42,0.08)] border border-slate-200/80 dark:border-gray-700 p-10 max-w-lg w-full text-center">
               <div className="hidden w-20 h-20 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl items-center justify-center mx-auto mb-6 shadow-md">
                 <span className="text-white text-4xl">💬</span>
               </div>
               <BrandLogo size="lg" stacked interactive className="mb-6" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your workspace</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Welcome to your workspace</h2>
               <p className="text-gray-500 mb-8 text-sm leading-relaxed">
                 Connect with others in chat rooms or through direct messages.
                 {myRooms.length === 0 && ' Create your first room or browse existing ones to get started.'}
@@ -593,28 +593,28 @@ export default function ChatPage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setCreateOpen(true)}
-                  className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/70 hover:shadow-[0_16px_36px_rgba(20,184,166,0.12)] group"
+                  className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 dark:border-gray-700 dark:bg-gray-800/50 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/70 hover:shadow-[0_16px_36px_rgba(20,184,166,0.12)] group"
                   data-testid="create-room-cta"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100 text-2xl text-teal-700 transition-all group-hover:from-teal-500 group-hover:to-cyan-600 group-hover:text-white">
                     🏠
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-800 text-sm">Create Room</div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200 text-sm">Create Room</div>
                     <div className="text-xs text-gray-400 mt-0.5">Start a group chat</div>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setDiscoverOpen(true)}
-                  className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50/70 hover:shadow-[0_16px_36px_rgba(8,145,178,0.12)] group"
+                  className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 dark:border-gray-700 dark:bg-gray-800/50 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50/70 hover:shadow-[0_16px_36px_rgba(8,145,178,0.12)] group"
                   data-testid="browse-rooms-cta"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl text-cyan-700 transition-all group-hover:from-cyan-500 group-hover:to-sky-600 group-hover:text-white">
                     🔍
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-800 text-sm">Browse Rooms</div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200 text-sm">Browse Rooms</div>
                     <div className="text-xs text-gray-400 mt-0.5">Join existing rooms</div>
                   </div>
                 </button>

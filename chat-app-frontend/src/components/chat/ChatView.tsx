@@ -148,11 +148,11 @@ export default function ChatView({
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header — swaps to selection action bar in selection mode */}
         {selectionMode ? (
-          <div className="px-2 py-2 bg-white flex items-center gap-1 shadow-md z-10 border-b border-gray-100" data-testid="selection-action-bar">
+          <div className="px-2 py-2 bg-white dark:bg-[#1a242b] flex items-center gap-1 shadow-md z-10 border-b border-gray-100 dark:border-gray-800" data-testid="selection-action-bar">
             {/* Cancel */}
             <button
               onClick={clearSelection}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800 rounded-full transition-colors"
               aria-label="Cancel selection"
               data-testid="cancel-selection-btn"
             >
@@ -162,7 +162,7 @@ export default function ChatView({
             </button>
 
             {/* Count */}
-            <span className="text-sm font-semibold text-gray-800 flex-1 ml-1" data-testid="selection-count">
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex-1 ml-1" data-testid="selection-count">
               {selectedIds.size} selected
             </span>
 

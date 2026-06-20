@@ -81,8 +81,8 @@ export default function DMConversationCard({
   return (
     <>
       <button
-        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
-          active ? 'bg-gray-100' : ''
+        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left ${
+          active ? 'bg-gray-100 dark:bg-gray-800' : ''
         }`}
         onClick={onClick}
         onContextMenu={handleContextMenu}
@@ -92,7 +92,7 @@ export default function DMConversationCard({
         <Avatar name={displayName} size="md" online={online} src={avatarUrl} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-gray-900 text-sm truncate">
+            <span className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
               {isPinned && (
                 <span className="mr-1 text-teal-600" aria-label="Pinned">📌</span>
               )}

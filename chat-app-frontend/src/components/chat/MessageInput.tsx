@@ -171,7 +171,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
   // If voice recorder is active, show only it
   if (showVoiceRecorder) {
     return (
-      <div className="bg-[#f0f2f5] relative">
+      <div className="bg-[#f0f2f5] dark:bg-[#1a242b] relative">
         <VoiceRecorder
           onSend={handleVoiceSend}
           onCancel={() => setShowVoiceRecorder(false)}
@@ -181,10 +181,10 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
   }
 
   return (
-    <div className="bg-[#f0f2f5] px-3 py-2.5">
+    <div className="bg-[#f0f2f5] dark:bg-[#1a242b] px-3 py-2.5">
       {/* Phase 18: Reply-to preview bar */}
       {replyTo && (
-        <div className="flex items-start gap-2 mb-2 bg-white/80 rounded-xl px-3 py-2 border-l-4 border-emerald-500" data-testid="reply-preview">
+        <div className="flex items-start gap-2 mb-2 bg-white/80 dark:bg-[#202c33] rounded-xl px-3 py-2 border-l-4 border-emerald-500" data-testid="reply-preview">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-emerald-700">{replyTo.senderName}</p>
             <p className="text-xs text-gray-500 truncate">{replyTo.content}</p>
@@ -253,7 +253,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || isUploading}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 disabled:opacity-40 flex-shrink-0 transition-colors shadow-sm"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#2a3942] dark:text-gray-300 text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 dark:hover:bg-[#374754] disabled:opacity-40 flex-shrink-0 transition-colors shadow-sm"
           aria-label="Attach file"
           data-testid="attach-file-btn"
         >
@@ -279,7 +279,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             disabled={disabled}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 disabled:opacity-40 transition-colors shadow-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#2a3942] dark:text-gray-300 text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 dark:hover:bg-[#374754] disabled:opacity-40 transition-colors shadow-sm"
             aria-label="Insert emoji"
             data-testid="emoji-picker-btn"
           >
@@ -289,7 +289,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
           </button>
           {showEmojiPicker && (
             <div
-              className="absolute bottom-12 left-0 p-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 w-72 max-h-72 overflow-y-auto"
+              className="absolute bottom-12 left-0 p-2 bg-white dark:bg-[#233138] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-20 w-72 max-h-72 overflow-y-auto"
               data-testid="input-emoji-picker"
             >
               {EMOJI_CATEGORIES.map((cat) => (
@@ -300,7 +300,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
                       <button
                         key={emoji}
                         onClick={() => insertEmoji(emoji)}
-                        className="text-xl p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-center"
+                        className="text-xl p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-center"
                         aria-label={emoji}
                       >
                         {emoji}
@@ -320,7 +320,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
           placeholder={placeholder ?? 'Type a message…'}
           disabled={disabled || isUploading}
           rows={1}
-          className="flex-1 resize-none bg-white rounded-3xl px-4 py-2.5 text-sm text-gray-900
+          className="flex-1 resize-none bg-white dark:bg-[#2a3942] dark:text-gray-100 rounded-3xl px-4 py-2.5 text-sm text-gray-900
             placeholder:text-gray-400 focus:outline-none shadow-sm
             max-h-32 overflow-y-auto disabled:opacity-50"
           style={{ minHeight: '42px' }}
@@ -333,7 +333,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
             type="button"
             onClick={() => setShowVoiceRecorder(true)}
             disabled={disabled}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 disabled:opacity-40 flex-shrink-0 transition-colors shadow-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#2a3942] dark:text-gray-300 text-[#54656f] hover:text-[#075e54] hover:bg-gray-100 dark:hover:bg-[#374754] disabled:opacity-40 flex-shrink-0 transition-colors shadow-sm"
             aria-label="Record voice message"
             data-testid="voice-record-btn"
           >

@@ -434,8 +434,8 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile', em
                 </div>
               )}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
-                <div className="flex items-center rounded-lg border border-gray-200 px-3 focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/20">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Username</label>
+                <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] px-3 focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/20">
                   <span className="text-gray-400 select-none">@</span>
                   <input
                     type="text"
@@ -443,7 +443,7 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile', em
                     onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
                     placeholder="username"
                     maxLength={20}
-                    className="flex-1 bg-transparent px-2 py-2 text-sm focus:outline-none"
+                    className="flex-1 bg-transparent px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
                     aria-label="Username"
                     data-testid="handle-input"
                   />
@@ -486,38 +486,38 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile', em
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Display Name</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Display Name</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder={user.username}
                   maxLength={60}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="display-name-input"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Status</label>
                 <input
                   type="text"
                   value={statusMessage}
                   onChange={(e) => setStatusMessage(e.target.value)}
                   placeholder="Hey there! I am using Baaat"
                   maxLength={139}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="status-input"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Bio</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Bio</label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell people a little about yourself"
                   rows={3}
                   maxLength={250}
-                  className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full resize-none rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="bio-input"
                 />
                 <p className="text-xs text-gray-400 text-right">{bio.length}/250</p>
@@ -537,35 +537,35 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile', em
           {tab === 'password' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Current Password</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Current Password</label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter current password"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="current-password-input"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">New Password</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">New Password</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="new-password-input"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Confirm New Password</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Confirm New Password</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat new password"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   data-testid="confirm-password-input"
                 />
               </div>
@@ -634,11 +634,11 @@ interface PrivacySelectProps {
 function PrivacySelect({ label, value, options, onChange, testId }: PrivacySelectProps) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+        className="w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
         data-testid={testId}
       >
         {options.map((opt) => (

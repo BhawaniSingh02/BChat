@@ -111,10 +111,10 @@ export default function ConversationSettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50" data-testid="conversation-settings-modal">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-[#1a242b] rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">Conversation Settings</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Conversation Settings</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -171,7 +171,7 @@ export default function ConversationSettingsModal({
                   className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors disabled:opacity-60 ${
                     disappearing === opt.value
                       ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
-                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-[#202c33] dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#2a3942]'
                   }`}
                   data-testid={`disappearing-${opt.value}-btn`}
                 >

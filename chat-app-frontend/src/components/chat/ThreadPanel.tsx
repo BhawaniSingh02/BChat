@@ -73,14 +73,14 @@ export default function ThreadPanel({
 
   return (
     <aside
-      className="flex flex-col border-l border-gray-200 bg-white"
+      className="flex flex-col border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-[#111b21]"
       style={{ width: 340, minWidth: 280 }}
       data-testid="thread-panel"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <div>
-          <h3 className="font-semibold text-gray-800 text-sm">Thread</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">Thread</h3>
           <p className="text-xs text-gray-400">
             {rootMessage.threadReplyCount ?? replies.length} {(rootMessage.threadReplyCount ?? replies.length) === 1 ? 'reply' : 'replies'}
           </p>
@@ -98,14 +98,14 @@ export default function ThreadPanel({
       </div>
 
       {/* Root message preview */}
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 dark:bg-[#1a242b] dark:border-gray-800">
         <div className="flex items-start gap-2">
           <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
             {rootMessage.senderName?.[0]?.toUpperCase() ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-gray-700">{rootMessage.senderName}</p>
-            <p className="text-sm text-gray-600 break-words line-clamp-3">{rootMessage.content}</p>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{rootMessage.senderName}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 break-words line-clamp-3">{rootMessage.content}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">{formatTime(rootMessage.timestamp)}</p>
           </div>
         </div>
@@ -135,13 +135,13 @@ export default function ThreadPanel({
       </div>
 
       {/* Reply input */}
-      <div className="border-t border-gray-200 p-3">
+      <div className="border-t border-gray-200 dark:border-gray-800 p-3">
         <div className="flex items-end gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 disabled:opacity-40 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors"
             aria-label="Attach file"
             data-testid="thread-attach-btn"
           >
@@ -163,7 +163,7 @@ export default function ThreadPanel({
             onKeyDown={handleKeyDown}
             placeholder="Reply in thread…"
             rows={1}
-            className="flex-1 resize-none bg-gray-100 rounded-2xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none max-h-24 overflow-y-auto"
+            className="flex-1 resize-none bg-gray-100 dark:bg-[#2a3942] dark:text-gray-100 rounded-2xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none max-h-24 overflow-y-auto"
             style={{ minHeight: '36px' }}
             aria-label="Thread reply input"
             data-testid="thread-reply-input"

@@ -50,7 +50,7 @@ export default function UserSearchModal({
           value={query}
           onChange={(e) => search(e.target.value)}
           placeholder="Search by name or @username…"
-          className="w-full bg-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full bg-gray-100 dark:bg-[#2a3942] dark:text-gray-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           autoFocus
           aria-label="Search users"
         />
@@ -71,13 +71,13 @@ export default function UserSearchModal({
             return (
               <button
                 key={user.id}
-                className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors text-left"
                 onClick={() => handleSelect(user.username)}
                 data-testid="user-search-result"
               >
                 <Avatar name={user.displayName || user.uniqueHandle || user.username} size="sm" online={isOnline(user.username)} />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{primary}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{primary}</p>
                   {user.displayName && <p className="text-xs text-gray-500 truncate">{handle}</p>}
                 </div>
               </button>

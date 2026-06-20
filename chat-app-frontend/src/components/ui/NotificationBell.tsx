@@ -67,12 +67,12 @@ export default function NotificationBell({
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 top-11 z-40 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+          className="absolute right-0 top-11 z-40 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)] dark:border-gray-700 dark:bg-[#1a242b]"
           data-testid="notification-panel"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
-            <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3 dark:border-gray-800 dark:bg-[#111b21]">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-gray-200">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={() => { onMarkAllRead(); }}

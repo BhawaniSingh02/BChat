@@ -33,7 +33,7 @@ function ToastCard({ toast }: { toast: NotificationToast }) {
 
   return (
     <div
-      className={`pointer-events-auto relative flex overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.16)] transition-all duration-300 ease-out ${
+      className={`pointer-events-auto relative flex overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-[#233138] shadow-[0_12px_32px_rgba(15,23,42,0.16)] transition-all duration-300 ease-out ${
         shown ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
       }`}
       role="alert"
@@ -50,7 +50,7 @@ function ToastCard({ toast }: { toast: NotificationToast }) {
         <Avatar name={toast.avatarName} size="md" src={toast.avatarUrl} />
         <span className="flex-1 min-w-0">
           <span className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-gray-900 truncate">{toast.title}</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{toast.title}</span>
             <span className="text-[10px] text-gray-400 flex-shrink-0">now</span>
           </span>
           <span className="mt-0.5 block text-sm text-gray-500 truncate">{toast.body}</span>

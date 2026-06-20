@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` variants apply when <html> has the `dark` class
+   (toggled by the theme store). Tailwind v4 defaults to prefers-color-scheme, so
+   we opt into the manual strategy here. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 * {
   box-sizing: border-box;
 }
@@ -22,6 +27,11 @@ body {
   min-height: 100dvh; /* dynamic viewport height — fixes Safari address bar resize bug */
 }
 
+/* Dark theme global surfaces */
+.dark body {
+  background-color: #0b141a;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -32,11 +42,17 @@ body {
   background: #c1c1c1;
   border-radius: 3px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #374754;
+}
 
 /* Chat area background pattern */
 .chat-bg {
   background-color: #efeae2;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4cfc8' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.dark .chat-bg {
+  background-color: #0b141a;
 }
 
 /* Message bubble tails */
@@ -54,6 +70,9 @@ body {
   border-width: 0 0 10px 8px;
   border-color: transparent transparent #dcf8c6 transparent;
 }
+.dark .bubble-mine::after {
+  border-color: transparent transparent #005c4b transparent;
+}
 
 .bubble-other {
   position: relative;
@@ -68,6 +87,9 @@ body {
   border-style: solid;
   border-width: 0 8px 10px 0;
   border-color: transparent #fff transparent transparent;
+}
+.dark .bubble-other::after {
+  border-color: transparent #202c33 transparent transparent;
 }
 
 /* Smooth message entrance */

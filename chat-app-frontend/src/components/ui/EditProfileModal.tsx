@@ -196,7 +196,7 @@ export default function EditProfileModal({ user, onClose }: EditProfileModalProp
         data-testid="edit-profile-backdrop"
       />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative bg-white dark:bg-[#1a242b] rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">Edit Profile</h2>
@@ -484,7 +484,7 @@ function PrivacySelect({ label, value, options, onChange, testId }: PrivacySelec
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-white"
+        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-white dark:bg-[#2a3942] dark:border-gray-700 dark:text-gray-100"
         data-testid={testId}
       >
         {options.map((opt) => (

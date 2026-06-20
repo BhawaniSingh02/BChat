@@ -43,16 +43,16 @@ export default function NotificationsPanel() {
 
   return (
     <div>
-      <h3 className="text-lg font-bold text-gray-900">Notifications</h3>
-      <p className="mt-0.5 text-sm text-gray-500">Get notified about new messages, even when Baaat is in the background.</p>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
+      <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Get notified about new messages, even when Baaat is in the background.</p>
 
-      <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+      <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-800/40">
         {perm === 'unsupported' ? (
           <p className="text-sm text-gray-500">This browser doesn’t support notifications.</p>
         ) : perm === 'granted' ? (
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Desktop notifications are on</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Desktop notifications are on</p>
               <p className="text-xs text-gray-400">You’ll receive message alerts on this device.</p>
             </div>
             <button
@@ -72,7 +72,7 @@ export default function NotificationsPanel() {
         ) : (
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Enable desktop notifications</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Enable desktop notifications</p>
               <p className="text-xs text-gray-400">We’ll ask your browser for permission.</p>
             </div>
             <button

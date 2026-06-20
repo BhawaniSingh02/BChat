@@ -31,15 +31,15 @@ export default function MembersPanel({ roomId, roomAdmin, currentUsername, onClo
 
   return (
     <div
-      className="w-64 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col h-full"
+      className="w-64 flex-shrink-0 bg-white dark:bg-[#111b21] border-l border-gray-200 dark:border-gray-800 flex flex-col h-full"
       data-testid="members-panel"
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900 text-sm">Members</h3>
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Members</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100 transition-colors"
+          className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
           aria-label="Close members panel"
           data-testid="close-members-btn"
         >
@@ -90,7 +90,7 @@ function MemberRow({ member, online, onViewProfile, isAdmin, canKick, onKick }: 
   onKick?: (username: string) => void
 }) {
   return (
-    <div className="flex items-center gap-1 px-4 py-2 hover:bg-gray-50 transition-colors group" data-testid="member-row">
+    <div className="flex items-center gap-1 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group" data-testid="member-row">
       <button
         onClick={() => onViewProfile?.(member.username)}
         className="flex items-center gap-3 flex-1 min-w-0 text-left focus:outline-none"
@@ -110,7 +110,7 @@ function MemberRow({ member, online, onViewProfile, isAdmin, canKick, onKick }: 
           )}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
             {member.displayName || (member.uniqueHandle ? `@${member.uniqueHandle}` : member.username)}
             {isAdmin && <span className="ml-1 text-[10px] text-amber-500 font-semibold">Admin</span>}
           </p>

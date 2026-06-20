@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import Avatar from './Avatar'
 import ProfileModal from './ProfileModal'
+import ChatsPanel from './settings/ChatsPanel'
 import VideoVoicePanel from './settings/VideoVoicePanel'
 import NotificationsPanel from './settings/NotificationsPanel'
 import ShortcutsPanel from './settings/ShortcutsPanel'
 import HelpPanel from './settings/HelpPanel'
 
-type Section = 'profile' | 'account' | 'privacy' | 'devices' | 'notifications' | 'shortcuts' | 'help'
+type Section = 'profile' | 'account' | 'privacy' | 'chats' | 'devices' | 'notifications' | 'shortcuts' | 'help'
 
 interface SettingsModalProps {
   open: boolean
@@ -33,6 +34,12 @@ const NAV: NavItem[] = [
     id: 'privacy', label: 'Privacy', hint: 'Last seen, blocking, disappearing',
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.105.895-2 2-2s2 .895 2 2m-9 0V7a5 5 0 0110 0v4m-12 0h14a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1v-7a1 1 0 011-1z" />
+    ),
+  },
+  {
+    id: 'chats', label: 'Chats', hint: 'Theme & appearance',
+    icon: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     ),
   },
   {
@@ -97,24 +104,24 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} data-testid="settings-backdrop" />
 
-      <div className="relative flex h-[85vh] max-h-[640px] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
+      <div className="relative flex h-[85vh] max-h-[640px] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-700 dark:bg-[#1a242b]">
         {/* ── Left rail ── */}
-        <aside className="flex w-[40%] max-w-[300px] flex-col border-r border-gray-100 bg-gray-50/60">
+        <aside className="flex w-[40%] max-w-[300px] flex-col border-r border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-[#111b21]">
           <div className="px-5 pt-5 pb-3">
-            <h2 className="text-xl font-bold text-gray-900">Settings</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Settings</h2>
           </div>
 
           {/* Profile card */}
           <button
             onClick={() => setSection('profile')}
             className={`mx-3 flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
-              section === 'profile' ? 'bg-white shadow-sm' : 'hover:bg-white'
+              section === 'profile' ? 'bg-white shadow-sm dark:bg-gray-800' : 'hover:bg-white dark:hover:bg-gray-800/60'
             }`}
             data-testid="settings-profile-card"
           >
             <Avatar name={displayName} size="md" src={user.avatarUrl ?? undefined} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-gray-900">{displayName}</p>
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{displayName}</p>
               <p className="truncate text-xs text-gray-400">{handle}</p>
             </div>
             <svg className="h-4 w-4 flex-shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -122,7 +129,7 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
             </svg>
           </button>
 
-          <div className="mx-5 my-2 border-t border-gray-100" />
+          <div className="mx-5 my-2 border-t border-gray-100 dark:border-gray-800" />
 
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto px-3 pb-3">
@@ -131,15 +138,15 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
                 key={item.id}
                 onClick={() => setSection(item.id)}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                  section === item.id ? 'bg-white shadow-sm' : 'hover:bg-white/70'
+                  section === item.id ? 'bg-white shadow-sm dark:bg-gray-800' : 'hover:bg-white/70 dark:hover:bg-gray-800/60'
                 }`}
                 data-testid={`settings-nav-${item.id}`}
               >
-                <svg className="h-5 w-5 flex-shrink-0 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <svg className="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   {item.icon}
                 </svg>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-gray-800">{item.label}</span>
+                  <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">{item.label}</span>
                   <span className="block truncate text-xs text-gray-400">{item.hint}</span>
                 </span>
               </button>
@@ -162,7 +169,7 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
         <section className="relative flex-1 overflow-y-auto">
           <button
             onClick={onClose}
-            className="absolute right-3 top-3 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="absolute right-3 top-3 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             aria-label="Close settings"
             data-testid="settings-close"
           >
@@ -174,7 +181,7 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
           <div className="px-7 py-6">
             {section === 'profile' && (
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Edit profile</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Edit profile</h3>
                 <p className="mt-0.5 text-sm text-gray-500">Your name, username and photo.</p>
                 <div className="mt-4">
                   <ProfileModal embedded open initialTab="profile" onClose={() => {}} />
@@ -183,16 +190,16 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
             )}
             {section === 'account' && (
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Account</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Account</h3>
                 <p className="mt-0.5 text-sm text-gray-500">Manage your profile and password.</p>
 
                 <button
                   onClick={() => setSection('profile')}
-                  className="mt-4 flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                  className="mt-4 flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/60"
                   data-testid="account-edit-profile"
                 >
                   <span>
-                    <span className="block text-sm font-medium text-gray-800">Edit profile</span>
+                    <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">Edit profile</span>
                     <span className="block text-xs text-gray-400">Name, username & photo</span>
                   </span>
                   <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -200,21 +207,22 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
                   </svg>
                 </button>
 
-                <div className="mt-6 border-t border-gray-100 pt-5">
-                  <h4 className="mb-1 text-sm font-semibold text-gray-800">Change password</h4>
+                <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-5">
+                  <h4 className="mb-1 text-sm font-semibold text-gray-800 dark:text-gray-200">Change password</h4>
                   <ProfileModal embedded open initialTab="password" onClose={() => {}} />
                 </div>
               </div>
             )}
             {section === 'privacy' && (
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Privacy</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Privacy</h3>
                 <p className="mt-0.5 text-sm text-gray-500">Choose what others can see about you.</p>
                 <div className="mt-4">
                   <ProfileModal embedded open initialTab="privacy" onClose={() => {}} />
                 </div>
               </div>
             )}
+            {section === 'chats' && <ChatsPanel />}
             {section === 'devices' && <VideoVoicePanel />}
             {section === 'notifications' && <NotificationsPanel />}
             {section === 'shortcuts' && <ShortcutsPanel />}
@@ -225,13 +233,13 @@ export default function SettingsModal({ open, onClose, onLogout }: SettingsModal
         {/* Logout confirmation */}
         {confirmLogout && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30" data-testid="settings-logout-confirm">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-              <h3 className="text-base font-semibold text-gray-900">Log out</h3>
-              <p className="mt-1 text-sm text-gray-600">Are you sure you want to log out?</p>
+            <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#1a242b] p-6 shadow-2xl">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Log out</h3>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Are you sure you want to log out?</p>
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   onClick={() => setConfirmLogout(false)}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                   data-testid="settings-cancel-logout"
                 >
                   Cancel

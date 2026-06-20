@@ -211,7 +211,7 @@ function MenuItem({
       data-testid={testId}
       className={`
         w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors
-        ${danger ? 'text-red-500 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}
+        ${danger ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60'}
       `}
     >
       <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center">{icon}</span>
@@ -362,7 +362,7 @@ function MessageBubble({
         data-testid="message-row"
       >
         <div
-          className="max-w-[70%] rounded-2xl px-4 py-2 bg-white/60 text-gray-400 border border-gray-200/80"
+          className="max-w-[70%] rounded-2xl px-4 py-2 bg-white/60 dark:bg-[#202c33]/60 text-gray-400 border border-gray-200/80 dark:border-gray-700"
           data-testid="message-bubble"
         >
           <p className="text-sm italic">{message.content}</p>
@@ -398,7 +398,7 @@ function MessageBubble({
         {selectionMode && (
           <div
             className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-              isSelected ? 'bg-[#075e54] border-[#075e54]' : 'border-gray-400 bg-white'
+              isSelected ? 'bg-[#075e54] border-[#075e54]' : 'border-gray-400 bg-white dark:border-gray-500 dark:bg-[#202c33]'
             }`}
             data-testid="selection-checkbox"
           >
@@ -423,8 +423,8 @@ function MessageBubble({
                 className={`
                   relative px-3.5 py-2 shadow-sm
                   ${isMine
-                    ? `bg-[#dcf8c6] text-gray-900 rounded-t-2xl rounded-bl-2xl ${!isGrouped ? 'rounded-br-sm bubble-mine' : 'rounded-br-2xl'}`
-                    : `bg-white text-gray-900 rounded-t-2xl rounded-br-2xl ${!isGrouped ? 'rounded-bl-sm bubble-other' : 'rounded-bl-2xl'}`
+                    ? `bg-[#dcf8c6] text-gray-900 dark:bg-[#005c4b] dark:text-gray-100 rounded-t-2xl rounded-bl-2xl ${!isGrouped ? 'rounded-br-sm bubble-mine' : 'rounded-br-2xl'}`
+                    : `bg-white text-gray-900 dark:bg-[#202c33] dark:text-gray-100 rounded-t-2xl rounded-br-2xl ${!isGrouped ? 'rounded-bl-sm bubble-other' : 'rounded-bl-2xl'}`
                   }
                 `}
                 data-testid="message-bubble"
@@ -447,7 +447,7 @@ function MessageBubble({
                 {message.replyToId && message.replyToSnippet && (
                   <button
                     onClick={selectionMode ? undefined : () => onScrollToMessage?.(message.replyToId!)}
-                    className={`w-full text-left mb-1.5 rounded-lg overflow-hidden border-l-4 px-2 py-1.5 ${isMine ? 'border-emerald-500 bg-emerald-600/20' : 'border-blue-500 bg-blue-50/80'}`}
+                    className={`w-full text-left mb-1.5 rounded-lg overflow-hidden border-l-4 px-2 py-1.5 ${isMine ? 'border-emerald-500 bg-emerald-600/20' : 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/30'}`}
                     data-testid="reply-quote"
                   >
                     <p className={`text-[11px] font-semibold ${isMine ? 'text-emerald-700' : 'text-blue-700'}`}>
@@ -523,7 +523,7 @@ function MessageBubble({
                 {/* Read receipt popup */}
                 {showReadReceipts && isMine && message.readAt && Object.keys(message.readAt).length > 0 && (
                   <div
-                    className="absolute bottom-8 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-30 min-w-[180px]"
+                    className="absolute bottom-8 right-0 bg-white dark:bg-[#233138] border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-30 min-w-[180px]"
                     data-testid="read-receipts-popup"
                   >
                     <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5 px-1">Read by</p>
@@ -574,7 +574,7 @@ function MessageBubble({
                     onClick={(e) => e.stopPropagation()}
                     className={`
                       absolute ${dropdownDir === 'up' ? 'bottom-7' : 'top-7'} ${isMine ? 'right-0' : 'left-0'}
-                      bg-white rounded-2xl shadow-2xl border border-gray-100/80 z-40
+                      bg-white dark:bg-[#233138] rounded-2xl shadow-2xl border border-gray-100/80 dark:border-gray-700 z-40
                       py-1.5 min-w-[190px] overflow-hidden
                     `}
                     data-testid="message-dropdown"
@@ -734,8 +734,8 @@ function MessageBubble({
                       className={`
                         flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full border shadow-sm transition-all
                         ${currentUsername && (users as string[]).includes(currentUsername)
-                          ? 'bg-emerald-100 border-emerald-300 text-emerald-700 font-medium'
-                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                          ? 'bg-emerald-100 border-emerald-300 text-emerald-700 font-medium dark:bg-emerald-900/40 dark:border-emerald-700 dark:text-emerald-300'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-[#202c33] dark:border-gray-700 dark:text-gray-300 dark:hover:bg-[#2a3942]'
                         }
                       `}
                       aria-label={`React with ${emoji}, ${(users as string[]).length} ${(users as string[]).length === 1 ? 'reaction' : 'reactions'}`}
@@ -755,7 +755,7 @@ function MessageBubble({
                 <div className="relative" ref={emojiPickerRef}>
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(!showEmojiPicker) }}
-                    className="w-7 h-7 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 transition-colors"
+                    className="w-7 h-7 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 dark:bg-[#233138] dark:border-gray-700 dark:hover:bg-[#2a3942] transition-colors"
                     aria-label="React to message"
                     data-testid="react-btn"
                   >
@@ -765,7 +765,7 @@ function MessageBubble({
                   </button>
                   {showEmojiPicker && (
                     <div
-                      className={`absolute bottom-9 ${isMine ? 'right-0' : 'left-0'} flex gap-1 p-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-20`}
+                      className={`absolute bottom-9 ${isMine ? 'right-0' : 'left-0'} flex gap-1 p-2 bg-white dark:bg-[#233138] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-20`}
                       data-testid="emoji-picker"
                     >
                       {QUICK_EMOJIS.map((emoji) => (

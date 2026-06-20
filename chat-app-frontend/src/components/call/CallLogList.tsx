@@ -89,8 +89,8 @@ export default function CallLogList({ currentUsername, onStartCall, onOpenConver
   if (rows.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-6 text-center" data-testid="call-log-empty">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">📞</div>
-        <p className="mb-1 text-sm font-medium text-gray-700">No calls yet</p>
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-2xl">📞</div>
+        <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">No calls yet</p>
         <p className="text-xs text-gray-400">Your audio and video calls will show up here.</p>
       </div>
     )
@@ -104,7 +104,7 @@ export default function CallLogList({ currentUsername, onStartCall, onOpenConver
         return (
           <div
             key={session.id}
-            className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
             data-testid="call-log-item"
           >
             <button
@@ -113,7 +113,7 @@ export default function CallLogList({ currentUsername, onStartCall, onOpenConver
             >
               <Avatar name={name} size="md" src={u?.avatarUrl ?? undefined} />
               <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm font-medium ${missed ? 'text-red-600' : 'text-gray-900'}`}>{name}</p>
+                <p className={`truncate text-sm font-medium ${missed ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>{name}</p>
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
                   <DirectionIcon outgoing={outgoing} missed={missed} />
                   <span className={missed ? 'text-red-500' : ''}>{label}</span>

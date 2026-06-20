@@ -58,16 +58,16 @@ export default function ChooseUsername() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)]">
-      <div className="w-full max-w-md rounded-[28px] border border-white/70 bg-white/90 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.14)] backdrop-blur-xl">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] dark:bg-none dark:bg-[#0b141a]">
+      <div className="w-full max-w-md rounded-[28px] border border-white/70 bg-white/90 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-gray-700 dark:bg-[#1a242b]">
         <div className="mb-6 flex justify-center">
           <BrandLogo size="md" />
         </div>
 
-        <h2 className="mb-1 text-center text-2xl font-bold tracking-[-0.02em] text-slate-900">
+        <h2 className="mb-1 text-center text-2xl font-bold tracking-[-0.02em] text-slate-900 dark:text-gray-100">
           Choose your username
         </h2>
-        <p className="mb-6 text-center text-sm text-slate-500">
+        <p className="mb-6 text-center text-sm text-slate-500 dark:text-gray-400">
           This is how people will find and mention you{user?.displayName ? `, ${user.displayName}` : ''}.
         </p>
 
@@ -79,7 +79,7 @@ export default function ChooseUsername() {
           )}
 
           <div>
-            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 px-3 focus-within:ring-2 focus-within:ring-teal-500">
+            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 px-3 focus-within:ring-2 focus-within:ring-teal-500 dark:border-gray-700 dark:bg-[#2a3942]">
               <span className="text-slate-400 text-lg select-none">@</span>
               <input
                 type="text"
@@ -88,7 +88,7 @@ export default function ChooseUsername() {
                 placeholder="username"
                 autoFocus
                 maxLength={20}
-                className="h-12 flex-1 bg-transparent px-2 text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                className="h-12 flex-1 bg-transparent px-2 text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-gray-100"
                 aria-label="Username"
                 data-testid="choose-username-input"
               />

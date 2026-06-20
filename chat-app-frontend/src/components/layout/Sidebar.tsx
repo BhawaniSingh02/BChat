@@ -146,7 +146,7 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
     : sortedConversations
 
   return (
-    <div className="w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full shadow-sm">
+    <div className="w-full md:w-80 flex-shrink-0 bg-white dark:bg-[#111b21] border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-sm">
       {/* Header */}
       <div className="h-[58px] px-4 border-b border-slate-800/60 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex items-center justify-between shadow-[0_12px_30px_rgba(15,23,42,0.34)]">
         <div className="flex items-center gap-2">
@@ -180,12 +180,12 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex border-b border-gray-200 bg-gray-50">
+      <div className="flex border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-[#0b141a]">
         <button
           className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
             tab === 'dms'
-              ? 'text-teal-700 bg-white'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              ? 'text-teal-700 dark:text-teal-400 bg-white dark:bg-[#111b21]'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800/50'
           }`}
           onClick={() => setTab('dms')}
         >
@@ -197,8 +197,8 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
         <button
           className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
             tab === 'rooms'
-              ? 'text-teal-700 bg-white'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              ? 'text-teal-700 dark:text-teal-400 bg-white dark:bg-[#111b21]'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800/50'
           }`}
           onClick={() => setTab('rooms')}
         >
@@ -210,8 +210,8 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
         <button
           className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
             tab === 'calls'
-              ? 'text-teal-700 bg-white'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              ? 'text-teal-700 dark:text-teal-400 bg-white dark:bg-[#111b21]'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800/50'
           }`}
           onClick={() => setTab('calls')}
           data-testid="calls-tab"
@@ -251,7 +251,7 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
           <div className="flex flex-col h-full">
             {/* Filter chips (WhatsApp-style) — only when there are conversations */}
             {sortedConversations.length > 0 && (
-              <div className="flex gap-2 px-4 py-2 border-b border-gray-100">
+              <div className="flex gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-800">
                 {(['all', 'unread'] as const).map((f) => (
                   <button
                     key={f}
@@ -259,7 +259,7 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       dmFilter === f
                         ? 'bg-teal-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
                     data-testid={`dm-filter-${f}`}
                   >
@@ -272,14 +272,14 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
             {requests.length > 0 && (
               <button
                 onClick={() => setRequestsOpen(true)}
-                className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left dark:border-gray-800 dark:hover:bg-gray-800/50"
                 data-testid="requests-row"
               >
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white text-sm">
                   ✉
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-gray-800">Message requests</span>
+                  <span className="block text-sm font-semibold text-gray-800 dark:text-gray-200">Message requests</span>
                   <span className="block text-xs text-gray-400">
                     {requests.length} pending
                   </span>
@@ -293,22 +293,22 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
             {archivedConversations.length > 0 && (
               <button
                 onClick={() => setArchivedOpen(true)}
-                className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left dark:border-gray-800 dark:hover:bg-gray-800/50"
                 data-testid="archived-row"
               >
                 <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                 </svg>
-                <span className="flex-1 text-sm font-medium text-gray-700">Archived</span>
+                <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">Archived</span>
                 <span className="text-xs text-gray-400">{archivedConversations.length}</span>
               </button>
             )}
             {sortedConversations.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-2xl">
+                <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3 text-2xl">
                   💬
                 </div>
-                <p className="text-sm font-medium text-gray-700 mb-1">No conversations yet.</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No conversations yet.</p>
                 <button
                   onClick={() => setDMSearchOpen(true)}
                   className="mt-2 text-teal-700 hover:text-cyan-700 font-medium text-sm transition-colors"
@@ -318,10 +318,10 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center" data-testid="no-unread-empty">
-                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-2xl">
+                <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3 text-2xl">
                   ✅
                 </div>
-                <p className="text-sm font-medium text-gray-700 mb-1">You're all caught up</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">You're all caught up</p>
                 <button
                   onClick={() => setDmFilter('all')}
                   className="mt-2 text-teal-700 hover:text-cyan-700 font-medium text-sm transition-colors"
@@ -347,9 +347,9 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
                     onDelete={handleDeleteConversation}
                   />
                 ))}
-                <div className="p-4 border-t mt-auto">
+                <div className="p-4 border-t border-gray-200 dark:border-gray-800 mt-auto">
                   <button
-                    className="w-full rounded-lg border border-slate-200 py-2 text-center text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                    className="w-full rounded-lg border border-slate-200 py-2 text-center text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
                     onClick={() => setDMSearchOpen(true)}
                   >
                     + New Message
@@ -384,16 +384,16 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
 
       {/* Profile footer */}
       {user && (
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-t border-gray-200 dark:border-gray-800 p-3">
           <button
             onClick={() => setSettingsOpen(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors group"
             data-testid="profile-footer-btn"
             aria-label="Open settings"
           >
             <Avatar name={user.displayName || user.uniqueHandle || user.username} size="sm" online src={user.avatarUrl ?? undefined} />
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-gray-900 truncate">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                 {user.displayName || (user.uniqueHandle ? `@${user.uniqueHandle}` : user.username)}
               </p>
               <p className="text-xs text-gray-400 truncate">

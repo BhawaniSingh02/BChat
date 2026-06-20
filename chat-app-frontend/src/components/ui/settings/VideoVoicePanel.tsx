@@ -121,11 +121,11 @@ interface DeviceSelectProps {
 function DeviceSelect({ label, value, options, onChange, testId }: DeviceSelectProps) {
   return (
     <div className="mt-4">
-      <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+        className="w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#2a3942] dark:text-gray-100 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
         data-testid={testId}
       >
         <option value="">System default</option>
@@ -140,8 +140,8 @@ function DeviceSelect({ label, value, options, onChange, testId }: DeviceSelectP
 function PanelShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-      {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+      {subtitle && <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
       <div className="mt-4">{children}</div>
     </div>
   )

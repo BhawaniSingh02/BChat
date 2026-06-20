@@ -28,11 +28,11 @@ interface MessageListProps {
 function DateDivider({ date }: { date: string }) {
   return (
     <div className="flex items-center my-6" role="separator">
-      <div className="flex-1 h-px bg-gray-200" />
-      <span className="mx-3 text-xs font-medium text-gray-400 bg-white border border-gray-200 rounded-full px-3 py-1">
+      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+      <span className="mx-3 text-xs font-medium text-gray-400 bg-white dark:bg-[#1a242b] border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1">
         {formatDate(date)}
       </span>
-      <div className="flex-1 h-px bg-gray-200" />
+      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
     </div>
   )
 }
@@ -45,7 +45,7 @@ function TypingIndicator({ users }: { users: string[] }) {
   return (
     <div className="flex items-end gap-2 mb-3 ml-1" aria-live="polite" aria-label={text + '…'}>
       <div className="w-8 h-8 flex-shrink-0" />
-      <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+      <div className="bg-white dark:bg-[#202c33] border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
         <div className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
           <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -85,11 +85,11 @@ export default function MessageList({
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8 chat-bg">
-        <div className="bg-white/80 backdrop-blur rounded-2xl px-8 py-6 shadow-sm border border-white/60">
-          <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mb-3 text-3xl mx-auto">
+        <div className="bg-white/80 dark:bg-[#1a242b]/80 backdrop-blur rounded-2xl px-8 py-6 shadow-sm border border-white/60 dark:border-gray-700">
+          <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mb-3 text-3xl mx-auto">
             💬
           </div>
-          <p className="text-gray-600 font-medium mb-1">No messages yet</p>
+          <p className="text-gray-600 dark:text-gray-300 font-medium mb-1">No messages yet</p>
           <p className="text-gray-400 text-sm">Be the first to say something!</p>
         </div>
       </div>
