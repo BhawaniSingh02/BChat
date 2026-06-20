@@ -11,7 +11,6 @@ const user: User = {
 
 describe('SettingsModal', () => {
   const onClose = vi.fn()
-  const onOpenProfileTab = vi.fn()
   const onLogout = vi.fn()
 
   beforeEach(() => {
@@ -20,10 +19,10 @@ describe('SettingsModal', () => {
   })
 
   const renderModal = () =>
-    render(<SettingsModal open onClose={onClose} onOpenProfileTab={onOpenProfileTab} onLogout={onLogout} />)
+    render(<SettingsModal open onClose={onClose} onLogout={onLogout} />)
 
   it('does not render when closed', () => {
-    render(<SettingsModal open={false} onClose={onClose} onOpenProfileTab={onOpenProfileTab} onLogout={onLogout} />)
+    render(<SettingsModal open={false} onClose={onClose} onLogout={onLogout} />)
     expect(screen.queryByTestId('settings-modal')).not.toBeInTheDocument()
   })
 
@@ -34,22 +33,40 @@ describe('SettingsModal', () => {
     expect(screen.getByTestId('settings-profile-card')).toHaveTextContent('@alice')
   })
 
-  it('opens the profile editor from the profile card', () => {
+  it('shows the profile editor inline by default (with avatar + username fields)', () => {
     renderModal()
-    fireEvent.click(screen.getByTestId('settings-profile-card'))
-    expect(onOpenProfileTab).toHaveBeenCalledWith('profile')
+    expect(screen.getByTestId('handle-input')).toBeInTheDocument()
+    expect(screen.getByTestId('display-name-input')).toBeInTheDocument()
+    expect(screen.getByTestId('change-photo-btn')).toBeInTheDocument()
   })
 
-  it('opens the password tab from Account', () => {
+  it('opens the profile editor inline from the profile card', () => {
     renderModal()
     fireEvent.click(screen.getByTestId('settings-nav-account'))
-    expect(onOpenProfileTab).toHaveBeenCalledWith('password')
+    expect(screen.queryByTestId('handle-input')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('settings-profile-card'))
+    expect(screen.getByTestId('handle-input')).toBeInTheDocument()
   })
 
-  it('opens the privacy tab from Privacy', () => {
+  it('shows the Account panel inline with password fields', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('settings-nav-account'))
+    expect(screen.getByTestId('current-password-input')).toBeInTheDocument()
+    expect(screen.getByTestId('change-password-btn')).toBeInTheDocument()
+  })
+
+  it('switches to the profile editor from the Account "Edit profile" button', () => {
+    renderModal()
+    fireEvent.click(screen.getByTestId('settings-nav-account'))
+    fireEvent.click(screen.getByTestId('account-edit-profile'))
+    expect(screen.getByTestId('handle-input')).toBeInTheDocument()
+  })
+
+  it('shows the Privacy panel inline with privacy selects', () => {
     renderModal()
     fireEvent.click(screen.getByTestId('settings-nav-privacy'))
-    expect(onOpenProfileTab).toHaveBeenCalledWith('privacy')
+    expect(screen.getByTestId('last-seen-privacy')).toBeInTheDocument()
+    expect(screen.getByTestId('online-privacy')).toBeInTheDocument()
   })
 
   it('switches the right pane to Keyboard shortcuts', () => {

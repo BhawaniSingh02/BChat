@@ -10,7 +10,6 @@ import RoomList from '../rooms/RoomList'
 import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
-import ProfileModal from '../ui/ProfileModal'
 import SettingsModal from '../ui/SettingsModal'
 import BrandLogo from '../ui/BrandLogo'
 import MessageRequestsModal from '../chat/MessageRequestsModal'
@@ -51,8 +50,6 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const [dmFilter, setDmFilter] = useState<'all' | 'unread'>('all')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [profileTab, setProfileTab] = useState<'profile' | 'password' | 'privacy'>('profile')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   const [archivedOpen, setArchivedOpen] = useState(false)
@@ -389,11 +386,8 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        onOpenProfileTab={(tab) => { setProfileTab(tab); setSettingsOpen(false); setProfileOpen(true) }}
         onLogout={() => { setSettingsOpen(false); logout() }}
       />
-
-      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} initialTab={profileTab} />
 
       {/* Message requests */}
       <MessageRequestsModal

@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import Avatar from './Avatar'
+import ProfileModal from './ProfileModal'
 import VideoVoicePanel from './settings/VideoVoicePanel'
 import NotificationsPanel from './settings/NotificationsPanel'
 import ShortcutsPanel from './settings/ShortcutsPanel'
 import HelpPanel from './settings/HelpPanel'
 
-type ProfileTab = 'profile' | 'password' | 'privacy'
-type Section = 'account' | 'privacy' | 'devices' | 'notifications' | 'shortcuts' | 'help'
+type Section = 'profile' | 'account' | 'privacy' | 'devices' | 'notifications' | 'shortcuts' | 'help'
 
 interface SettingsModalProps {
   open: boolean
   onClose: () => void
-  /** Open the profile editor at a specific tab (handled by the parent). */
-  onOpenProfileTab: (tab: ProfileTab) => void
   onLogout: () => void
 }
 
@@ -63,15 +61,15 @@ const NAV: NavItem[] = [
   },
 ]
 
-export default function SettingsModal({ open, onClose, onOpenProfileTab, onLogout }: SettingsModalProps) {
+export default function SettingsModal({ open, onClose, onLogout }: SettingsModalProps) {
   const user = useAuthStore((s) => s.user)
-  const [section, setSection] = useState<Section>('account')
+  const [section, setSection] = useState<Section>('profile')
   const [confirmLogout, setConfirmLogout] = useState(false)
 
   // Reset to the first section and clear transient state each time it opens.
   useEffect(() => {
     if (open) {
-      setSection('account')
+      setSection('profile')
       setConfirmLogout(false)
     }
   }, [open])
@@ -108,8 +106,10 @@ export default function SettingsModal({ open, onClose, onOpenProfileTab, onLogou
 
           {/* Profile card */}
           <button
-            onClick={() => onOpenProfileTab('profile')}
-            className="mx-3 flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-white"
+            onClick={() => setSection('profile')}
+            className={`mx-3 flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
+              section === 'profile' ? 'bg-white shadow-sm' : 'hover:bg-white'
+            }`}
             data-testid="settings-profile-card"
           >
             <Avatar name={displayName} size="md" src={user.avatarUrl ?? undefined} />
@@ -129,11 +129,7 @@ export default function SettingsModal({ open, onClose, onOpenProfileTab, onLogou
             {NAV.map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                  if (item.id === 'account') { onOpenProfileTab('password'); return }
-                  if (item.id === 'privacy') { onOpenProfileTab('privacy'); return }
-                  setSection(item.id)
-                }}
+                onClick={() => setSection(item.id)}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                   section === item.id ? 'bg-white shadow-sm' : 'hover:bg-white/70'
                 }`}
@@ -176,16 +172,53 @@ export default function SettingsModal({ open, onClose, onOpenProfileTab, onLogou
           </button>
 
           <div className="px-7 py-6">
+            {section === 'profile' && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Edit profile</h3>
+                <p className="mt-0.5 text-sm text-gray-500">Your name, username and photo.</p>
+                <div className="mt-4">
+                  <ProfileModal embedded open initialTab="profile" onClose={() => {}} />
+                </div>
+              </div>
+            )}
+            {section === 'account' && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Account</h3>
+                <p className="mt-0.5 text-sm text-gray-500">Manage your profile and password.</p>
+
+                <button
+                  onClick={() => setSection('profile')}
+                  className="mt-4 flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                  data-testid="account-edit-profile"
+                >
+                  <span>
+                    <span className="block text-sm font-medium text-gray-800">Edit profile</span>
+                    <span className="block text-xs text-gray-400">Name, username & photo</span>
+                  </span>
+                  <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <div className="mt-6 border-t border-gray-100 pt-5">
+                  <h4 className="mb-1 text-sm font-semibold text-gray-800">Change password</h4>
+                  <ProfileModal embedded open initialTab="password" onClose={() => {}} />
+                </div>
+              </div>
+            )}
+            {section === 'privacy' && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Privacy</h3>
+                <p className="mt-0.5 text-sm text-gray-500">Choose what others can see about you.</p>
+                <div className="mt-4">
+                  <ProfileModal embedded open initialTab="privacy" onClose={() => {}} />
+                </div>
+              </div>
+            )}
             {section === 'devices' && <VideoVoicePanel />}
             {section === 'notifications' && <NotificationsPanel />}
             {section === 'shortcuts' && <ShortcutsPanel />}
             {section === 'help' && <HelpPanel />}
-            {(section === 'account' || section === 'privacy') && (
-              // These open the dedicated editor; this is just a brief landing state.
-              <div className="flex h-full flex-col items-center justify-center pt-20 text-center text-gray-400">
-                <p className="text-sm">Opening {section === 'account' ? 'account' : 'privacy'} settings…</p>
-              </div>
-            )}
           </div>
         </section>
 

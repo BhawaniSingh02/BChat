@@ -198,6 +198,36 @@ describe('ProfileModal', () => {
     await waitFor(() => expect(screen.getByTestId('profile-success')).toHaveTextContent('Username updated'))
   })
 
+  it('also commits a changed username when Save Profile is clicked', async () => {
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: true })
+    render(<ProfileModal open onClose={onClose} />)
+    const handleInput = screen.getByTestId('handle-input')
+    await userEvent.clear(handleInput)
+    await userEvent.type(handleInput, 'newhandle')
+    await waitFor(() => expect(screen.getByTestId('handle-available')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('save-profile-btn'))
+
+    await waitFor(() => expect(mockClaimHandle).toHaveBeenCalledWith('newhandle'))
+    await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByTestId('profile-success')).toHaveTextContent('Profile saved'))
+  })
+
+  it('blocks Save Profile when the changed username is unavailable', async () => {
+    vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: false, reason: 'This username is taken' })
+    render(<ProfileModal open onClose={onClose} />)
+    const handleInput = screen.getByTestId('handle-input')
+    await userEvent.clear(handleInput)
+    await userEvent.type(handleInput, 'taken')
+    await waitFor(() => expect(screen.getByTestId('handle-unavailable')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('save-profile-btn'))
+
+    await waitFor(() => expect(screen.getByTestId('profile-error')).toHaveTextContent('This username is taken'))
+    expect(mockClaimHandle).not.toHaveBeenCalled()
+    expect(mockUpdateProfile).not.toHaveBeenCalled()
+  })
+
   it('shows an error when claiming the handle fails', async () => {
     vi.mocked(usersApi.checkHandle).mockResolvedValue({ available: true })
     mockClaimHandle.mockRejectedValueOnce({ response: { data: { detail: 'This username is taken' } } })

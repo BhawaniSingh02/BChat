@@ -13,6 +13,11 @@ interface ProfileModalProps {
   onClose: () => void
   /** Which tab to show when the modal opens (defaults to 'profile'). */
   initialTab?: Tab
+  /**
+   * When true, render only the active section's fields (no overlay, header,
+   * avatar or tab bar) so it can be embedded inside the Settings hub's pane.
+   */
+  embedded?: boolean
 }
 
 const PRIVACY_LABEL: Record<string, string> = {
@@ -21,7 +26,7 @@ const PRIVACY_LABEL: Record<string, string> = {
   CONTACTS: 'My Contacts',
 }
 
-export default function ProfileModal({ open, onClose, initialTab = 'profile' }: ProfileModalProps) {
+export default function ProfileModal({ open, onClose, initialTab = 'profile', embedded = false }: ProfileModalProps) {
   const user = useAuthStore((s) => s.user)
   const { updateProfile, uploadAvatar, removeAvatar, changePassword, claimHandle } = useAuthStore()
 
@@ -152,6 +157,20 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
     setSaving(true)
     setError(null)
     try {
+      // If the username was changed, commit it as part of saving the profile
+      // (Instagram-style — the main Save persists everything, not just the name).
+      const newHandle = handle.trim().toLowerCase()
+      const currentHandle = (user?.uniqueHandle ?? '').toLowerCase()
+      if (newHandle !== currentHandle) {
+        if (handleStatus !== 'available') {
+          flashError(handleReason ?? 'Pick an available username before saving')
+          setSaving(false)
+          return
+        }
+        await claimHandle(newHandle)
+        setHandleStatus('current')
+      }
+
       const payload: UpdateProfileRequest = {
         displayName: displayName.trim() || undefined,
         bio: bio.trim() || undefined,
@@ -230,25 +249,27 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Profile"
-      data-testid="profile-modal"
+      className={embedded ? 'w-full' : 'fixed inset-0 z-50 flex items-center justify-center'}
+      {...(embedded ? {} : { role: 'dialog', 'aria-modal': true as const, 'aria-label': 'Profile', 'data-testid': 'profile-modal' })}
     >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        data-testid="profile-backdrop"
-      />
+      {!embedded && (
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+          data-testid="profile-backdrop"
+        />
+      )}
 
       {/* Panel */}
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
+      <div className={embedded
+        ? 'relative flex w-full flex-col'
+        : 'relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl'}>
         {/* Header gradient */}
-        <div className="h-20 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex-shrink-0" />
+        {!embedded && <div className="h-20 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 flex-shrink-0" />}
 
         {/* Close button */}
+        {!embedded && (
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-white/80 hover:text-white bg-white/20 hover:bg-white/30 rounded-lg p-1.5 transition-colors"
@@ -259,8 +280,10 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+        )}
 
         {/* Avatar overlapping gradient */}
+        {!embedded && (
         <div className="px-6 -mt-8 flex items-end justify-between flex-shrink-0">
           <div
             className="relative group cursor-pointer"
@@ -314,8 +337,10 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
             )}
           </div>
         </div>
+        )}
 
         {/* Name + handle */}
+        {!embedded && (
         <div className="px-6 pt-2 pb-0 flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-900" data-testid="profile-display-name">
             {user.displayName || (user.uniqueHandle ? `@${user.uniqueHandle}` : user.username)}
@@ -328,8 +353,10 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
           )}
           <p className="text-xs text-gray-400 mt-0.5">Member since {memberSince}</p>
         </div>
+        )}
 
         {/* Tabs */}
+        {!embedded && (
         <div className="flex border-b border-gray-100 mt-3 flex-shrink-0">
           {(['profile', 'password', 'privacy'] as Tab[]).map((t) => (
             <button
@@ -346,9 +373,10 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
             </button>
           ))}
         </div>
+        )}
 
         {/* Scrollable tab content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+        <div className={embedded ? 'space-y-3' : 'flex-1 overflow-y-auto px-6 py-4 space-y-3'}>
           {/* Feedback */}
           {success && (
             <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-800" data-testid="profile-success">
@@ -364,6 +392,47 @@ export default function ProfileModal({ open, onClose, initialTab = 'profile' }: 
           {/* ── Profile Tab ── */}
           {tab === 'profile' && (
             <div className="space-y-3">
+              {/* Avatar editor — shown inline only when embedded (the modal shows it in the header) */}
+              {embedded && (
+                <div className="flex items-center gap-4">
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Change profile photo"
+                  >
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Avatar" className="h-16 w-16 rounded-full object-cover" data-testid="avatar-preview" />
+                    ) : (
+                      <Avatar name={user.displayName || user.uniqueHandle || user.username} size="xl" />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    data-testid="avatar-file-input"
+                  />
+                  <div className="flex gap-3 text-sm">
+                    <button onClick={() => fileInputRef.current?.click()} className="font-medium text-teal-700 hover:text-cyan-800" data-testid="change-photo-btn">
+                      Change photo
+                    </button>
+                    {avatarPreview && (
+                      <button onClick={handleRemoveAvatar} className="font-medium text-red-500 hover:text-red-700" data-testid="remove-photo-btn">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
                 <div className="flex items-center rounded-lg border border-gray-200 px-3 focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/20">
