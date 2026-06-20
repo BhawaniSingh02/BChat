@@ -39,7 +39,18 @@ function buildIceServers(): RTCIceServer[] {
   const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL as string | undefined
 
   if (turnUrl && turnUsername && turnCredential) {
+    // Custom/self-hosted TURN takes priority.
     servers.push({ urls: turnUrl, username: turnUsername, credential: turnCredential })
+  } else {
+    // Free public TURN fallback (OpenRelay/Metered). Without a relay, calls
+    // between users on different networks behind symmetric NAT often end up with
+    // one-way or no audio. This guarantees a relay path out of the box; for
+    // production scale, set the VITE_TURN_* env vars to your own TURN server.
+    servers.push(
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    )
   }
 
   return servers

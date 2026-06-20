@@ -53,6 +53,7 @@ export default function ActiveCallView({
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isFullScreen, setIsFullScreen] = useState(isMobile && callType === 'VIDEO')
   const [remoteHasVideo, setRemoteHasVideo] = useState(false)
+  const [audioBlocked, setAudioBlocked] = useState(false)
   const [minimized, setMinimized] = useState(false)
   // null = CSS default (bottom-right corner); non-null = explicit coordinates
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
@@ -92,16 +93,38 @@ export default function ActiveCallView({
     // it continues playing through minimize/expand without interruption.
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = remoteStream
-      // Route call audio to the speaker chosen in Settings → Video & voice.
-      void applyPreferredSpeaker(remoteAudioRef.current)
-      remoteAudioRef.current.play().catch(() => {})
     }
-
     // Video attachment only runs when the full-view <video> element is mounted.
     if (!minimized && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream
-      remoteVideoRef.current.play().catch(() => {})
     }
+
+    // Attempt playback. The CALLER's <audio> element mounts seconds after their
+    // tap (when the answer arrives), so the browser's autoplay policy can reject
+    // play() — leaving the caller with no remote audio. We surface that as
+    // `audioBlocked` and retry on the next user interaction (and once playing,
+    // apply the preferred speaker).
+    const playRemote = async () => {
+      let ok = true
+      const audioEl = remoteAudioRef.current
+      if (audioEl) {
+        try {
+          await audioEl.play()
+          void applyPreferredSpeaker(audioEl)
+        } catch { ok = false }
+      }
+      if (!minimized && remoteVideoRef.current) {
+        try { await remoteVideoRef.current.play() } catch { /* video autoplay (muted) rarely blocks */ }
+      }
+      setAudioBlocked(!ok)
+    }
+    void playRemote()
+
+    // Retry playback on any user gesture until it succeeds (recovers from autoplay block).
+    const onGesture = () => { void playRemote() }
+    window.addEventListener('pointerdown', onGesture)
+    window.addEventListener('keydown', onGesture)
+    window.addEventListener('touchstart', onGesture)
 
     // The remote stream is built by funnelling tracks in via addTrack() (see
     // useWebRTC). Programmatic addTrack() does NOT dispatch the 'addtrack' event,
@@ -117,6 +140,9 @@ export default function ActiveCallView({
     return () => {
       remoteStream.removeEventListener('addtrack', update)
       remoteStream.removeEventListener('removetrack', update)
+      window.removeEventListener('pointerdown', onGesture)
+      window.removeEventListener('keydown', onGesture)
+      window.removeEventListener('touchstart', onGesture)
     }
   }, [remoteStream, minimized])
 
@@ -259,6 +285,13 @@ export default function ActiveCallView({
 
   const videoWidth = callType === 'VIDEO' ? 340 : 280
 
+  // Explicit recovery for an autoplay-blocked remote stream (tap the banner).
+  const enableAudio = () => {
+    const el = remoteAudioRef.current
+    el?.play().then(() => { setAudioBlocked(false); void applyPreferredSpeaker(el) }).catch(() => {})
+    remoteVideoRef.current?.play().catch(() => {})
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -269,6 +302,17 @@ export default function ActiveCallView({
        * prevent double audio playback.
        */}
       <audio ref={remoteAudioRef} autoPlay data-testid="remote-audio" style={{ display: 'none' }} />
+
+      {/* Autoplay recovery: the caller's audio can be blocked until they interact. */}
+      {audioBlocked && (
+        <button
+          onClick={enableAudio}
+          className="fixed left-1/2 top-4 z-[60] -translate-x-1/2 rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-amber-600"
+          data-testid="enable-audio-banner"
+        >
+          🔊 Tap to enable call audio
+        </button>
+      )}
 
       {minimized ? (
         // ── Minimized pill ────────────────────────────────────────────────────

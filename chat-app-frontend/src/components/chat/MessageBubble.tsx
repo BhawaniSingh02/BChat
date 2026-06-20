@@ -33,12 +33,34 @@ function isTrustedUrl(url: string | undefined): boolean {
 
 export type DropdownAction = 'reply' | 'forward' | 'star' | 'delete' | 'pin' | 'unpin' | 'thread'
 
+/**
+ * Voice messages are recorded as webm/opus (Chrome's MediaRecorder default) and
+ * stored on Cloudinary under the `video` resource type. webm/opus does NOT play
+ * on Safari/iOS and some other clients, so the recipient gets a silent player.
+ * We deliver an mp3 transcode (universally supported) by inserting Cloudinary's
+ * `f_mp3` transformation and swapping the extension. Non-Cloudinary URLs are
+ * returned unchanged.
+ */
+export function playableAudioSrc(url: string): string {
+  try {
+    const u = new URL(url)
+    if (u.hostname.endsWith('.cloudinary.com') && u.pathname.includes('/video/upload/')) {
+      u.pathname = u.pathname
+        .replace('/video/upload/', '/video/upload/f_mp3/')
+        .replace(/\.(webm|ogg|opus|m4a|aac|wav|oga)$/i, '.mp3')
+      return u.toString()
+    }
+  } catch { /* not a parseable URL — use as-is */ }
+  return url
+}
+
 /** Inline audio player for voice messages (Phase 24) */
 function AudioPlayer({ src }: { src: string }) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const playableSrc = playableAudioSrc(src)
 
   const togglePlay = () => {
     const audio = audioRef.current
@@ -59,7 +81,7 @@ function AudioPlayer({ src }: { src: string }) {
     <div className="flex items-center gap-2 min-w-[200px]" data-testid="audio-player">
       <audio
         ref={audioRef}
-        src={src}
+        src={playableSrc}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onTimeUpdate={handleTimeUpdate}

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import ActiveCallView from '../components/call/ActiveCallView'
 
 // Capture a reference so tests can assert stream (re-)attachment calls.
@@ -30,6 +30,43 @@ describe('ActiveCallView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.clearAllTimers()
+  })
+
+  afterEach(() => {
+    // Restore a resolving play() stub so one test's rejection can't leak.
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      value: vi.fn().mockResolvedValue(undefined), writable: true,
+    })
+  })
+
+  const fakeStream = () => ({
+    getVideoTracks: () => [],
+    getAudioTracks: () => [],
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  } as unknown as MediaStream)
+
+  it('shows the enable-audio banner when remote autoplay is blocked, and clears it on tap', async () => {
+    const playMock = vi.fn()
+      .mockRejectedValueOnce(new Error('NotAllowedError'))
+      .mockResolvedValue(undefined)
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', { value: playMock, writable: true })
+
+    render(<ActiveCallView {...defaultProps} remoteStream={fakeStream()} />)
+    await act(async () => {}) // let the initial play() rejection settle
+
+    expect(screen.getByTestId('enable-audio-banner')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('enable-audio-banner'))
+    await act(async () => {}) // let the retry play() resolve
+
+    expect(screen.queryByTestId('enable-audio-banner')).not.toBeInTheDocument()
+  })
+
+  it('does not show the enable-audio banner when autoplay succeeds', async () => {
+    render(<ActiveCallView {...defaultProps} remoteStream={fakeStream()} />)
+    await act(async () => {})
+    expect(screen.queryByTestId('enable-audio-banner')).not.toBeInTheDocument()
   })
 
   it('renders the active call view', () => {
