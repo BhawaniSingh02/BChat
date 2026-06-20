@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useRoomStore } from '../../store/roomStore'
 import { useDMStore } from '../../store/dmStore'
 import { usePresenceStore } from '../../store/presenceStore'
 import { useChatStore } from '../../store/chatStore'
+import { useUserCacheStore } from '../../store/userCacheStore'
 import { messagesApi } from '../../api/messages'
 import Avatar from '../ui/Avatar'
 import RoomList from '../rooms/RoomList'
@@ -50,6 +51,8 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
   const dmUnreadCounts = useDMStore((s) => s.dmUnreadCounts)
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
+  const userCache = useUserCacheStore((s) => s.cache)
+  const prefetchUsers = useUserCacheStore((s) => s.prefetch)
   const [tab, setTab] = useState<Tab>('dms')
   const [dmFilter, setDmFilter] = useState<'all' | 'unread'>('all')
   const [discoverOpen, setDiscoverOpen] = useState(false)
@@ -129,6 +132,21 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
     setArchivedOpen(false)
     onSelectChat?.()
   }
+
+  // Resolve a participant's display name/@handle (never the opaque id).
+  const resolveDisplayName = (username: string) => {
+    const u = userCache[username]
+    return u?.displayName || (u?.uniqueHandle ? `@${u.uniqueHandle}` : '…')
+  }
+
+  // Load archived participants' profiles when the modal opens.
+  useEffect(() => {
+    if (!archivedOpen) return
+    const others = archivedConversations
+      .map((c) => c.participants.find((p) => p !== user?.username))
+      .filter((u): u is string => !!u)
+    if (others.length) prefetchUsers(others)
+  }, [archivedOpen, archivedConversations, user?.username, prefetchUsers])
 
   // Pinned conversations float to the top; within each group sort by lastMessageAt desc
   const sortedConversations = [...visibleConversations].sort((a, b) => {
@@ -434,18 +452,19 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
           <div className="-mx-2 max-h-80 overflow-y-auto">
             {archivedConversations.map((conv) => {
               const other = conv.participants.find((p) => p !== user?.username) ?? ''
+              const otherName = resolveDisplayName(other)
               return (
                 <div
                   key={conv.id}
-                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   data-testid="archived-chat-item"
                 >
                   <button
                     onClick={() => handleOpenArchivedChat(conv.id)}
                     className="flex items-center gap-3 flex-1 min-w-0 text-left"
                   >
-                    <Avatar name={other} size="sm" online={isOnline(other)} />
-                    <span className="text-sm font-medium text-gray-900 truncate">{other}</span>
+                    <Avatar name={otherName} size="sm" online={isOnline(other)} src={userCache[other]?.avatarUrl ?? undefined} />
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{otherName}</span>
                   </button>
                   <button
                     onClick={() => handleUnarchiveChat(conv.id)}

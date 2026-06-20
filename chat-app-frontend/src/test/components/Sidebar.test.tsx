@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { Room, DirectConversation } from '../../types'
+import type { Room, DirectConversation, User } from '../../types'
+import { useUserCacheStore } from '../../store/userCacheStore'
 
 // Hoisted so vi.mock factories can close over them
 const mocks = vi.hoisted(() => ({
@@ -171,6 +172,15 @@ describe('Sidebar', () => {
     render(<Sidebar />)
     await userEvent.click(screen.getByTestId('archived-row'))
     expect(screen.getByTestId('archived-chat-item')).toBeInTheDocument()
+  })
+
+  it('shows the resolved display name in the archived modal, not the opaque id', async () => {
+    const bob: User = { id: 'b', username: 'bob', email: 'b@e.com', displayName: 'Bob Tester', uniqueHandle: 'bob', createdAt: '', lastSeen: '' }
+    useUserCacheStore.setState({ cache: { bob }, fetching: new Set() })
+    mocks.conversations = [makeConv('c1', { archivedBy: ['alice'] })]
+    render(<Sidebar />)
+    await userEvent.click(screen.getByTestId('archived-row'))
+    expect(screen.getByText('Bob Tester')).toBeInTheDocument()
   })
 
   it('unarchives a chat from the archived modal', async () => {
