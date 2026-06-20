@@ -1,6 +1,7 @@
 package com.substring.chat.repositories;
 
 import com.substring.chat.entities.CallSession;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
@@ -12,6 +13,10 @@ public interface CallSessionRepository extends MongoRepository<CallSession, Stri
 
     /** All call sessions for a conversation, newest first. */
     List<CallSession> findByConversationIdOrderByStartedAtDesc(String conversationId);
+
+    /** All call sessions involving a user (as caller or callee), newest first (paged). */
+    @Query(value = "{ '$or': [{ 'callerId': ?0 }, { 'calleeId': ?0 }] }", sort = "{ 'startedAt': -1 }")
+    List<CallSession> findByParticipant(String username, Pageable pageable);
 
     /** Find a ringing or active call in a conversation (at most one should exist). */
     Optional<CallSession> findByConversationIdAndStatusIn(String conversationId,

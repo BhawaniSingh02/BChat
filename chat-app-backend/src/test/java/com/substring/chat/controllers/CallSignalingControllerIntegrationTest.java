@@ -144,6 +144,43 @@ class CallSignalingControllerIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ── GET /api/v1/calls/history (all my calls) ────────────────────────────
+
+    @Test
+    void getMyCallHistory_returnsCallsWhereUserIsCallerOrCallee() throws Exception {
+        CallSession outgoing = new CallSession();
+        outgoing.setConversationId(conversationId);
+        outgoing.setCallerId(aliceHandle);
+        outgoing.setCalleeId(bobHandle);
+        outgoing.setCallType(CallSession.CallType.VIDEO);
+        outgoing.setStatus(CallSession.CallStatus.ENDED);
+        outgoing.setStartedAt(Instant.now().minusSeconds(60));
+        callSessionRepository.save(outgoing);
+
+        CallSession incomingMissed = new CallSession();
+        incomingMissed.setConversationId(conversationId);
+        incomingMissed.setCallerId(bobHandle);
+        incomingMissed.setCalleeId(aliceHandle);
+        incomingMissed.setCallType(CallSession.CallType.AUDIO);
+        incomingMissed.setStatus(CallSession.CallStatus.MISSED);
+        incomingMissed.setStartedAt(Instant.now());
+        callSessionRepository.save(incomingMissed);
+
+        mockMvc.perform(get("/api/v1/calls/history")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                // newest first
+                .andExpect(jsonPath("$[0].status").value("MISSED"))
+                .andExpect(jsonPath("$[1].status").value("ENDED"));
+    }
+
+    @Test
+    void getMyCallHistory_requiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/calls/history"))
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     void getCallHistory_returns404ForNonParticipant() throws Exception {
         String eveToken = registerAndGetToken("Eve Call", "eve_call@example.com", "password123");

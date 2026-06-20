@@ -331,6 +331,29 @@ class CallServiceTest {
                 .isInstanceOf(ConversationNotFoundException.class);
     }
 
+    // ── getCallHistoryForUser ──────────────────────────────────────────────────
+
+    @Test
+    void getCallHistoryForUser_returnsAllSessionsInvolvingUser() {
+        CallSession other = new CallSession();
+        other.setId("session-2");
+        other.setConversationId("conv-9");
+        other.setCallerId("carol");
+        other.setCalleeId("alice");
+        other.setCallType(CallSession.CallType.VIDEO);
+        other.setStatus(CallSession.CallStatus.MISSED);
+        other.setStartedAt(Instant.now());
+
+        when(callSessionRepository.findByParticipant(eq("alice"), any()))
+                .thenReturn(List.of(ringingSession, other));
+
+        List<CallSessionResponse> history = callService.getCallHistoryForUser("alice");
+
+        assertThat(history).hasSize(2);
+        assertThat(history).extracting(CallSessionResponse::getConversationId)
+                .containsExactly("conv-1", "conv-9");
+    }
+
     // ── cancelCallByConversation ───────────────────────────────────────────────
 
     @Test

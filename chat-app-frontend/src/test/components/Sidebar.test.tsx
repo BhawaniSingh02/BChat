@@ -70,6 +70,10 @@ vi.mock('../../store/presenceStore', () => ({
   usePresenceStore: (selector: (s: any) => any) => selector({ isOnline: () => false }),
 }))
 
+vi.mock('../../api/calls', () => ({
+  callsApi: { getMyCallHistory: vi.fn().mockResolvedValue([]), getCallHistory: vi.fn().mockResolvedValue([]) },
+}))
+
 import Sidebar from '../../components/layout/Sidebar'
 import { messagesApi } from '../../api/messages'
 
@@ -212,6 +216,14 @@ describe('Sidebar', () => {
     await userEvent.click(screen.getByTestId('dm-filter-unread'))
     expect(screen.getByTestId('no-unread-empty')).toBeInTheDocument()
     expect(screen.queryByTestId('dm-card')).not.toBeInTheDocument()
+  })
+
+  it('switches to the Calls tab and shows the call log', async () => {
+    render(<Sidebar />)
+    await userEvent.click(screen.getByTestId('calls-tab'))
+    expect(screen.getByTestId('calls-tab')).toHaveClass('text-teal-700')
+    // With no calls, the empty state appears once history loads
+    expect(await screen.findByTestId('call-log-empty')).toBeInTheDocument()
   })
 
   it('opens the Settings hub from the footer button', async () => {

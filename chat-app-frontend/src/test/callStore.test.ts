@@ -6,8 +6,10 @@ import type { CallEvent } from '../types'
 vi.mock('../api/calls', () => ({
   callsApi: {
     getCallHistory: vi.fn().mockResolvedValue([]),
+    getMyCallHistory: vi.fn().mockResolvedValue([]),
   },
 }))
+import { callsApi } from '../api/calls'
 
 function resetStore() {
   useCallStore.setState({
@@ -21,6 +23,8 @@ function resetStore() {
     remoteMuted: false,
     remoteCameraOff: false,
     callHistory: {},
+    myCallHistory: [],
+    myCallHistoryLoaded: false,
   })
 }
 
@@ -34,6 +38,24 @@ describe('callStore', () => {
     expect(s.callState).toBe('idle')
     expect(s.callSessionId).toBeNull()
     expect(s.otherUsername).toBeNull()
+  })
+
+  describe('fetchMyCallHistory', () => {
+    it('loads the global call history and marks it loaded', async () => {
+      vi.mocked(callsApi.getMyCallHistory).mockResolvedValueOnce([
+        { id: 's1', conversationId: 'c1', callerId: 'me', calleeId: 'bob', callType: 'AUDIO', status: 'ENDED', startedAt: '2026-06-19T10:00:00Z', durationSeconds: 30 },
+      ])
+      await useCallStore.getState().fetchMyCallHistory()
+      const s = useCallStore.getState()
+      expect(s.myCallHistory).toHaveLength(1)
+      expect(s.myCallHistoryLoaded).toBe(true)
+    })
+
+    it('still marks loaded if the request fails', async () => {
+      vi.mocked(callsApi.getMyCallHistory).mockRejectedValueOnce(new Error('network'))
+      await useCallStore.getState().fetchMyCallHistory()
+      expect(useCallStore.getState().myCallHistoryLoaded).toBe(true)
+    })
   })
 
   describe('startOutgoingCall', () => {

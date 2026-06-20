@@ -129,6 +129,13 @@ public class CallSignalingController {
 
     // ── REST endpoints ────────────────────────────────────────────────────────
 
+    /** GET the current user's full call history across all conversations, newest first. */
+    @GetMapping("/history")
+    public ResponseEntity<List<CallSessionResponse>> getMyCallHistory(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(callService.getCallHistoryForUser(userDetails.getUsername()));
+    }
+
     /** GET call history for a DM conversation. */
     @GetMapping("/{conversationId}/history")
     public ResponseEntity<List<CallSessionResponse>> getCallHistory(

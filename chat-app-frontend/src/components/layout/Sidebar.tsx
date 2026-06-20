@@ -9,14 +9,16 @@ import Avatar from '../ui/Avatar'
 import RoomList from '../rooms/RoomList'
 import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
+import CallLogList from '../call/CallLogList'
 import UserSearchModal from '../ui/UserSearchModal'
 import SettingsModal from '../ui/SettingsModal'
 import BrandLogo from '../ui/BrandLogo'
 import MessageRequestsModal from '../chat/MessageRequestsModal'
 import { isConversationArchived } from '../../utils/conversation'
+import type { CallType } from '../../types'
 
 
-type Tab = 'rooms' | 'dms'
+type Tab = 'rooms' | 'dms' | 'calls'
 
 function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
@@ -36,9 +38,10 @@ function RoomSkeleton() {
 
 interface SidebarProps {
   onSelectChat?: () => void
+  onStartCall?: (conversationId: string, otherUsername: string, type: CallType) => void
 }
 
-export default function Sidebar({ onSelectChat }: SidebarProps) {
+export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
   const { conversations, activeDMId, setActiveDM, getOrCreateConversation, removeConversation, updateConversation } = useDMStore()
@@ -204,6 +207,20 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
           )}
         </button>
+        <button
+          className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
+            tab === 'calls'
+              ? 'text-teal-700 bg-white'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+          }`}
+          onClick={() => setTab('calls')}
+          data-testid="calls-tab"
+        >
+          Calls
+          {tab === 'calls' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-cyan-600" />
+          )}
+        </button>
       </div>
 
       {/* Content */}
@@ -221,6 +238,15 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
               unreadCounts={unreadCounts}
             />
           )
+        ) : tab === 'calls' ? (
+          <CallLogList
+            currentUsername={user?.username ?? ''}
+            onStartCall={(conversationId, otherUsername, type) => {
+              onStartCall?.(conversationId, otherUsername, type)
+              onSelectChat?.()
+            }}
+            onOpenConversation={handleSelectDM}
+          />
         ) : (
           <div className="flex flex-col h-full">
             {/* Filter chips (WhatsApp-style) — only when there are conversations */}

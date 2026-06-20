@@ -10,6 +10,7 @@ import com.substring.chat.repositories.CallSessionRepository;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -287,6 +288,14 @@ public class CallService {
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
         return callSessionRepository.findByConversationIdOrderByStartedAtDesc(conversationId)
+                .stream()
+                .map(CallSessionResponse::from)
+                .toList();
+    }
+
+    /** All calls involving this user across every conversation, newest first (capped). */
+    public List<CallSessionResponse> getCallHistoryForUser(String username) {
+        return callSessionRepository.findByParticipant(username, PageRequest.of(0, 200))
                 .stream()
                 .map(CallSessionResponse::from)
                 .toList();

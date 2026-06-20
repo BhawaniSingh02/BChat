@@ -492,6 +492,7 @@ export default function ChatPage() {
       `}>
         <Sidebar
           onSelectChat={() => setMobileSidebarOpen(false)}
+          onStartCall={handleInitiateCall}
         />
       </div>
 

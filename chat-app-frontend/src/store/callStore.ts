@@ -22,6 +22,8 @@ interface CallStore {
 
   // History
   callHistory: Record<string, CallSession[]>  // conversationId -> sessions
+  myCallHistory: CallSession[]                 // all calls involving me, newest first
+  myCallHistoryLoaded: boolean
 
   // Actions
   /** Called when we initiate a call (before signaling) */
@@ -42,6 +44,7 @@ interface CallStore {
   setRemoteCameraOff: (off: boolean) => void
 
   fetchCallHistory: (conversationId: string) => Promise<void>
+  fetchMyCallHistory: () => Promise<void>
 }
 
 export const useCallStore = create<CallStore>((set) => ({
@@ -55,6 +58,8 @@ export const useCallStore = create<CallStore>((set) => ({
   remoteMuted: false,
   remoteCameraOff: false,
   callHistory: {},
+  myCallHistory: [],
+  myCallHistoryLoaded: false,
 
   startOutgoingCall: (conversationId, otherUsername, callType) =>
     set({
@@ -121,6 +126,15 @@ export const useCallStore = create<CallStore>((set) => ({
       set((s) => ({ callHistory: { ...s.callHistory, [conversationId]: sessions } }))
     } catch {
       // silently ignore — history is optional
+    }
+  },
+
+  fetchMyCallHistory: async () => {
+    try {
+      const sessions = await callsApi.getMyCallHistory()
+      set({ myCallHistory: sessions, myCallHistoryLoaded: true })
+    } catch {
+      set({ myCallHistoryLoaded: true })
     }
   },
 }))
