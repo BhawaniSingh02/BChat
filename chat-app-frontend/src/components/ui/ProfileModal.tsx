@@ -6,12 +6,14 @@ import Avatar from './Avatar'
 
 type HandleStatus = 'current' | 'idle' | 'checking' | 'available' | 'unavailable'
 
+type Tab = 'profile' | 'password' | 'privacy'
+
 interface ProfileModalProps {
   open: boolean
   onClose: () => void
+  /** Which tab to show when the modal opens (defaults to 'profile'). */
+  initialTab?: Tab
 }
-
-type Tab = 'profile' | 'password' | 'privacy'
 
 const PRIVACY_LABEL: Record<string, string> = {
   EVERYONE: 'Everyone',
@@ -19,7 +21,7 @@ const PRIVACY_LABEL: Record<string, string> = {
   CONTACTS: 'My Contacts',
 }
 
-export default function ProfileModal({ open, onClose }: ProfileModalProps) {
+export default function ProfileModal({ open, onClose, initialTab = 'profile' }: ProfileModalProps) {
   const user = useAuthStore((s) => s.user)
   const { updateProfile, uploadAvatar, removeAvatar, changePassword, claimHandle } = useAuthStore()
 
@@ -67,7 +69,7 @@ export default function ProfileModal({ open, onClose }: ProfileModalProps) {
       setOnlinePrivacy(user.onlinePrivacy ?? 'EVERYONE')
       setProfilePhotoPrivacy(user.profilePhotoPrivacy ?? 'EVERYONE')
       setAvatarPreview(user.avatarUrl ?? null)
-      setTab('profile')
+      setTab(initialTab)
       setError(null)
       setSuccess(null)
       setCurrentPassword('')

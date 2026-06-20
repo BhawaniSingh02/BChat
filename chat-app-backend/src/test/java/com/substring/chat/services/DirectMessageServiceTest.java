@@ -142,6 +142,58 @@ class DirectMessageServiceTest {
     }
 
     @Test
+    void sendMessage_denormalizesTextPreviewOntoConversation() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
+
+        Message saved = new Message();
+        saved.setId("msg-1");
+        saved.setRoomId("dm:conv-1");
+        saved.setSender("alice");
+        saved.setContent("Hello Bob!");
+        saved.setMessageType(Message.MessageType.TEXT);
+        saved.setTimestamp(Instant.now());
+        saved.setReadBy(new ArrayList<>());
+        when(messageRepository.save(any(Message.class))).thenReturn(saved);
+        when(conversationRepository.save(any(DirectConversation.class))).thenReturn(existingConversation);
+
+        SendDirectMessageRequest request = new SendDirectMessageRequest();
+        request.setContent("Hello Bob!");
+
+        directMessageService.sendMessage("conv-1", "alice", request);
+
+        assertThat(existingConversation.getLastMessagePreview()).isEqualTo("Hello Bob!");
+        assertThat(existingConversation.getLastMessageType()).isEqualTo("TEXT");
+        assertThat(existingConversation.getLastMessageSender()).isEqualTo("alice");
+        assertThat(existingConversation.getLastMessageAt()).isEqualTo(saved.getTimestamp());
+    }
+
+    @Test
+    void sendMessage_usesMediaLabelPreviewForImage() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
+
+        Message saved = new Message();
+        saved.setId("msg-2");
+        saved.setRoomId("dm:conv-1");
+        saved.setSender("alice");
+        saved.setContent("");
+        saved.setMessageType(Message.MessageType.IMAGE);
+        saved.setTimestamp(Instant.now());
+        saved.setReadBy(new ArrayList<>());
+        when(messageRepository.save(any(Message.class))).thenReturn(saved);
+        when(conversationRepository.save(any(DirectConversation.class))).thenReturn(existingConversation);
+
+        SendDirectMessageRequest request = new SendDirectMessageRequest();
+        request.setContent("");
+        request.setMessageType(Message.MessageType.IMAGE);
+        request.setFileUrl("https://cdn/x.png");
+
+        directMessageService.sendMessage("conv-1", "alice", request);
+
+        assertThat(existingConversation.getLastMessagePreview()).isEqualTo("📷 Photo");
+        assertThat(existingConversation.getLastMessageType()).isEqualTo("IMAGE");
+    }
+
+    @Test
     void sendMessage_throwsWhenConversationNotFound() {
         when(conversationRepository.findById("bad-conv")).thenReturn(Optional.empty());
 

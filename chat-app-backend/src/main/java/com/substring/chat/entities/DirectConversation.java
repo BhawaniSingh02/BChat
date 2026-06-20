@@ -30,6 +30,13 @@ public class DirectConversation {
     private Instant createdAt;
     private Instant lastMessageAt;
 
+    // Denormalized preview of the most recent message, so the conversation list can
+    // show "last message" snippets without loading messages for every chat (scales to
+    // large inboxes). Updated whenever a message is sent.
+    private String lastMessagePreview;   // text content, or a media label like "📷 Photo"
+    private String lastMessageType;      // TEXT | IMAGE | FILE | AUDIO | VIDEO
+    private String lastMessageSender;    // opaque username of the sender
+
     // Message requests (Instagram-style). ACCEPTED = normal chat; PENDING = the
     // recipient hasn't accepted the initiator's first message yet (shows in their
     // Requests inbox). Defaults to ACCEPTED so existing conversations are unaffected.

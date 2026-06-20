@@ -180,6 +180,47 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: '+ New Message' })).toBeInTheDocument()
   })
 
+  it('shows All/Unread filter chips when conversations exist', async () => {
+    mocks.conversations = [makeConv('c1')]
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
+    expect(screen.getByTestId('dm-filter-all')).toBeInTheDocument()
+    expect(screen.getByTestId('dm-filter-unread')).toBeInTheDocument()
+  })
+
+  it('does not show filter chips when there are no conversations', async () => {
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
+    expect(screen.queryByTestId('dm-filter-all')).not.toBeInTheDocument()
+  })
+
+  it('filters to only unread conversations when Unread chip is clicked', async () => {
+    mocks.conversations = [makeConv('c1'), makeConv('c2')]
+    mocks.dmUnreadCounts = { c1: 2 }
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
+    expect(screen.getAllByTestId('dm-card')).toHaveLength(2)
+    await userEvent.click(screen.getByTestId('dm-filter-unread'))
+    expect(screen.getAllByTestId('dm-card')).toHaveLength(1)
+  })
+
+  it('shows a caught-up empty state when no conversations are unread', async () => {
+    mocks.conversations = [makeConv('c1')]
+    mocks.dmUnreadCounts = {}
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
+    await userEvent.click(screen.getByTestId('dm-filter-unread'))
+    expect(screen.getByTestId('no-unread-empty')).toBeInTheDocument()
+    expect(screen.queryByTestId('dm-card')).not.toBeInTheDocument()
+  })
+
+  it('opens the Settings hub from the footer button', async () => {
+    render(<Sidebar />)
+    expect(screen.queryByTestId('settings-modal')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByTestId('profile-footer-btn'))
+    expect(screen.getByTestId('settings-modal')).toBeInTheDocument()
+  })
+
   it('asks for confirmation before logging out', async () => {
     render(<Sidebar />)
     await userEvent.click(screen.getByLabelText('Logout'))

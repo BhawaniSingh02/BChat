@@ -172,9 +172,34 @@ public class DirectMessageService {
                 && !senderUsername.equals(conv.getInitiatedBy())) {
             conv.setStatus("ACCEPTED");
         }
-        conv.setLastMessageAt(saved.getTimestamp());
+        applyLastMessage(conv, saved);
         conversationRepository.save(conv);
 
         return MessageResponse.from(saved);
+    }
+
+    /** Denormalize the latest message onto the conversation for fast inbox previews. */
+    public static void applyLastMessage(DirectConversation conv, Message message) {
+        conv.setLastMessageAt(message.getTimestamp());
+        conv.setLastMessagePreview(previewTextFor(message));
+        conv.setLastMessageType(message.getMessageType() != null ? message.getMessageType().name() : "TEXT");
+        conv.setLastMessageSender(message.getSender());
+    }
+
+    /** Short, list-friendly preview: the text, or a media label for non-text messages. */
+    public static String previewTextFor(Message message) {
+        String content = message.getContent();
+        if (content != null && !content.isBlank()) {
+            return content.length() > 120 ? content.substring(0, 120) : content;
+        }
+        Message.MessageType type = message.getMessageType();
+        if (type == null) return "";
+        return switch (type) {
+            case IMAGE -> "📷 Photo";
+            case FILE -> "📎 File";
+            case AUDIO -> "🎤 Voice message";
+            case VIDEO -> "🎬 Video";
+            default -> "";
+        };
     }
 }

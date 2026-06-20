@@ -112,6 +112,10 @@ export interface DirectConversation {
   participants: string[]
   createdAt: string
   lastMessageAt?: string
+  // Denormalized last-message preview for the conversation list
+  lastMessagePreview?: string
+  lastMessageType?: MessageType
+  lastMessageSender?: string
   // Phase 20 — Mute & Archive
   mutedBy?: Record<string, string>   // username -> ISO date (muted until)
   archivedBy?: string[]

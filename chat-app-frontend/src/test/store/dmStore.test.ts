@@ -130,6 +130,23 @@ describe('dmStore', () => {
       useDMStore.getState().addMessage(msg)
       expect(useDMStore.getState().conversations[0].lastMessageAt).toBe(msg.timestamp)
     })
+
+    it('denormalizes the last-message preview onto the conversation', () => {
+      useDMStore.setState({ conversations: [makeConv('conv-1')] })
+      const msg = { ...makeDMMessage('m1', 'conv-1', 'bob'), content: 'hey there' }
+      useDMStore.getState().addMessage(msg)
+      const conv = useDMStore.getState().conversations[0]
+      expect(conv.lastMessagePreview).toBe('hey there')
+      expect(conv.lastMessageType).toBe('TEXT')
+      expect(conv.lastMessageSender).toBe('bob')
+    })
+
+    it('uses a media label preview for image messages', () => {
+      useDMStore.setState({ conversations: [makeConv('conv-1')] })
+      const msg = { ...makeDMMessage('m1', 'conv-1', 'bob'), content: '', messageType: 'IMAGE' as const }
+      useDMStore.getState().addMessage(msg)
+      expect(useDMStore.getState().conversations[0].lastMessagePreview).toBe('📷 Photo')
+    })
   })
 
   describe('setActiveDM', () => {

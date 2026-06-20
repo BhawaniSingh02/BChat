@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CallType } from '../../types'
 import Avatar from '../ui/Avatar'
+import { applyPreferredSpeaker } from '../../utils/mediaPreferences'
 
 interface ActiveCallViewProps {
   otherUsername: string
@@ -91,6 +92,8 @@ export default function ActiveCallView({
     // it continues playing through minimize/expand without interruption.
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = remoteStream
+      // Route call audio to the speaker chosen in Settings → Video & voice.
+      void applyPreferredSpeaker(remoteAudioRef.current)
       remoteAudioRef.current.play().catch(() => {})
     }
 

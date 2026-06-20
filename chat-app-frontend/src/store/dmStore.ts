@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { DirectConversation, Message } from '../types'
 import { dmApi } from '../api/dm'
+import { previewForMessage } from '../utils/conversation'
 
 interface DMState {
   conversations: DirectConversation[]
@@ -14,7 +15,7 @@ interface DMState {
   addMessage: (message: Message) => void
   upsertDMMessage: (message: Message) => void
   setActiveDM: (id: string | null) => void
-  updateLastMessage: (conversationId: string, timestamp: string) => void
+  updateLastMessage: (conversationId: string, message: Message) => void
   incrementDMUnread: (conversationId: string) => void
   resetDMUnread: (conversationId: string) => void
   removeConversation: (conversationId: string) => void
@@ -94,7 +95,7 @@ export const useDMStore = create<DMState>((set, get) => ({
         [conversationId]: [...(s.messages[conversationId] ?? []), message],
       },
     }))
-    get().updateLastMessage(conversationId, message.timestamp)
+    get().updateLastMessage(conversationId, message)
   },
 
   upsertDMMessage: (message) => {
@@ -111,7 +112,7 @@ export const useDMStore = create<DMState>((set, get) => ({
       return { messages: { ...s.messages, [conversationId]: updated } }
     })
     // Only bump lastMessageAt for genuinely new messages — not edits, deletes, or reactions
-    if (isNew && !message.edited && !message.deleted) get().updateLastMessage(conversationId, message.timestamp)
+    if (isNew && !message.edited && !message.deleted) get().updateLastMessage(conversationId, message)
   },
 
   setActiveDM: (id) => set({ activeDMId: id }),
@@ -133,10 +134,18 @@ export const useDMStore = create<DMState>((set, get) => ({
     })
   },
 
-  updateLastMessage: (conversationId, timestamp) => {
+  updateLastMessage: (conversationId, message) => {
     set((s) => ({
       conversations: s.conversations.map((c) =>
-        c.id === conversationId ? { ...c, lastMessageAt: timestamp } : c
+        c.id === conversationId
+          ? {
+              ...c,
+              lastMessageAt: message.timestamp,
+              lastMessagePreview: previewForMessage(message),
+              lastMessageType: message.messageType,
+              lastMessageSender: message.sender,
+            }
+          : c
       ),
     }))
   },

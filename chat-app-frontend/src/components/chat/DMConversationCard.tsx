@@ -115,7 +115,16 @@ export default function DMConversationCard({
               )}
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">{online ? 'Online' : 'Offline'}</p>
+          {conversation.lastMessagePreview ? (
+            <p className="text-xs text-gray-500 mt-0.5 truncate" data-testid="dm-card-preview">
+              {conversation.lastMessageSender === currentUsername && (
+                <span className="text-gray-400">You: </span>
+              )}
+              {conversation.lastMessagePreview}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400 mt-0.5">{online ? 'Online' : 'Offline'}</p>
+          )}
         </div>
       </button>
 

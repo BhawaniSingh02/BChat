@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react'
+import { buildAudioConstraints, buildVideoConstraints } from '../utils/mediaPreferences'
 
 // ── Safari detection & H.264 codec preference ─────────────────────────────────
 // Safari does not support VP8/VP9. Reordering codecs to prefer H.264 ensures
@@ -228,8 +229,8 @@ export function useWebRTC(handlers: WebRTCHandlers) {
   const startCall = useCallback(async (withVideo: boolean): Promise<string> => {
     cleanup()
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: withVideo,
+      audio: buildAudioConstraints(),
+      video: buildVideoConstraints(withVideo),
     })
     localStreamRef.current = stream
 
@@ -257,8 +258,8 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     cleanup()
     pendingIceCandidatesRef.current = carriedCandidates
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: withVideo,
+      audio: buildAudioConstraints(),
+      video: buildVideoConstraints(withVideo),
     })
     localStreamRef.current = stream
 

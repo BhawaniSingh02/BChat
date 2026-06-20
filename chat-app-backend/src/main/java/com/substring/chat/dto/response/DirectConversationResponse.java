@@ -19,6 +19,11 @@ public class DirectConversationResponse {
     private Instant createdAt;
     private Instant lastMessageAt;
 
+    // Denormalized last-message preview for the conversation list
+    private String lastMessagePreview;
+    private String lastMessageType;
+    private String lastMessageSender;
+
     // Phase 20 — Mute & Archive
     private Map<String, Instant> mutedBy;
     private List<String> archivedBy;
@@ -36,6 +41,9 @@ public class DirectConversationResponse {
         response.setParticipants(conv.getParticipants());
         response.setCreatedAt(conv.getCreatedAt());
         response.setLastMessageAt(conv.getLastMessageAt());
+        response.setLastMessagePreview(conv.getLastMessagePreview());
+        response.setLastMessageType(conv.getLastMessageType());
+        response.setLastMessageSender(conv.getLastMessageSender());
         response.setStatus(conv.getStatus() != null ? conv.getStatus() : "ACCEPTED");
         response.setInitiatedBy(conv.getInitiatedBy());
         response.setMutedBy(conv.getMutedBy() != null ? conv.getMutedBy() : new HashMap<>());

@@ -64,6 +64,38 @@ describe('DMConversationCard', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument()
   })
 
+  it('shows the last-message preview instead of online status when present', () => {
+    render(
+      <DMConversationCard
+        conversation={{ ...makeConv('conv-1'), lastMessagePreview: 'See you tomorrow', lastMessageType: 'TEXT', lastMessageSender: 'bob' }}
+        currentUsername="alice"
+        online
+      />
+    )
+    expect(screen.getByTestId('dm-card-preview')).toHaveTextContent('See you tomorrow')
+    expect(screen.queryByText('Online')).not.toBeInTheDocument()
+  })
+
+  it('prefixes "You:" when the last message was sent by the current user', () => {
+    render(
+      <DMConversationCard
+        conversation={{ ...makeConv('conv-1'), lastMessagePreview: 'on my way', lastMessageType: 'TEXT', lastMessageSender: 'alice' }}
+        currentUsername="alice"
+      />
+    )
+    expect(screen.getByTestId('dm-card-preview')).toHaveTextContent('You: on my way')
+  })
+
+  it('shows a media label preview for non-text messages', () => {
+    render(
+      <DMConversationCard
+        conversation={{ ...makeConv('conv-1'), lastMessagePreview: '📷 Photo', lastMessageType: 'IMAGE', lastMessageSender: 'bob' }}
+        currentUsername="alice"
+      />
+    )
+    expect(screen.getByTestId('dm-card-preview')).toHaveTextContent('📷 Photo')
+  })
+
   it('applies active styles when active=true', () => {
     render(
       <DMConversationCard

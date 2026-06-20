@@ -1,4 +1,24 @@
-import type { DirectConversation } from '../types'
+import type { DirectConversation, Message } from '../types'
+
+/**
+ * Short, list-friendly preview for a message: the text, or a media label for
+ * non-text messages. Mirrors the backend's `previewTextFor` so live (WebSocket)
+ * updates and server-loaded conversations look identical.
+ */
+export function previewForMessage(message: Pick<Message, 'content' | 'messageType' | 'deleted'>): string {
+  if (message.deleted) return 'This message was deleted'
+  const content = message.content
+  if (content && content.trim()) {
+    return content.length > 120 ? content.slice(0, 120) : content
+  }
+  switch (message.messageType) {
+    case 'IMAGE': return '📷 Photo'
+    case 'FILE': return '📎 File'
+    case 'AUDIO': return '🎤 Voice message'
+    case 'VIDEO': return '🎬 Video'
+    default: return ''
+  }
+}
 
 /**
  * True if the conversation is currently muted for the given user.

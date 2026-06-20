@@ -11,6 +11,7 @@ import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
 import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.entities.Room;
+import com.substring.chat.services.DirectMessageService;
 import com.substring.chat.services.MessageRateLimiter;
 import com.substring.chat.services.WebPushService;
 import lombok.RequiredArgsConstructor;
@@ -195,7 +196,7 @@ public class ChatController {
                     && !principal.getName().equals(conv.getInitiatedBy())) {
                 conv.setStatus("ACCEPTED");
             }
-            conv.setLastMessageAt(saved.getTimestamp());
+            DirectMessageService.applyLastMessage(conv, saved);
             conversationRepository.save(conv);
 
             MessageResponse response = MessageResponse.from(saved);

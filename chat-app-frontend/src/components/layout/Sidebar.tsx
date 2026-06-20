@@ -11,6 +11,7 @@ import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
 import UserSearchModal from '../ui/UserSearchModal'
 import ProfileModal from '../ui/ProfileModal'
+import SettingsModal from '../ui/SettingsModal'
 import BrandLogo from '../ui/BrandLogo'
 import MessageRequestsModal from '../chat/MessageRequestsModal'
 import { isConversationArchived } from '../../utils/conversation'
@@ -47,9 +48,12 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
   const isOnline = usePresenceStore((s) => s.isOnline)
   const unreadCounts = useChatStore((s) => s.unreadCounts)
   const [tab, setTab] = useState<Tab>('dms')
+  const [dmFilter, setDmFilter] = useState<'all' | 'unread'>('all')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [profileTab, setProfileTab] = useState<'profile' | 'password' | 'privacy'>('profile')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   const [archivedOpen, setArchivedOpen] = useState(false)
   const [requestsOpen, setRequestsOpen] = useState(false)
@@ -136,6 +140,11 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
     return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
   })
 
+  // Apply the active filter chip (All / Unread)
+  const filteredConversations = dmFilter === 'unread'
+    ? sortedConversations.filter((c) => (dmUnreadCounts[c.id] ?? 0) > 0)
+    : sortedConversations
+
   return (
     <div className="w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full shadow-sm">
       {/* Header */}
@@ -217,6 +226,25 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
           )
         ) : (
           <div className="flex flex-col h-full">
+            {/* Filter chips (WhatsApp-style) — only when there are conversations */}
+            {sortedConversations.length > 0 && (
+              <div className="flex gap-2 px-4 py-2 border-b border-gray-100">
+                {(['all', 'unread'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setDmFilter(f)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      dmFilter === f
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    data-testid={`dm-filter-${f}`}
+                  >
+                    {f === 'all' ? 'All' : `Unread${totalDMUnread > 0 ? ` ${totalDMUnread}` : ''}`}
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Message requests entry (Instagram-style) — only when some exist */}
             {requests.length > 0 && (
               <button
@@ -265,9 +293,22 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
                   Start a new message
                 </button>
               </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center" data-testid="no-unread-empty">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-2xl">
+                  ✅
+                </div>
+                <p className="text-sm font-medium text-gray-700 mb-1">You're all caught up</p>
+                <button
+                  onClick={() => setDmFilter('all')}
+                  className="mt-2 text-teal-700 hover:text-cyan-700 font-medium text-sm transition-colors"
+                >
+                  Show all chats
+                </button>
+              </div>
             ) : (
               <>
-                {sortedConversations.map((conv) => (
+                {filteredConversations.map((conv) => (
                   <DMConversationCard
                     key={conv.id}
                     conversation={conv}
@@ -322,10 +363,10 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
       {user && (
         <div className="border-t border-gray-200 p-3">
           <button
-            onClick={() => setProfileOpen(true)}
+            onClick={() => setSettingsOpen(true)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
             data-testid="profile-footer-btn"
-            aria-label="Open profile"
+            aria-label="Open settings"
           >
             <Avatar name={user.displayName || user.uniqueHandle || user.username} size="sm" online src={user.avatarUrl ?? undefined} />
             <div className="flex-1 min-w-0 text-left">
@@ -344,7 +385,15 @@ export default function Sidebar({ onSelectChat }: SidebarProps) {
         </div>
       )}
 
-      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      {/* Settings hub */}
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenProfileTab={(tab) => { setProfileTab(tab); setSettingsOpen(false); setProfileOpen(true) }}
+        onLogout={() => { setSettingsOpen(false); logout() }}
+      />
+
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} initialTab={profileTab} />
 
       {/* Message requests */}
       <MessageRequestsModal
