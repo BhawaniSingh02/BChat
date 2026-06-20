@@ -24,6 +24,7 @@ import { usePresenceStore } from '../store/presenceStore'
 import { useDMStore } from '../store/dmStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useAuthStore } from '../store/authStore'
+import { useUserCacheStore } from '../store/userCacheStore'
 import { isConversationMuted } from '../utils/conversation'
 import { presentIncomingNotification, messagePreview } from '../utils/notify'
 import type { CallEvent } from '../types'
@@ -159,12 +160,20 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
               // Respect the conversation's mute setting — suppress the in-app and
               // desktop notification while muted (the unread badge still updates).
               if (!isConversationMuted(conversation, currentUsernameRef.current)) {
-                const otherUser = conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.senderName ?? message.sender
-                addNotification(message, otherUser)
+                // Resolve the sender to a human name (never the opaque id): cached
+                // profile → message.senderName (set to displayName at write time) →
+                // the other participant id as a last resort.
+                const senderProfile = useUserCacheStore.getState().cache[message.sender]
+                const senderDisplay =
+                  senderProfile?.displayName
+                  || (senderProfile?.uniqueHandle ? `@${senderProfile.uniqueHandle}` : undefined)
+                  || (message.senderName && message.senderName !== message.sender ? message.senderName : undefined)
+                  || (conversation?.participants.find((p) => p !== currentUsernameRef.current) ?? message.sender)
+                addNotification(message, senderDisplay)
                 presentIncomingNotification({
-                  title: otherUser,
+                  title: senderDisplay,
                   body: messagePreview(message.content, message.messageType),
-                  avatarName: otherUser,
+                  avatarName: senderDisplay,
                   conversationId: conversationId ?? undefined,
                 })
               }
