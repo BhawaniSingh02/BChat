@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import type { Room } from '../../types'
 import RoomCard from './RoomCard'
-import CreateRoomModal from './CreateRoomModal'
-import Button from '../ui/Button'
 
 interface RoomListProps {
   rooms: Room[]
@@ -15,7 +13,6 @@ interface RoomListProps {
 
 export default function RoomList({ rooms, activeRoomId, onSelectRoom, onJoinRoom, showJoin, unreadCounts }: RoomListProps) {
   const [search, setSearch] = useState('')
-  const [createOpen, setCreateOpen] = useState(false)
 
   const filtered = rooms.filter(
     (r) =>
@@ -25,13 +22,13 @@ export default function RoomList({ rooms, activeRoomId, onSelectRoom, onJoinRoom
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search rooms…"
-          className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-[#2a3942] dark:text-gray-100"
           aria-label="Search rooms"
         />
       </div>
@@ -53,20 +50,6 @@ export default function RoomList({ rooms, activeRoomId, onSelectRoom, onJoinRoom
           ))
         )}
       </div>
-
-      {!showJoin && (
-        <div className="p-4 border-t">
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => setCreateOpen(true)}
-          >
-            + New Room
-          </Button>
-        </div>
-      )}
-
-      <CreateRoomModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { useUserCacheStore } from '../../store/userCacheStore'
 import { messagesApi } from '../../api/messages'
 import Avatar from '../ui/Avatar'
 import RoomList from '../rooms/RoomList'
+import CreateRoomModal from '../rooms/CreateRoomModal'
 import Modal from '../ui/Modal'
 import DMConversationCard from '../chat/DMConversationCard'
 import CallLogList from '../call/CallLogList'
@@ -57,6 +58,8 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
   const [dmFilter, setDmFilter] = useState<'all' | 'unread'>('all')
   const [discoverOpen, setDiscoverOpen] = useState(false)
   const [dmSearchOpen, setDMSearchOpen] = useState(false)
+  const [createRoomOpen, setCreateRoomOpen] = useState(false)
+  const [callSearchOpen, setCallSearchOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   const [archivedOpen, setArchivedOpen] = useState(false)
@@ -164,6 +167,22 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
     ? sortedConversations.filter((c) => (dmUnreadCounts[c.id] ?? 0) > 0)
     : sortedConversations
 
+  // Header "+" action: per-tab. Rooms opens the New Room modal; the rest a search.
+  const handlePlus = () => {
+    if (tab === 'rooms') setDiscoverOpen(true)
+    else if (tab === 'calls') setCallSearchOpen(true)
+    else setDMSearchOpen(true)
+  }
+
+  // Start a brand-new call from the Calls "+" picker.
+  const handleStartCallFromSearch = async (username: string) => {
+    setCallSearchOpen(false)
+    try {
+      const conv = await getOrCreateConversation(username)
+      onStartCall?.(conv.id, username, 'AUDIO')
+    } catch { /* recipient may not accept messages — ignore */ }
+  }
+
   return (
     <div className="w-full md:w-80 flex-shrink-0 bg-white dark:bg-[#111b21] border-r border-gray-200 dark:border-gray-800 flex flex-col h-full shadow-sm">
       {/* Header */}
@@ -172,14 +191,12 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
           <BrandLogo size="md" tone="light" showIcon={false} interactive className="origin-left scale-x-[1.06]" />
         </div>
         <div className="flex items-center gap-1">
-          {/* Global search button — Phase 25 */}
-         
-          {/* Notification bell — Phase 26 */}
           <button
-            onClick={() => tab === 'rooms' ? setDiscoverOpen(true) : setDMSearchOpen(true)}
-            className="text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
-            title={tab === 'rooms' ? 'Discover rooms' : 'New direct message'}
-            aria-label={tab === 'rooms' ? 'Discover rooms' : 'New direct message'}
+            onClick={handlePlus}
+            className="flex items-center text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
+            title={tab === 'rooms' ? 'New room' : tab === 'calls' ? 'New call' : 'New direct message'}
+            aria-label={tab === 'rooms' ? 'New room' : tab === 'calls' ? 'New call' : 'New direct message'}
+            data-testid="sidebar-plus-btn"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -368,38 +385,65 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
                     onDelete={handleDeleteConversation}
                   />
                 ))}
-                <div className="p-4 border-t border-gray-200 dark:border-gray-800 mt-auto">
-                  <button
-                    className="w-full rounded-lg border border-slate-200 py-2 text-center text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-                    onClick={() => setDMSearchOpen(true)}
-                  >
-                    + New Message
-                  </button>
-                </div>
               </>
             )}
           </div>
         )}
       </div>
 
-      {/* Discover rooms modal */}
-      <Modal open={discoverOpen} onClose={() => setDiscoverOpen(false)} title="Discover Rooms">
-        <div className="h-96 -mx-6 -mb-4 overflow-hidden rounded-b-xl">
-          <RoomList
-            rooms={rooms}
-            activeRoomId={activeRoomId}
-            onSelectRoom={(id) => { handleSelectRoom(id); setDiscoverOpen(false) }}
-            onJoinRoom={handleJoinRoom}
-            showJoin
-          />
+      {/* New Room modal — create a room or browse & join existing ones */}
+      <Modal open={discoverOpen} onClose={() => setDiscoverOpen(false)} title="New Room">
+        <div className="-mx-6 -mb-4 flex h-[26rem] flex-col overflow-hidden rounded-b-xl">
+          {/* Create a new room */}
+          <button
+            onClick={() => { setDiscoverOpen(false); setCreateRoomOpen(true) }}
+            className="flex items-center gap-3 px-6 py-3.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
+            data-testid="room-menu-create"
+          >
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">Create a new room</span>
+              <span className="block text-xs text-gray-400">Start a group chat</span>
+            </span>
+          </button>
+
+          <div className="px-6 pb-1 pt-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400" data-testid="room-browse-heading">Browse rooms</p>
+          </div>
+
+          {/* Browsable / joinable rooms */}
+          <div className="flex-1 overflow-hidden">
+            <RoomList
+              rooms={rooms}
+              activeRoomId={activeRoomId}
+              onSelectRoom={(id) => { handleSelectRoom(id); setDiscoverOpen(false) }}
+              onJoinRoom={handleJoinRoom}
+              showJoin
+            />
+          </div>
         </div>
       </Modal>
+
+      {/* Create room (from the Rooms "+" menu) */}
+      <CreateRoomModal open={createRoomOpen} onClose={() => setCreateRoomOpen(false)} />
 
       {/* DM user search */}
       <UserSearchModal
         open={dmSearchOpen}
         onClose={() => setDMSearchOpen(false)}
         onSelectUser={handleStartDM}
+        currentUsername={user?.username ?? ''}
+      />
+
+      {/* New call — pick a user to call (from the Calls "+") */}
+      <UserSearchModal
+        open={callSearchOpen}
+        onClose={() => setCallSearchOpen(false)}
+        onSelectUser={handleStartCallFromSearch}
         currentUsername={user?.username ?? ''}
       />
 

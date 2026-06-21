@@ -191,11 +191,36 @@ describe('Sidebar', () => {
     expect(messagesApi.unarchiveDM).toHaveBeenCalledWith('c1')
   })
 
-  it('shows + New Message button in DMs tab', async () => {
+  it('opens user search from the header + on the Messages tab', async () => {
     mocks.conversations = [makeConv('c1')]
     render(<Sidebar />)
     await userEvent.click(screen.getByRole('button', { name: /Messages/ }))
-    expect(screen.getByRole('button', { name: '+ New Message' })).toBeInTheDocument()
+    await userEvent.click(screen.getByTestId('sidebar-plus-btn'))
+    expect(screen.getByPlaceholderText('Search by name or @username…')).toBeInTheDocument()
+  })
+
+  it('header + on the Rooms tab opens the New Room modal (create + browse)', async () => {
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+    await userEvent.click(screen.getByTestId('sidebar-plus-btn'))
+    expect(screen.getByRole('heading', { name: 'New Room' })).toBeInTheDocument()
+    expect(screen.getByTestId('room-menu-create')).toBeInTheDocument()
+    expect(screen.getByTestId('room-browse-heading')).toBeInTheDocument()
+  })
+
+  it('"Create a new room" opens the create dialog', async () => {
+    render(<Sidebar />)
+    await userEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+    await userEvent.click(screen.getByTestId('sidebar-plus-btn'))
+    await userEvent.click(screen.getByTestId('room-menu-create'))
+    expect(screen.getByRole('heading', { name: 'Create Room' })).toBeInTheDocument()
+  })
+
+  it('header + on the Calls tab opens the new-call user search', async () => {
+    render(<Sidebar />)
+    await userEvent.click(screen.getByTestId('calls-tab'))
+    await userEvent.click(screen.getByTestId('sidebar-plus-btn'))
+    expect(screen.getByPlaceholderText('Search by name or @username…')).toBeInTheDocument()
   })
 
   it('shows All/Unread filter chips when conversations exist', async () => {
