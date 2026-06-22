@@ -211,6 +211,7 @@ class AuthServiceTest {
         user.setWhoCanMessage("APPROVED_ONLY");
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("alice.smith.1234")).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenReturn(user);
         when(jwtTokenProvider.generateToken("alice.smith.1234")).thenReturn("jwt-token");
 

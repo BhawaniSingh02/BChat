@@ -33,4 +33,24 @@ describe('Input', () => {
     render(<Input placeholder="Enter text here" />)
     expect(screen.getByPlaceholderText('Enter text here')).toBeInTheDocument()
   })
+
+  it('reveals/hides the password via the toggle', async () => {
+    render(<Input label="Password" type="password" value="secret" onChange={() => {}} />)
+    const input = screen.getByLabelText('Password') as HTMLInputElement
+    expect(input.type).toBe('password')
+
+    const toggle = screen.getByTestId('password-toggle')
+    expect(toggle).toHaveAttribute('aria-label', 'Show password')
+    await userEvent.click(toggle)
+    expect((screen.getByLabelText('Password') as HTMLInputElement).type).toBe('text')
+    expect(screen.getByTestId('password-toggle')).toHaveAttribute('aria-label', 'Hide password')
+
+    await userEvent.click(screen.getByTestId('password-toggle'))
+    expect((screen.getByLabelText('Password') as HTMLInputElement).type).toBe('password')
+  })
+
+  it('does not render a password toggle for non-password inputs', () => {
+    render(<Input label="Email or username" type="text" />)
+    expect(screen.queryByTestId('password-toggle')).not.toBeInTheDocument()
+  })
 })

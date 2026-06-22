@@ -198,6 +198,44 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void login_succeedsWithUsernameInsteadOfEmail() throws Exception {
+        registerAndGetToken("Handle Login", "handlelogin@example.com", "securepass");
+        String handle = userRepository.findByEmail("handlelogin@example.com").orElseThrow().getUniqueHandle();
+
+        // Plain handle
+        LoginRequest byHandle = new LoginRequest();
+        byHandle.setEmail(handle);
+        byHandle.setPassword("securepass");
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(byHandle)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.uniqueHandle").value(handle));
+
+        // With a leading "@" and different casing
+        LoginRequest byAtHandle = new LoginRequest();
+        byAtHandle.setEmail("@" + handle.toUpperCase());
+        byAtHandle.setPassword("securepass");
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(byAtHandle)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uniqueHandle").value(handle));
+    }
+
+    @Test
+    void login_returns401WithUnknownUsername() throws Exception {
+        LoginRequest req = new LoginRequest();
+        req.setEmail("nosuchhandle");
+        req.setPassword("whatever");
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void login_returns401WithWrongPassword() throws Exception {
         registerAndGetToken("Secure User", "secure@example.com", "correctpassword");
 

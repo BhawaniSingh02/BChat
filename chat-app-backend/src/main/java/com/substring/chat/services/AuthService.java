@@ -151,7 +151,7 @@ public class AuthService {
      * Phase 3: Login by email + password. Rejects unverified accounts.
      */
     public LoginResult login(LoginRequest request, String ip, String userAgent) {
-        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        User user = resolveLoginUser(request.getEmail());
 
         // Check lockout
         if (user != null && user.getAccountLockedUntil() != null
@@ -187,7 +187,7 @@ public class AuthService {
             throw e;
         }
 
-        user = userRepository.findByEmail(request.getEmail())
+        user = userRepository.findByUsername(user.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found after authentication"));
 
         user.setFailedLoginAttempts(0);
@@ -203,6 +203,20 @@ public class AuthService {
                 new AuthResponse(accessToken, user.getUsername(), user.getEmail(),
                         user.getId(), user.getUniqueHandle(), user.getWhoCanMessage()),
                 refreshToken);
+    }
+
+    /**
+     * Resolve a login identifier to a user: an email address, or the public
+     * @username (uniqueHandle). Tries email first, then handle (case-insensitive,
+     * tolerating a leading '@'). Returns null if neither matches.
+     */
+    private User resolveLoginUser(String identifier) {
+        if (identifier == null || identifier.isBlank()) return null;
+        String id = identifier.trim();
+        Optional<User> byEmail = userRepository.findByEmail(id);
+        if (byEmail.isPresent()) return byEmail.get();
+        String handle = id.startsWith("@") ? id.substring(1) : id;
+        return userRepository.findByUniqueHandleIgnoreCase(handle).orElse(null);
     }
 
     public void logout(String username, String refreshTokenValue, String ip) {

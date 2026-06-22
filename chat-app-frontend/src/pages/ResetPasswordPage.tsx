@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import BrandLogo from '../components/ui/BrandLogo'
-import Input from '../components/ui/Input'
+import FloatingInput from '../components/ui/FloatingInput'
 import Button from '../components/ui/Button'
 
 export default function ResetPasswordPage() {
@@ -82,26 +82,23 @@ export default function ResetPasswordPage() {
                   {error}
                 </div>
               )}
-              <Input
-                label="New password"
+              <FloatingInput
+                label="New password (at least 8 characters)"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
                 required
+                minLength={8}
                 autoComplete="new-password"
                 autoFocus
-                className="h-12 rounded-xl border-slate-200 bg-slate-50/72 focus:ring-teal-500"
               />
-              <Input
+              <FloatingInput
                 label="Confirm password"
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Repeat your new password"
                 required
                 autoComplete="new-password"
-                className="h-12 rounded-xl border-slate-200 bg-slate-50/72 focus:ring-teal-500"
               />
               <Button
                 type="submit"

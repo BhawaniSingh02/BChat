@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import BrandLogo from '../components/ui/BrandLogo'
-import Input from '../components/ui/Input'
+import FloatingInput from '../components/ui/FloatingInput'
 import Button from '../components/ui/Button'
 
 export default function ForgotPasswordPage() {
@@ -61,16 +61,14 @@ export default function ForgotPasswordPage() {
                   {error}
                 </div>
               )}
-              <Input
+              <FloatingInput
                 label="Email address"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
                 required
                 autoComplete="email"
                 autoFocus
-                className="h-12 rounded-xl border-slate-200 bg-slate-50/72 focus:ring-teal-500"
               />
               <Button
                 type="submit"

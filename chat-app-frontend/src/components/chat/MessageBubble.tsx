@@ -576,8 +576,10 @@ function MessageBubble({
                       absolute top-0 right-0
                       w-7 h-7 flex items-center justify-center
                       rounded-tr-2xl rounded-bl-lg
-                      ${isMine ? 'bg-gradient-to-bl from-[#d4f5c0] to-transparent' : 'bg-gradient-to-bl from-gray-100 to-transparent'}
-                      text-gray-500 hover:text-gray-700
+                      ${isMine
+                        ? 'bg-gradient-to-bl from-[#d4f5c0] to-transparent dark:from-[#005c4b]'
+                        : 'bg-gradient-to-bl from-gray-100 to-transparent dark:from-[#202c33]'}
+                      text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white
                       transition-opacity
                     `}
                     aria-label="Message options"

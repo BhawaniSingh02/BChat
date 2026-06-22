@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import Button from '../ui/Button'
-import Input from '../ui/Input'
+import FloatingInput from '../ui/FloatingInput'
 import BrandLogo from '../ui/BrandLogo'
 
 export default function LoginForm() {
@@ -87,38 +87,26 @@ export default function LoginForm() {
                 </div>
               )}
 
-              <Input
-                label="Email"
-                type="email"
+              <FloatingInput
+                label="Email or username"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
                 required
-                autoComplete="email"
+                autoComplete="username"
                 autoFocus
-                labelClassName={darkMode ? 'text-slate-200' : ''}
-                className={`h-12 rounded-xl focus:ring-teal-500 ${
-                  darkMode
-                    ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
-                    : 'border-slate-200 bg-slate-50/72'
-                }`}
+                darkMode={darkMode}
               />
 
               <div>
-                <Input
+                <FloatingInput
                   label="Password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
                   required
                   autoComplete="current-password"
-                  labelClassName={darkMode ? 'text-slate-200' : ''}
-                  className={`h-12 rounded-xl focus:ring-teal-500 ${
-                    darkMode
-                      ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
-                      : 'border-slate-200 bg-slate-50/72'
-                  }`}
+                  darkMode={darkMode}
                 />
                 <div className="mt-1.5 text-right">
                   <Link

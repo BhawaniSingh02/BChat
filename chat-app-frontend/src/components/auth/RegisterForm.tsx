@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
+import FloatingInput from '../ui/FloatingInput'
 import BrandLogo from '../ui/BrandLogo'
 
 type Step = 'details' | 'otp' | 'success'
@@ -151,55 +152,37 @@ export default function RegisterForm() {
                     </div>
                   )}
 
-                  <Input
-                    label="Display Name"
+                  <FloatingInput
+                    label="Display name"
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your name (e.g. Alice Smith)"
                     required
                     minLength={1}
                     maxLength={50}
                     autoFocus
-                    labelClassName={darkMode ? 'text-slate-200' : ''}
-                    className={`h-12 rounded-xl focus:ring-teal-500 ${
-                      darkMode
-                        ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
-                        : 'border-slate-200 bg-slate-50/72'
-                    }`}
+                    darkMode={darkMode}
                   />
 
-                  <Input
+                  <FloatingInput
                     label="Email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
                     required
                     autoComplete="email"
-                    labelClassName={darkMode ? 'text-slate-200' : ''}
-                    className={`h-12 rounded-xl focus:ring-teal-500 ${
-                      darkMode
-                        ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
-                        : 'border-slate-200 bg-slate-50/72'
-                    }`}
+                    darkMode={darkMode}
                   />
 
-                  <Input
-                    label="Password"
+                  <FloatingInput
+                    label="Password (at least 6 characters)"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
                     required
                     minLength={6}
                     autoComplete="new-password"
-                    labelClassName={darkMode ? 'text-slate-200' : ''}
-                    className={`h-12 rounded-xl focus:ring-teal-500 ${
-                      darkMode
-                        ? 'border-slate-800 bg-slate-900/72 text-slate-100 placeholder:text-slate-500'
-                        : 'border-slate-200 bg-slate-50/72'
-                    }`}
+                    darkMode={darkMode}
                   />
 
                   <Button

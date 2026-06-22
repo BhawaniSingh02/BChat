@@ -52,9 +52,9 @@ describe('RegisterForm', () => {
     renderForm()
 
     // ── Step 1: details ──
-    fireEvent.change(screen.getByPlaceholderText('Your name (e.g. Alice Smith)'), { target: { value: 'Alice Smith' } })
-    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'alice@example.com' } })
-    fireEvent.change(screen.getByPlaceholderText('At least 6 characters'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Alice Smith' } })
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'alice@example.com' } })
+    fireEvent.change(screen.getByLabelText('Password (at least 6 characters)'), { target: { value: 'password123' } })
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     // ── Step 2: OTP ──
@@ -80,9 +80,9 @@ describe('RegisterForm', () => {
     })
 
     renderForm()
-    fireEvent.change(screen.getByPlaceholderText('Your name (e.g. Alice Smith)'), { target: { value: 'Alice Smith' } })
-    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'alice@example.com' } })
-    fireEvent.change(screen.getByPlaceholderText('At least 6 characters'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Alice Smith' } })
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'alice@example.com' } })
+    fireEvent.change(screen.getByLabelText('Password (at least 6 characters)'), { target: { value: 'password123' } })
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(await screen.findByText('Email already registered')).toBeInTheDocument()

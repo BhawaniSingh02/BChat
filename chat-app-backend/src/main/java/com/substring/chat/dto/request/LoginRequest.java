@@ -1,6 +1,5 @@
 package com.substring.chat.dto.request;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,8 +8,9 @@ import lombok.Setter;
 @Setter
 public class LoginRequest {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email must be valid")
+    /** Email address OR public @username (uniqueHandle). Field name kept as
+     *  {@code email} for backward compatibility with existing clients. */
+    @NotBlank(message = "Email or username is required")
     private String email;
 
     @NotBlank(message = "Password is required")
