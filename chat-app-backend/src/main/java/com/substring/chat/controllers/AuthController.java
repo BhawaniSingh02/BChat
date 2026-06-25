@@ -11,6 +11,7 @@ import com.substring.chat.dto.response.UserResponse;
 import com.substring.chat.entities.User;
 import com.substring.chat.exceptions.UserAlreadyExistsException;
 import com.substring.chat.repositories.UserRepository;
+import org.springframework.security.authentication.BadCredentialsException;
 import com.substring.chat.services.AuthRateLimiter;
 import com.substring.chat.services.AuthService;
 import com.substring.chat.services.SecurityAuditService;
@@ -92,7 +93,7 @@ public class AuthController {
         } catch (UserAlreadyExistsException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("detail", e.getMessage()));
+                    .body(Map.of("detail", "An account with that email already exists."));
         } catch (RuntimeException e) {
             // e.g. email delivery failure — not a conflict; nothing was persisted.
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
@@ -164,6 +165,10 @@ public class AuthController {
             setJwtCookie(response, result.authResponse().getToken());
             setRefreshCookie(response, result.refreshToken().getToken());
             return ResponseEntity.ok(result.authResponse());
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"Incorrect email or password.\"}");
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .contentType(MediaType.APPLICATION_JSON)

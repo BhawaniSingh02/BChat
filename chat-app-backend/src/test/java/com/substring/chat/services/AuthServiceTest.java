@@ -87,7 +87,7 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.register(registerRequest, "127.0.0.1"))
                 .isInstanceOf(UserAlreadyExistsException.class)
-                .hasMessageContaining("alice@example.com");
+                .hasMessageContaining("already exists");
         // Must not touch persistence or email for an already-verified account
         verify(userRepository, never()).save(any(User.class));
     }

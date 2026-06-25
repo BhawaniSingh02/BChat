@@ -33,8 +33,8 @@ import java.util.UUID;
 @Slf4j
 public class AuthService {
 
-    private static final int MAX_FAILED_ATTEMPTS = 10;
-    private static final int LOCKOUT_MINUTES = 30;
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int LOCKOUT_MINUTES = 15;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
@@ -56,7 +56,7 @@ public class AuthService {
         Optional<User> existing = userRepository.findByEmail(request.getEmail());
 
         if (existing.isPresent() && existing.get().isEmailVerified()) {
-            throw new UserAlreadyExistsException("Email already registered: " + request.getEmail());
+            throw new UserAlreadyExistsException("An account with that email already exists.");
         }
 
         // Reuse the pending (unverified) account if it exists, otherwise create a new one
