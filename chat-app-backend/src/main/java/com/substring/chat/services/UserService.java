@@ -7,6 +7,8 @@ import com.substring.chat.entities.User;
 import com.substring.chat.exceptions.UserNotFoundException;
 import com.substring.chat.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +31,7 @@ public class UserService {
     private final HandleService handleService;
 
     /** Full profile — only for the authenticated user themselves (via /me). */
+    @Cacheable(value = "userProfile", key = "#username")
     public UserResponse getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
@@ -120,6 +123,7 @@ public class UserService {
      * Claim or change the caller's public @handle. Frees their previous handle
      * automatically (it's simply overwritten, so others can take it).
      */
+    @CacheEvict(value = "userProfile", key = "#currentUsername")
     public UserResponse claimHandle(String currentUsername, String rawHandle) {
         HandleService.Validation result = handleService.checkAvailability(rawHandle, currentUsername);
         if (!result.valid()) {
@@ -132,6 +136,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    @CacheEvict(value = "userProfile", key = "#username")
     public UserResponse updateProfile(String username, UpdateProfileRequest request) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
@@ -162,6 +167,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    @CacheEvict(value = "userProfile", key = "#username")
     public UserResponse uploadAvatar(String username, MultipartFile file) throws Exception {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
@@ -172,6 +178,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    @CacheEvict(value = "userProfile", key = "#username")
     public UserResponse removeAvatar(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
@@ -180,6 +187,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    // No cache eviction needed — the password hash isn't part of the cached UserResponse.
     public void changePassword(String username, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
@@ -217,6 +225,7 @@ public class UserService {
         return user.getWhoCanMessage() != null ? user.getWhoCanMessage() : "APPROVED_ONLY";
     }
 
+    @CacheEvict(value = "userProfile", key = "#username")
     public void updateWhoCanMessage(String username, String value) {
         if (value == null || !VALID_WHO_CAN_MESSAGE.contains(value)) {
             throw new IllegalArgumentException("Invalid value. Must be one of: ANYONE, APPROVED_ONLY, NOBODY");
@@ -229,6 +238,7 @@ public class UserService {
 
     // ── Phase 23: User Blocking ──────────────────────────────────────────
 
+    @CacheEvict(value = "userProfile", key = "#username")
     public UserResponse blockUser(String username, String targetUsername) {
         if (username.equals(targetUsername)) {
             throw new IllegalArgumentException("Cannot block yourself");
@@ -247,6 +257,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    @CacheEvict(value = "userProfile", key = "#username")
     public UserResponse unblockUser(String username, String targetUsername) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));

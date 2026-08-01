@@ -9,9 +9,14 @@ interface DMState {
   activeDMId: string | null
   isLoading: boolean
   dmUnreadCounts: Record<string, number>
+  /** Cursor to fetch the next (older) page of messages for a conversation, or null if no more. */
+  nextCursor: Record<string, number | null>
+  hasMoreOlder: Record<string, boolean>
+  isLoadingOlder: Record<string, boolean>
   fetchConversations: () => Promise<void>
   getOrCreateConversation: (otherUsername: string) => Promise<DirectConversation>
-  fetchMessages: (conversationId: string, page?: number) => Promise<void>
+  fetchMessages: (conversationId: string) => Promise<void>
+  loadMoreMessages: (conversationId: string) => Promise<void>
   addMessage: (message: Message) => void
   upsertDMMessage: (message: Message) => void
   setActiveDM: (id: string | null) => void
@@ -33,6 +38,9 @@ export const useDMStore = create<DMState>((set, get) => ({
   activeDMId: null,
   isLoading: false,
   dmUnreadCounts: {},
+  nextCursor: {},
+  hasMoreOlder: {},
+  isLoadingOlder: {},
   requests: [],
 
   fetchConversations: async () => {
@@ -72,16 +80,29 @@ export const useDMStore = create<DMState>((set, get) => ({
     return conv
   },
 
-  fetchMessages: async (conversationId, page = 0) => {
+  fetchMessages: async (conversationId) => {
     set({ isLoading: true })
-    const data = await dmApi.getMessages(conversationId, page)
+    const data = await dmApi.getMessages(conversationId)
     const ordered = [...data.content].reverse()
     set((s) => ({
-      messages: {
-        ...s.messages,
-        [conversationId]: page === 0 ? ordered : [...ordered, ...(s.messages[conversationId] ?? [])],
-      },
+      messages: { ...s.messages, [conversationId]: ordered },
+      nextCursor: { ...s.nextCursor, [conversationId]: data.nextCursor },
+      hasMoreOlder: { ...s.hasMoreOlder, [conversationId]: data.hasMore },
       isLoading: false,
+    }))
+  },
+
+  loadMoreMessages: async (conversationId) => {
+    const cursor = get().nextCursor[conversationId]
+    if (!cursor || get().isLoadingOlder[conversationId]) return
+    set((s) => ({ isLoadingOlder: { ...s.isLoadingOlder, [conversationId]: true } }))
+    const data = await dmApi.getMessages(conversationId, cursor)
+    const older = [...data.content].reverse()
+    set((s) => ({
+      messages: { ...s.messages, [conversationId]: [...older, ...(s.messages[conversationId] ?? [])] },
+      nextCursor: { ...s.nextCursor, [conversationId]: data.nextCursor },
+      hasMoreOlder: { ...s.hasMoreOlder, [conversationId]: data.hasMore },
+      isLoadingOlder: { ...s.isLoadingOlder, [conversationId]: false },
     }))
   },
 

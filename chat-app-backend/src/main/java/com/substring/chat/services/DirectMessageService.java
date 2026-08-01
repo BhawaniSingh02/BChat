@@ -1,6 +1,7 @@
 package com.substring.chat.services;
 
 import com.substring.chat.dto.request.SendDirectMessageRequest;
+import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.DirectConversationResponse;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.entities.DirectConversation;
@@ -116,7 +117,7 @@ public class DirectMessageService {
         return conv;
     }
 
-    public Page<MessageResponse> getMessages(String conversationId, String requestingUser, int page, int size) {
+    public CursorPage<MessageResponse> getMessages(String conversationId, String requestingUser, Long before, int size) {
         DirectConversation conv = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
@@ -124,9 +125,13 @@ public class DirectMessageService {
             throw new ConversationNotFoundException(conversationId);
         }
 
-        return messageRepository.findByRoomIdOrderByTimestampDesc(
-                "dm:" + conversationId, PageRequest.of(page, size))
-                .map(MessageResponse::from);
+        Instant cursor = before != null ? Instant.ofEpochMilli(before) : Instant.now();
+        Page<Message> page = messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                "dm:" + conversationId, cursor, PageRequest.of(0, size));
+        List<MessageResponse> content = page.getContent().stream().map(MessageResponse::from).toList();
+        Long nextCursor = content.isEmpty() ? null
+                : page.getContent().get(page.getContent().size() - 1).getTimestamp().toEpochMilli();
+        return new CursorPage<>(content, nextCursor, page.hasNext());
     }
 
     public MessageResponse sendMessage(String conversationId, String senderUsername,

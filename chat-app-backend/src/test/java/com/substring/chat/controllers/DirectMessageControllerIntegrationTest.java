@@ -203,7 +203,8 @@ class DirectMessageControllerIntegrationTest {
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.totalElements").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0))
+                .andExpect(jsonPath("$.hasMore").value(false));
     }
 
     @Test
@@ -227,7 +228,7 @@ class DirectMessageControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/dm/" + conversationId + "/messages")
                         .header("Authorization", "Bearer " + aliceToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].content").value("Test message"));
     }
 

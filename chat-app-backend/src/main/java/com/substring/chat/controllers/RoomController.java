@@ -4,6 +4,7 @@ import com.substring.chat.dto.request.CreateRoomRequest;
 import com.substring.chat.dto.request.EditMessageRequest;
 import com.substring.chat.dto.request.MuteRequest;
 import com.substring.chat.dto.request.UpdateRoomRequest;
+import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.dto.response.RoomResponse;
 import com.substring.chat.dto.response.UserResponse;
@@ -11,7 +12,6 @@ import com.substring.chat.services.ConversationService;
 import com.substring.chat.services.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -74,10 +74,10 @@ public class RoomController {
     }
 
     @GetMapping("/{roomId}/messages")
-    public ResponseEntity<Page<MessageResponse>> getMessages(@PathVariable String roomId,
-                                                              @RequestParam(defaultValue = "0") int page,
-                                                              @RequestParam(defaultValue = "50") int size) {
-        return ResponseEntity.ok(roomService.getMessages(roomId, page, size));
+    public ResponseEntity<CursorPage<MessageResponse>> getMessages(@PathVariable String roomId,
+                                                                     @RequestParam(required = false) Long before,
+                                                                     @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(roomService.getMessages(roomId, before, size));
     }
 
     @GetMapping("/{roomId}/messages/search")

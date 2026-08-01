@@ -1,6 +1,7 @@
 package com.substring.chat.services;
 
 import com.substring.chat.dto.request.SendDirectMessageRequest;
+import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.DirectConversationResponse;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.entities.DirectConversation;
@@ -220,7 +221,7 @@ class DirectMessageServiceTest {
     void getMessages_throwsWhenConversationNotFound() {
         when(conversationRepository.findById("bad")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> directMessageService.getMessages("bad", "alice", 0, 50))
+        assertThatThrownBy(() -> directMessageService.getMessages("bad", "alice", null, 50))
                 .isInstanceOf(ConversationNotFoundException.class);
     }
 
@@ -228,12 +229,12 @@ class DirectMessageServiceTest {
     void getMessages_throwsWhenUserNotInConversation() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
 
-        assertThatThrownBy(() -> directMessageService.getMessages("conv-1", "eve", 0, 50))
+        assertThatThrownBy(() -> directMessageService.getMessages("conv-1", "eve", null, 50))
                 .isInstanceOf(ConversationNotFoundException.class);
     }
 
     @Test
-    void getMessages_returnsPagedMessages() {
+    void getMessages_returnsCursorPage() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
 
         Message msg = new Message();
@@ -245,13 +246,52 @@ class DirectMessageServiceTest {
         msg.setTimestamp(Instant.now());
         msg.setReadBy(new ArrayList<>());
         Page<Message> page = new PageImpl<>(List.of(msg));
-        when(messageRepository.findByRoomIdOrderByTimestampDesc(eq("dm:conv-1"), any(Pageable.class)))
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("dm:conv-1"), any(Instant.class), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<MessageResponse> result = directMessageService.getMessages("conv-1", "alice", 0, 50);
+        CursorPage<MessageResponse> result = directMessageService.getMessages("conv-1", "alice", null, 50);
 
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getContent()).isEqualTo("hi");
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).getContent()).isEqualTo("hi");
+        assertThat(result.nextCursor()).isEqualTo(msg.getTimestamp().toEpochMilli());
+        assertThat(result.hasMore()).isFalse();
+    }
+
+    @Test
+    void getMessages_usesBeforeCursorAsInstant() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("dm:conv-1"), eq(Instant.ofEpochMilli(1_000L)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        CursorPage<MessageResponse> result = directMessageService.getMessages("conv-1", "alice", 1_000L, 50);
+
+        assertThat(result.content()).isEmpty();
+        assertThat(result.nextCursor()).isNull();
+        assertThat(result.hasMore()).isFalse();
+    }
+
+    @Test
+    void getMessages_hasMoreTrueWhenAnotherPageExists() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
+
+        Message msg = new Message();
+        msg.setId("msg-1");
+        msg.setRoomId("dm:conv-1");
+        msg.setSender("alice");
+        msg.setContent("hi");
+        msg.setMessageType(Message.MessageType.TEXT);
+        msg.setTimestamp(Instant.now());
+        msg.setReadBy(new ArrayList<>());
+        Page<Message> page = new PageImpl<>(List.of(msg), Pageable.ofSize(1), 2);
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("dm:conv-1"), any(Instant.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        CursorPage<MessageResponse> result = directMessageService.getMessages("conv-1", "alice", null, 1);
+
+        assertThat(result.hasMore()).isTrue();
     }
 
     // ── Message requests ──────────────────────────────────────────────────────

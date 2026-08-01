@@ -58,11 +58,22 @@ export function buildAudioConstraints(): MediaTrackConstraints {
   return micId ? { ...base, deviceId: { ideal: micId } } : base
 }
 
-/** Video constraints for getUserMedia, honouring the preferred camera. */
+/**
+ * Video constraints for getUserMedia, honouring the preferred camera.
+ * Requests a consistent 16:9 shape (ideal, not exact) so calls look the same
+ * across devices with different default camera aspect ratios — without this,
+ * a portrait phone camera composited into a 16:9 video tile gets cropped hard
+ * by `object-cover`, which reads as "zoomed in".
+ */
 export function buildVideoConstraints(withVideo: boolean): boolean | MediaTrackConstraints {
   if (!withVideo) return false
   const camId = getPreferredCameraId()
-  return camId ? { deviceId: { ideal: camId } } : true
+  const shape: MediaTrackConstraints = {
+    aspectRatio: { ideal: 16 / 9 },
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+  }
+  return camId ? { ...shape, deviceId: { ideal: camId } } : shape
 }
 
 /**

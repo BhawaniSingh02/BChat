@@ -11,7 +11,12 @@ interface ChatState {
   typingUsers: TypingUsers
   isLoadingMessages: boolean
   unreadCounts: Record<string, number>
-  fetchMessages: (roomId: string, page?: number) => Promise<void>
+  /** Cursor to fetch the next (older) page of messages for a room, or null if no more. */
+  nextCursor: Record<string, number | null>
+  hasMoreOlder: Record<string, boolean>
+  isLoadingOlder: Record<string, boolean>
+  fetchMessages: (roomId: string) => Promise<void>
+  loadMoreMessages: (roomId: string) => Promise<void>
   addMessage: (message: Message) => void
   upsertMessage: (message: Message) => void
   setTyping: (roomId: string, username: string, typing: boolean) => void
@@ -21,23 +26,39 @@ interface ChatState {
   resetUnread: (roomId: string) => void
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   messages: {},
   typingUsers: {},
   isLoadingMessages: false,
   unreadCounts: {},
+  nextCursor: {},
+  hasMoreOlder: {},
+  isLoadingOlder: {},
 
-  fetchMessages: async (roomId, page = 0) => {
+  fetchMessages: async (roomId) => {
     set({ isLoadingMessages: true })
-    const data = await roomsApi.getMessages(roomId, page)
+    const data = await roomsApi.getMessages(roomId)
     // API returns newest first; reverse to show oldest first
     const ordered = [...data.content].reverse()
     set((s) => ({
-      messages: {
-        ...s.messages,
-        [roomId]: page === 0 ? ordered : [...ordered, ...(s.messages[roomId] ?? [])],
-      },
+      messages: { ...s.messages, [roomId]: ordered },
+      nextCursor: { ...s.nextCursor, [roomId]: data.nextCursor },
+      hasMoreOlder: { ...s.hasMoreOlder, [roomId]: data.hasMore },
       isLoadingMessages: false,
+    }))
+  },
+
+  loadMoreMessages: async (roomId) => {
+    const cursor = get().nextCursor[roomId]
+    if (!cursor || get().isLoadingOlder[roomId]) return
+    set((s) => ({ isLoadingOlder: { ...s.isLoadingOlder, [roomId]: true } }))
+    const data = await roomsApi.getMessages(roomId, cursor)
+    const older = [...data.content].reverse()
+    set((s) => ({
+      messages: { ...s.messages, [roomId]: [...older, ...(s.messages[roomId] ?? [])] },
+      nextCursor: { ...s.nextCursor, [roomId]: data.nextCursor },
+      hasMoreOlder: { ...s.hasMoreOlder, [roomId]: data.hasMore },
+      isLoadingOlder: { ...s.isLoadingOlder, [roomId]: false },
     }))
   },
 
@@ -88,8 +109,10 @@ export const useChatStore = create<ChatState>((set) => ({
 
   clearRoom: (roomId) => {
     set((s) => {
-      const { [roomId]: _, ...rest } = s.messages
-      return { messages: rest }
+      const { [roomId]: _m, ...messages } = s.messages
+      const { [roomId]: _c, ...nextCursor } = s.nextCursor
+      const { [roomId]: _h, ...hasMoreOlder } = s.hasMoreOlder
+      return { messages, nextCursor, hasMoreOlder }
     })
   },
 

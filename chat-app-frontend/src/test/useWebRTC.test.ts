@@ -257,7 +257,7 @@ describe('useWebRTC — signaling basics', () => {
     const { result } = setup()
     let offer = ''
     await act(async () => { offer = await result.current.startCall(true) })
-    expect(getUserMedia).toHaveBeenCalledWith(expect.objectContaining({ video: true }))
+    expect(getUserMedia).toHaveBeenCalledWith(expect.objectContaining({ video: expect.objectContaining({ aspectRatio: { ideal: 16 / 9 } }) }))
     expect(JSON.parse(offer).type).toBe('offer')
     expect(createdPCs[0].addedTracks.length).toBe(2) // audio + video
   })

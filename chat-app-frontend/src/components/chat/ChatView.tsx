@@ -54,6 +54,9 @@ export default function ChatView({
     [roomTypingUsers, currentUsername]
   )
   const fetchMessages = useChatStore((s) => s.fetchMessages)
+  const loadMoreMessages = useChatStore((s) => s.loadMoreMessages)
+  const hasMoreOlder = useChatStore((s) => s.hasMoreOlder[room.roomId] ?? false)
+  const isLoadingOlder = useChatStore((s) => s.isLoadingOlder[room.roomId] ?? false)
 
   useEffect(() => {
     fetchMessages(room.roomId)
@@ -374,6 +377,9 @@ export default function ChatView({
             onDropdownAction={handleDropdownAction}
             isAdmin={isAdmin}
             pinnedMessageIds={room.pinnedMessages}
+            hasMoreOlder={hasMoreOlder}
+            isLoadingOlder={isLoadingOlder}
+            onLoadOlder={() => loadMoreMessages(room.roomId)}
           />
         )}
 

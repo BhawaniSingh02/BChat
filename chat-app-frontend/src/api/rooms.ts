@@ -1,5 +1,5 @@
 import client from './client'
-import type { CreateRoomRequest, Message, PagedResponse, Room, UpdateRoomRequest, User } from '../types'
+import type { CreateRoomRequest, CursorPage, Message, Room, UpdateRoomRequest, User } from '../types'
 
 export const roomsApi = {
   getAll: () => client.get<Room[]>('/rooms').then((r) => r.data),
@@ -17,9 +17,9 @@ export const roomsApi = {
   leave: (roomId: string) =>
     client.delete(`/rooms/${roomId}/leave`),
 
-  getMessages: (roomId: string, page = 0, size = 50) =>
+  getMessages: (roomId: string, before?: number, size = 50) =>
     client
-      .get<PagedResponse<Message>>(`/rooms/${roomId}/messages`, { params: { page, size } })
+      .get<CursorPage<Message>>(`/rooms/${roomId}/messages`, { params: { before, size } })
       .then((r) => r.data),
 
   searchMessages: (roomId: string, q: string) =>

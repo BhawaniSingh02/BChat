@@ -2,6 +2,7 @@ package com.substring.chat.services;
 
 import com.substring.chat.dto.request.CreateRoomRequest;
 import com.substring.chat.dto.request.UpdateRoomRequest;
+import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.dto.response.RoomResponse;
 import com.substring.chat.dto.response.UserResponse;
@@ -14,6 +15,9 @@ import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
 import com.substring.chat.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +35,7 @@ public class RoomService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
 
+    @CacheEvict(value = "allRooms", key = "'all'")
     public RoomResponse createRoom(CreateRoomRequest request, String createdBy) {
         if (roomRepository.findByRoomId(request.getRoomId()) != null) {
             throw new RoomAlreadyExistsException(request.getRoomId());
@@ -57,6 +62,7 @@ public class RoomService {
         return RoomResponse.from(room);
     }
 
+    @Cacheable(value = "allRooms", key = "'all'")
     public List<RoomResponse> getAllRooms() {
         return roomRepository.findAllByOrderByLastMessageAtDesc()
                 .stream()
@@ -64,6 +70,7 @@ public class RoomService {
                 .toList();
     }
 
+    @Cacheable(value = "userRooms", key = "#username")
     public List<RoomResponse> getRoomsForUser(String username) {
         return roomRepository.findByMembersContaining(username)
                 .stream()
@@ -71,6 +78,7 @@ public class RoomService {
                 .toList();
     }
 
+    @CacheEvict(value = "userRooms", key = "#username")
     public RoomResponse joinRoom(String roomId, String username) {
         Room room = roomRepository.findByRoomId(roomId);
         if (room == null) {
@@ -83,6 +91,7 @@ public class RoomService {
         return RoomResponse.from(room);
     }
 
+    @CacheEvict(value = "userRooms", key = "#username")
     public void leaveRoom(String roomId, String username) {
         Room room = roomRepository.findByRoomId(roomId);
         if (room == null) {
@@ -92,13 +101,22 @@ public class RoomService {
         roomRepository.save(room);
     }
 
-    public Page<MessageResponse> getMessages(String roomId, int page, int size) {
+    /**
+     * Cursor-based message history. {@code before} is an epoch-millis timestamp;
+     * omit it to fetch the most recent page. One code path handles both the
+     * initial load and "load older" — the cursor just defaults to "now".
+     */
+    public CursorPage<MessageResponse> getMessages(String roomId, Long before, int size) {
         if (roomRepository.findByRoomId(roomId) == null) {
             throw new RoomNotFoundException(roomId);
         }
-        return messageRepository.findByRoomIdOrderByTimestampDesc(
-                roomId, PageRequest.of(page, size))
-                .map(MessageResponse::from);
+        Instant cursor = before != null ? Instant.ofEpochMilli(before) : Instant.now();
+        Page<Message> page = messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                roomId, cursor, PageRequest.of(0, size));
+        List<MessageResponse> content = page.getContent().stream().map(MessageResponse::from).toList();
+        Long nextCursor = content.isEmpty() ? null
+                : page.getContent().get(page.getContent().size() - 1).getTimestamp().toEpochMilli();
+        return new CursorPage<>(content, nextCursor, page.hasNext());
     }
 
     public List<MessageResponse> searchMessages(String roomId, String query) {
@@ -156,6 +174,7 @@ public class RoomService {
     }
 
     /** Kick a member — only the room creator (admin) can do this. Admin cannot kick themselves. */
+    @CacheEvict(value = "userRooms", key = "#targetUsername")
     public RoomResponse kickMember(String roomId, String targetUsername, String requestingUsername) {
         Room room = roomRepository.findByRoomId(roomId);
         if (room == null) throw new RoomNotFoundException(roomId);
@@ -170,7 +189,17 @@ public class RoomService {
         return RoomResponse.from(room);
     }
 
-    /** Update room name/description — admin only. */
+    /**
+     * Update room name/description — admin only. Evicts the whole userRooms
+     * cache (coarse) since these display fields are embedded in every
+     * member's cached room list and updateRoom doesn't have the member list
+     * on hand for a precise per-member evict — acceptable given the 10-minute
+     * TTL and low frequency of this admin action.
+     */
+    @Caching(evict = {
+            @CacheEvict(value = "allRooms", key = "'all'"),
+            @CacheEvict(value = "userRooms", allEntries = true),
+    })
     public RoomResponse updateRoom(String roomId, UpdateRoomRequest request, String requestingUsername) {
         Room room = roomRepository.findByRoomId(roomId);
         if (room == null) throw new RoomNotFoundException(roomId);

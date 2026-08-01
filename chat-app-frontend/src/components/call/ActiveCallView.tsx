@@ -443,7 +443,7 @@ export default function ActiveCallView({
                 onResize={() => {
                   if ((remoteVideoRef.current?.videoWidth ?? 0) > 0) setRemoteHasVideo(true)
                 }}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 data-testid="remote-video"
                 aria-label={`${otherUsername}'s video`}
               />

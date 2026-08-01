@@ -16,6 +16,9 @@ vi.mock('../../store/dmStore', () => ({
       messages: { 'conv-1': mockMessages },
       isLoading: mockIsLoading,
       fetchMessages: mockFetchMessages,
+      loadMoreMessages: vi.fn(),
+      hasMoreOlder: {},
+      isLoadingOlder: {},
     }
     return selector(state)
   },

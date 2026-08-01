@@ -40,6 +40,9 @@ export default function DMChatView({
   const messages = useMemo(() => rawMessages ?? [], [rawMessages])
   const isLoading = useDMStore((s) => s.isLoading)
   const fetchMessages = useDMStore((s) => s.fetchMessages)
+  const loadMoreMessages = useDMStore((s) => s.loadMoreMessages)
+  const hasMoreOlder = useDMStore((s) => s.hasMoreOlder[conversation.id] ?? false)
+  const isLoadingOlder = useDMStore((s) => s.isLoadingOlder[conversation.id] ?? false)
   const isOnline = usePresenceStore((s) => s.isOnline)
 
   const otherUser = conversation.participants.find((p) => p !== currentUsername) ?? '?'
@@ -382,6 +385,9 @@ export default function DMChatView({
           onEditMessage={handleEditSave}
           onDropdownAction={handleDropdownAction}
           onCallBack={onCallBack}
+          hasMoreOlder={hasMoreOlder}
+          isLoadingOlder={isLoadingOlder}
+          onLoadOlder={() => loadMoreMessages(conversation.id)}
         />
       )}
 

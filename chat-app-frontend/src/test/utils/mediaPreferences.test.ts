@@ -42,13 +42,22 @@ describe('mediaPreferences', () => {
     expect(buildVideoConstraints(false)).toBe(false)
   })
 
-  it('returns true video constraints when no camera is chosen', () => {
-    expect(buildVideoConstraints(true)).toBe(true)
+  it('returns 16:9 shape constraints when no camera is chosen', () => {
+    expect(buildVideoConstraints(true)).toEqual({
+      aspectRatio: { ideal: 16 / 9 },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    })
   })
 
-  it('includes the preferred camera as an ideal deviceId', () => {
+  it('includes the preferred camera as an ideal deviceId alongside the 16:9 shape', () => {
     setPreferredCameraId('cam-1')
-    expect(buildVideoConstraints(true)).toEqual({ deviceId: { ideal: 'cam-1' } })
+    expect(buildVideoConstraints(true)).toEqual({
+      aspectRatio: { ideal: 16 / 9 },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      deviceId: { ideal: 'cam-1' },
+    })
   })
 
   it('applyPreferredSpeaker is a no-op when element is null', async () => {

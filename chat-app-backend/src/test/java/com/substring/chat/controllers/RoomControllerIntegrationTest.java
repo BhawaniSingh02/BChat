@@ -217,7 +217,62 @@ class RoomControllerIntegrationTest {
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.totalElements").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0))
+                .andExpect(jsonPath("$.hasMore").value(false))
+                .andExpect(jsonPath("$.nextCursor").doesNotExist());
+    }
+
+    @Test
+    void getMessages_cursorPaginatesOlderMessagesWithoutOverlap() throws Exception {
+        String roomId = "cursor-room";
+        CreateRoomRequest request = new CreateRoomRequest();
+        request.setRoomId(roomId);
+        request.setName("Cursor Room");
+
+        mockMvc.perform(post("/api/v1/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + authToken)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        // Seed 3 messages with strictly increasing timestamps, all safely in the
+        // past — the default cursor (no `before` param) is real Instant.now() at
+        // request time, so future-dated seed timestamps would be filtered out.
+        java.time.Instant now = java.time.Instant.now();
+        for (int i = 0; i < 3; i++) {
+            Message msg = new Message();
+            msg.setRoomId(roomId);
+            msg.setSender(authHandle);
+            msg.setSenderName(authHandle);
+            msg.setContent("msg-" + i);
+            msg.setMessageType(Message.MessageType.TEXT);
+            msg.setTimestamp(now.minusSeconds(3 - i)); // msg-0 oldest, msg-2 newest
+            msg.setReadBy(new java.util.ArrayList<>());
+            messageRepository.save(msg);
+        }
+
+        // First page of size 2: newest 2 messages, hasMore true.
+        String firstPageJson = mockMvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+                        .param("size", "2")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.hasMore").value(true))
+                .andExpect(jsonPath("$.content[0].content").value("msg-2"))
+                .andExpect(jsonPath("$.content[1].content").value("msg-1"))
+                .andReturn().getResponse().getContentAsString();
+
+        long nextCursor = objectMapper.readTree(firstPageJson).get("nextCursor").asLong();
+
+        // Second page via the cursor: the oldest remaining message, no overlap with page 1.
+        mockMvc.perform(get("/api/v1/rooms/" + roomId + "/messages")
+                        .param("before", String.valueOf(nextCursor))
+                        .param("size", "2")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].content").value("msg-0"))
+                .andExpect(jsonPath("$.hasMore").value(false));
     }
 
     @Test

@@ -1,5 +1,5 @@
 import client from './client'
-import type { DirectConversation, Message, PagedResponse } from '../types'
+import type { CursorPage, DirectConversation, Message } from '../types'
 
 export const dmApi = {
   getConversations: () =>
@@ -8,9 +8,9 @@ export const dmApi = {
   getOrCreate: (otherUsername: string) =>
     client.post<DirectConversation>(`/dm/${otherUsername}`).then((r) => r.data),
 
-  getMessages: (conversationId: string, page = 0, size = 50) =>
+  getMessages: (conversationId: string, before?: number, size = 50) =>
     client
-      .get<PagedResponse<Message>>(`/dm/${conversationId}/messages`, { params: { page, size } })
+      .get<CursorPage<Message>>(`/dm/${conversationId}/messages`, { params: { before, size } })
       .then((r) => r.data),
 
   sendMessage: (conversationId: string, content: string) =>

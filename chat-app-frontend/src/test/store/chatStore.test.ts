@@ -23,7 +23,11 @@ describe('chatStore', () => {
       typingUsers: {},
       isLoadingMessages: false,
       unreadCounts: {},
+      nextCursor: {},
+      hasMoreOlder: {},
+      isLoadingOlder: {},
     })
+    vi.clearAllMocks()
   })
 
   describe('addMessage', () => {
@@ -168,15 +172,11 @@ describe('chatStore', () => {
 
   describe('fetchMessages', () => {
     it('fetches and reverses messages for display', async () => {
-      const pagedResponse = {
+      vi.mocked(roomsApi.getMessages).mockResolvedValue({
         content: [makeMessage('3'), makeMessage('2'), makeMessage('1')], // newest first
-        totalElements: 3,
-        totalPages: 1,
-        number: 0,
-        size: 50,
-        last: true,
-      }
-      vi.mocked(roomsApi.getMessages).mockResolvedValue(pagedResponse)
+        nextCursor: 1000,
+        hasMore: true,
+      })
 
       await useChatStore.getState().fetchMessages('general')
 
@@ -185,6 +185,43 @@ describe('chatStore', () => {
       // Should be reversed: oldest first
       expect(messages[0].id).toBe('1')
       expect(messages[2].id).toBe('3')
+      expect(useChatStore.getState().nextCursor['general']).toBe(1000)
+      expect(useChatStore.getState().hasMoreOlder['general']).toBe(true)
+    })
+  })
+
+  describe('loadMoreMessages', () => {
+    it('prepends older messages ahead of existing ones', async () => {
+      useChatStore.setState({
+        messages: { general: [makeMessage('3')] },
+        nextCursor: { general: 3000 },
+        hasMoreOlder: { general: true },
+      })
+      vi.mocked(roomsApi.getMessages).mockResolvedValue({
+        content: [makeMessage('2'), makeMessage('1')], // newest first
+        nextCursor: null,
+        hasMore: false,
+      })
+
+      await useChatStore.getState().loadMoreMessages('general')
+
+      const messages = useChatStore.getState().messages['general']
+      expect(messages.map((m) => m.id)).toEqual(['1', '2', '3'])
+      expect(useChatStore.getState().nextCursor['general']).toBeNull()
+      expect(useChatStore.getState().hasMoreOlder['general']).toBe(false)
+      expect(roomsApi.getMessages).toHaveBeenCalledWith('general', 3000)
+    })
+
+    it('is a no-op when there is no cursor', async () => {
+      useChatStore.setState({ nextCursor: { general: null } })
+      await useChatStore.getState().loadMoreMessages('general')
+      expect(roomsApi.getMessages).not.toHaveBeenCalled()
+    })
+
+    it('is a no-op when already loading', async () => {
+      useChatStore.setState({ nextCursor: { general: 1000 }, isLoadingOlder: { general: true } })
+      await useChatStore.getState().loadMoreMessages('general')
+      expect(roomsApi.getMessages).not.toHaveBeenCalled()
     })
   })
 })

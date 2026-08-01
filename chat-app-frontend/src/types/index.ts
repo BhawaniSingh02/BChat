@@ -107,6 +107,13 @@ export interface PagedResponse<T> {
   last: boolean
 }
 
+export interface CursorPage<T> {
+  content: T[]
+  /** Epoch-millis timestamp of the oldest item in `content`; pass as `before` to fetch the next older page. */
+  nextCursor: number | null
+  hasMore: boolean
+}
+
 export interface DirectConversation {
   id: string
   participants: string[]

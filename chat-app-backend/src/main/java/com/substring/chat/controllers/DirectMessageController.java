@@ -3,13 +3,13 @@ package com.substring.chat.controllers;
 import com.substring.chat.dto.request.DisappearingTimerRequest;
 import com.substring.chat.dto.request.MuteRequest;
 import com.substring.chat.dto.request.SendDirectMessageRequest;
+import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.DirectConversationResponse;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.services.ConversationService;
 import com.substring.chat.services.DirectMessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -49,13 +49,13 @@ public class DirectMessageController {
     }
 
     @GetMapping("/{conversationId}/messages")
-    public ResponseEntity<Page<MessageResponse>> getMessages(
+    public ResponseEntity<CursorPage<MessageResponse>> getMessages(
             @PathVariable String conversationId,
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) Long before,
             @RequestParam(defaultValue = "50") int size) {
         return ResponseEntity.ok(
-                directMessageService.getMessages(conversationId, userDetails.getUsername(), page, size));
+                directMessageService.getMessages(conversationId, userDetails.getUsername(), before, size));
     }
 
     @PostMapping("/{conversationId}/messages")

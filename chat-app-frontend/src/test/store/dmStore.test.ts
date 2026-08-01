@@ -24,7 +24,10 @@ const makeDMMessage = (id: string, convId: string, sender = 'alice'): Message =>
 
 describe('dmStore', () => {
   beforeEach(() => {
-    useDMStore.setState({ conversations: [], messages: {}, activeDMId: null, isLoading: false, dmUnreadCounts: {}, requests: [] })
+    useDMStore.setState({
+      conversations: [], messages: {}, activeDMId: null, isLoading: false, dmUnreadCounts: {}, requests: [],
+      nextCursor: {}, hasMoreOlder: {}, isLoadingOlder: {},
+    })
     vi.clearAllMocks()
   })
 
@@ -166,13 +169,49 @@ describe('dmStore', () => {
     it('fetches and reverses messages', async () => {
       vi.mocked(dmApi.getMessages).mockResolvedValue({
         content: [makeDMMessage('m3', 'conv-1'), makeDMMessage('m2', 'conv-1'), makeDMMessage('m1', 'conv-1')],
-        totalElements: 3, totalPages: 1, number: 0, size: 50, last: true,
+        nextCursor: 1000, hasMore: true,
       })
       await useDMStore.getState().fetchMessages('conv-1')
       const msgs = useDMStore.getState().messages['conv-1']
       expect(msgs).toHaveLength(3)
       expect(msgs[0].id).toBe('m1')
       expect(msgs[2].id).toBe('m3')
+      expect(useDMStore.getState().nextCursor['conv-1']).toBe(1000)
+      expect(useDMStore.getState().hasMoreOlder['conv-1']).toBe(true)
+    })
+  })
+
+  describe('loadMoreMessages', () => {
+    it('prepends older messages ahead of existing ones', async () => {
+      useDMStore.setState({
+        messages: { 'conv-1': [makeDMMessage('m3', 'conv-1')] },
+        nextCursor: { 'conv-1': 3000 },
+        hasMoreOlder: { 'conv-1': true },
+      })
+      vi.mocked(dmApi.getMessages).mockResolvedValue({
+        content: [makeDMMessage('m2', 'conv-1'), makeDMMessage('m1', 'conv-1')],
+        nextCursor: null, hasMore: false,
+      })
+
+      await useDMStore.getState().loadMoreMessages('conv-1')
+
+      const msgs = useDMStore.getState().messages['conv-1']
+      expect(msgs.map((m) => m.id)).toEqual(['m1', 'm2', 'm3'])
+      expect(useDMStore.getState().nextCursor['conv-1']).toBeNull()
+      expect(useDMStore.getState().hasMoreOlder['conv-1']).toBe(false)
+      expect(dmApi.getMessages).toHaveBeenCalledWith('conv-1', 3000)
+    })
+
+    it('is a no-op when there is no cursor', async () => {
+      useDMStore.setState({ nextCursor: { 'conv-1': null } })
+      await useDMStore.getState().loadMoreMessages('conv-1')
+      expect(dmApi.getMessages).not.toHaveBeenCalled()
+    })
+
+    it('is a no-op when already loading', async () => {
+      useDMStore.setState({ nextCursor: { 'conv-1': 1000 }, isLoadingOlder: { 'conv-1': true } })
+      await useDMStore.getState().loadMoreMessages('conv-1')
+      expect(dmApi.getMessages).not.toHaveBeenCalled()
     })
   })
 

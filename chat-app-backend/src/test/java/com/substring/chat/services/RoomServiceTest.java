@@ -2,6 +2,7 @@ package com.substring.chat.services;
 
 import com.substring.chat.dto.request.CreateRoomRequest;
 import com.substring.chat.dto.request.UpdateRoomRequest;
+import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.dto.response.RoomResponse;
 import com.substring.chat.dto.response.UserResponse;
@@ -20,6 +21,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,6 +33,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -162,6 +167,88 @@ class RoomServiceTest {
 
         assertThat(rooms).hasSize(1);
         assertThat(rooms.get(0).getMembers()).contains("alice");
+    }
+
+    // ── getMessages (cursor pagination) ──────────────────────────────────────
+
+    @Test
+    void getMessages_throwsWhenRoomNotFound() {
+        when(roomRepository.findByRoomId("nonexistent")).thenReturn(null);
+
+        assertThatThrownBy(() -> roomService.getMessages("nonexistent", null, 50))
+                .isInstanceOf(RoomNotFoundException.class);
+    }
+
+    @Test
+    void getMessages_returnsCursorPageWithNextCursorFromOldestMessage() {
+        when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
+
+        Message msg = new Message();
+        msg.setId("msg-1");
+        msg.setRoomId("general");
+        msg.setSender("alice");
+        msg.setContent("hi");
+        msg.setMessageType(Message.MessageType.TEXT);
+        msg.setTimestamp(Instant.now());
+        msg.setReadBy(new ArrayList<>());
+        Page<Message> page = new PageImpl<>(List.of(msg));
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("general"), any(Instant.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        CursorPage<MessageResponse> result = roomService.getMessages("general", null, 50);
+
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.nextCursor()).isEqualTo(msg.getTimestamp().toEpochMilli());
+        assertThat(result.hasMore()).isFalse();
+    }
+
+    @Test
+    void getMessages_returnsNullCursorAndNoMoreWhenEmpty() {
+        when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("general"), any(Instant.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        CursorPage<MessageResponse> result = roomService.getMessages("general", null, 50);
+
+        assertThat(result.content()).isEmpty();
+        assertThat(result.nextCursor()).isNull();
+        assertThat(result.hasMore()).isFalse();
+    }
+
+    @Test
+    void getMessages_hasMoreTrueWhenAnotherOlderPageExists() {
+        when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
+
+        Message msg = new Message();
+        msg.setId("msg-1");
+        msg.setRoomId("general");
+        msg.setSender("alice");
+        msg.setContent("hi");
+        msg.setMessageType(Message.MessageType.TEXT);
+        msg.setTimestamp(Instant.now());
+        msg.setReadBy(new ArrayList<>());
+        Page<Message> page = new PageImpl<>(List.of(msg), Pageable.ofSize(1), 2);
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("general"), any(Instant.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        CursorPage<MessageResponse> result = roomService.getMessages("general", null, 1);
+
+        assertThat(result.hasMore()).isTrue();
+    }
+
+    @Test
+    void getMessages_passesBeforeAsInstant() {
+        when(roomRepository.findByRoomId("general")).thenReturn(existingRoom);
+        when(messageRepository.findByRoomIdAndTimestampBeforeOrderByTimestampDesc(
+                eq("general"), eq(Instant.ofEpochMilli(5_000L)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        CursorPage<MessageResponse> result = roomService.getMessages("general", 5_000L, 50);
+
+        assertThat(result.content()).isEmpty();
     }
 
     @Test
