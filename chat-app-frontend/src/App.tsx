@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { useAuthStore } from './store/authStore'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -117,6 +118,7 @@ export default function App() {
 
   return (
     <>
+    <Analytics />
     <UpdateBanner />
     <BrowserRouter>
       <Routes>
