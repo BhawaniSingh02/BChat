@@ -40,6 +40,7 @@ public class StoryService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final WebPushService webPushService;
+    private final ExpoPushService expoPushService;
 
     /** Create a 24-hour story for the author. */
     public StoryResponse createStory(String authorId, CreateStoryRequest request) {
@@ -166,6 +167,7 @@ public class StoryService {
         }
         // Background push to the author.
         webPushService.sendToUser(author, resolveName(fromUser), text.trim(), conv.getId(), null);
+        expoPushService.sendToUser(author, resolveName(fromUser), text.trim(), conv.getId(), null);
 
         return response;
     }

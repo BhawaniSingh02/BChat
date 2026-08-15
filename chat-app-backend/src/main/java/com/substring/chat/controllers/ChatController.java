@@ -12,6 +12,7 @@ import com.substring.chat.repositories.RoomRepository;
 import com.substring.chat.repositories.UserRepository;
 import com.substring.chat.entities.Room;
 import com.substring.chat.services.DirectMessageService;
+import com.substring.chat.services.ExpoPushService;
 import com.substring.chat.services.MessageRateLimiter;
 import com.substring.chat.services.WebPushService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class ChatController {
     private final MessageRateLimiter rateLimiter;
     private final UserRepository userRepository;
     private final WebPushService webPushService;
+    private final ExpoPushService expoPushService;
 
     @MessageMapping("/chat.sendMessage/{roomId}")
     public void sendMessage(@DestinationVariable String roomId,
@@ -98,6 +100,7 @@ public class ChatController {
         for (String member : room.getMembers()) {
             if (!member.equals(principal.getName())) {
                 webPushService.sendToUser(member, roomLabel, roomBody, null, roomId);
+                expoPushService.sendToUser(member, roomLabel, roomBody, null, roomId);
             }
         }
     }
@@ -209,6 +212,28 @@ public class ChatController {
             boolean stillPendingRequest = "PENDING".equals(conv.getStatus());
             if (recipient != null && !stillPendingRequest) {
                 webPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
+                expoPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
+            }
+        });
+    }
+
+    /**
+     * DM typing indicator: client sends to /app/dm.typing/{conversationId}
+     * with payload {"typing": true/false}
+     * Delivers to the other participant(s) via /user/queue/typing (DMs have no
+     * per-conversation topic, so this mirrors the /user/queue/messages delivery model).
+     */
+    @MessageMapping("/dm.typing/{conversationId}")
+    public void dmTyping(@DestinationVariable String conversationId,
+                         @Payload TypingEvent event,
+                         Principal principal) {
+        conversationRepository.findById(conversationId).ifPresent(conv -> {
+            if (!conv.getParticipants().contains(principal.getName())) return;
+            TypingEvent broadcast = new TypingEvent(conversationId, principal.getName(), event.isTyping());
+            for (String participant : conv.getParticipants()) {
+                if (!participant.equals(principal.getName())) {
+                    messagingTemplate.convertAndSendToUser(participant, "/queue/typing", broadcast);
+                }
             }
         });
     }

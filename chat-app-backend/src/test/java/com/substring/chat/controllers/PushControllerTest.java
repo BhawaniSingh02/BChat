@@ -1,7 +1,10 @@
 package com.substring.chat.controllers;
 
+import com.substring.chat.dto.request.MobilePushTokenRequest;
 import com.substring.chat.dto.request.PushSubscriptionRequest;
+import com.substring.chat.entities.MobilePushToken;
 import com.substring.chat.entities.PushSubscription;
+import com.substring.chat.repositories.MobilePushTokenRepository;
 import com.substring.chat.repositories.PushSubscriptionRepository;
 import com.substring.chat.services.WebPushService;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +27,7 @@ class PushControllerTest {
 
     private WebPushService webPushService;
     private PushSubscriptionRepository repo;
+    private MobilePushTokenRepository mobileTokenRepo;
     private PushController controller;
     private UserDetails alice;
 
@@ -31,7 +35,8 @@ class PushControllerTest {
     void setUp() {
         webPushService = mock(WebPushService.class);
         repo = mock(PushSubscriptionRepository.class);
-        controller = new PushController(webPushService, repo);
+        mobileTokenRepo = mock(MobilePushTokenRepository.class);
+        controller = new PushController(webPushService, repo, mobileTokenRepo);
         alice = mock(UserDetails.class);
         when(alice.getUsername()).thenReturn("alice");
     }
@@ -84,5 +89,52 @@ class PushControllerTest {
         ResponseEntity<Void> res = controller.unsubscribe(req);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(repo).deleteByEndpoint("https://push/abc");
+    }
+
+    @Test
+    void registerMobileToken_savesNewTokenForUser() {
+        when(mobileTokenRepo.findByExpoPushToken("ExponentPushToken[abc]")).thenReturn(Optional.empty());
+
+        MobilePushTokenRequest req = new MobilePushTokenRequest();
+        req.setExpoPushToken("ExponentPushToken[abc]");
+        req.setPlatform("android");
+
+        ResponseEntity<Void> res = controller.registerMobileToken(req, alice);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(mobileTokenRepo).save(any(MobilePushToken.class));
+    }
+
+    @Test
+    void registerMobileToken_reusesExistingTokenRecord() {
+        MobilePushToken existing = new MobilePushToken();
+        existing.setId("existing-id");
+        when(mobileTokenRepo.findByExpoPushToken("ExponentPushToken[abc]")).thenReturn(Optional.of(existing));
+
+        MobilePushTokenRequest req = new MobilePushTokenRequest();
+        req.setExpoPushToken("ExponentPushToken[abc]");
+        req.setPlatform("android");
+
+        controller.registerMobileToken(req, alice);
+
+        assertThat(existing.getUsername()).isEqualTo("alice");
+        verify(mobileTokenRepo).save(existing);
+    }
+
+    @Test
+    void registerMobileToken_rejectsMissingToken() {
+        MobilePushTokenRequest req = new MobilePushTokenRequest();
+        ResponseEntity<Void> res = controller.registerMobileToken(req, alice);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(mobileTokenRepo, never()).save(any());
+    }
+
+    @Test
+    void unregisterMobileToken_deletesByToken() {
+        MobilePushTokenRequest req = new MobilePushTokenRequest();
+        req.setExpoPushToken("ExponentPushToken[abc]");
+        ResponseEntity<Void> res = controller.unregisterMobileToken(req);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(mobileTokenRepo).deleteByExpoPushToken("ExponentPushToken[abc]");
     }
 }

@@ -43,7 +43,7 @@ class PresenceControllerIntegrationTest {
     void setUp() throws Exception {
         userRepository.deleteAll();
         // clear presence state
-        presenceService.getOnlineUsers().forEach(u -> presenceService.setOffline(u));
+        presenceService.getOnlineUsers().forEach(u -> presenceService.unregisterSession(u, "test-session"));
 
         RegisterRequest request = new RegisterRequest();
         request.setDisplayName("Presence User");
@@ -85,8 +85,8 @@ class PresenceControllerIntegrationTest {
 
     @Test
     void getOnlineUsers_returnsOnlineUsersWhenSet() throws Exception {
-        presenceService.setOnline("alice");
-        presenceService.setOnline("bob");
+        presenceService.registerSession("alice", "test-session");
+        presenceService.registerSession("bob", "test-session");
 
         mockMvc.perform(get("/api/v1/presence")
                         .header("Authorization", "Bearer " + authToken))
@@ -96,7 +96,7 @@ class PresenceControllerIntegrationTest {
 
     @Test
     void getUserPresence_returnsOnlineStatusTrue() throws Exception {
-        presenceService.setOnline("alice");
+        presenceService.registerSession("alice", "test-session");
 
         mockMvc.perform(get("/api/v1/presence/alice")
                         .header("Authorization", "Bearer " + authToken))

@@ -17,17 +17,35 @@ import java.util.Set;
 public class RedisPresenceService implements PresenceService {
 
     private static final String ONLINE_USERS_KEY = "presence:online";
+    private static final String SESSIONS_KEY_PREFIX = "presence:sessions:";
 
     private final StringRedisTemplate redisTemplate;
 
-    @Override
-    public void setOnline(String username) {
-        redisTemplate.opsForSet().add(ONLINE_USERS_KEY, username);
+    private static String sessionsKey(String username) {
+        return SESSIONS_KEY_PREFIX + username;
     }
 
     @Override
-    public void setOffline(String username) {
-        redisTemplate.opsForSet().remove(ONLINE_USERS_KEY, username);
+    public boolean registerSession(String username, String sessionId) {
+        redisTemplate.opsForSet().add(sessionsKey(username), sessionId);
+        Long count = redisTemplate.opsForSet().size(sessionsKey(username));
+        boolean wasOffline = count != null && count == 1;
+        if (wasOffline) {
+            redisTemplate.opsForSet().add(ONLINE_USERS_KEY, username);
+        }
+        return wasOffline;
+    }
+
+    @Override
+    public boolean unregisterSession(String username, String sessionId) {
+        redisTemplate.opsForSet().remove(sessionsKey(username), sessionId);
+        Long remaining = redisTemplate.opsForSet().size(sessionsKey(username));
+        boolean nowOffline = remaining == null || remaining == 0;
+        if (nowOffline) {
+            redisTemplate.opsForSet().remove(ONLINE_USERS_KEY, username);
+            redisTemplate.delete(sessionsKey(username));
+        }
+        return nowOffline;
     }
 
     @Override

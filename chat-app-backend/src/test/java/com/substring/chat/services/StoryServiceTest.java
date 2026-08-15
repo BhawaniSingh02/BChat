@@ -44,6 +44,7 @@ class StoryServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private WebPushService webPushService;
+    @Mock private ExpoPushService expoPushService;
 
     @InjectMocks private StoryService storyService;
 

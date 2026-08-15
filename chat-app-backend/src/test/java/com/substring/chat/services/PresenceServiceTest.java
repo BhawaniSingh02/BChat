@@ -15,16 +15,38 @@ class PresenceServiceTest {
     }
 
     @Test
-    void setOnline_marksUserAsOnline() {
-        presenceService.setOnline("alice");
+    void registerSession_marksUserAsOnline() {
+        presenceService.registerSession("alice", "session-1");
         assertThat(presenceService.isOnline("alice")).isTrue();
     }
 
     @Test
-    void setOffline_marksUserAsOffline() {
-        presenceService.setOnline("alice");
-        presenceService.setOffline("alice");
+    void registerSession_firstSessionReturnsTrue() {
+        assertThat(presenceService.registerSession("alice", "session-1")).isTrue();
+    }
+
+    @Test
+    void registerSession_secondSessionForSameUserReturnsFalse() {
+        presenceService.registerSession("alice", "session-1");
+        assertThat(presenceService.registerSession("alice", "session-2")).isFalse();
+    }
+
+    @Test
+    void unregisterSession_lastSessionMarksUserOfflineAndReturnsTrue() {
+        presenceService.registerSession("alice", "session-1");
+        assertThat(presenceService.unregisterSession("alice", "session-1")).isTrue();
         assertThat(presenceService.isOnline("alice")).isFalse();
+    }
+
+    @Test
+    void unregisterSession_oneOfSeveralSessionsKeepsUserOnline() {
+        // Regression test for the bug this fix addresses: a user with two simultaneous
+        // connections (e.g. a web tab and the mobile app) must stay online when only one
+        // of them disconnects.
+        presenceService.registerSession("alice", "session-1");
+        presenceService.registerSession("alice", "session-2");
+        assertThat(presenceService.unregisterSession("alice", "session-1")).isFalse();
+        assertThat(presenceService.isOnline("alice")).isTrue();
     }
 
     @Test
@@ -34,37 +56,37 @@ class PresenceServiceTest {
 
     @Test
     void getOnlineUsers_returnsAllOnlineUsers() {
-        presenceService.setOnline("alice");
-        presenceService.setOnline("bob");
+        presenceService.registerSession("alice", "session-1");
+        presenceService.registerSession("bob", "session-1");
         assertThat(presenceService.getOnlineUsers()).containsExactlyInAnyOrder("alice", "bob");
     }
 
     @Test
     void getOnlineUsers_excludesOfflineUsers() {
-        presenceService.setOnline("alice");
-        presenceService.setOnline("bob");
-        presenceService.setOffline("bob");
+        presenceService.registerSession("alice", "session-1");
+        presenceService.registerSession("bob", "session-1");
+        presenceService.unregisterSession("bob", "session-1");
         assertThat(presenceService.getOnlineUsers()).containsOnly("alice");
     }
 
     @Test
     void getOnlineCount_returnsCorrectCount() {
         assertThat(presenceService.getOnlineCount()).isEqualTo(0);
-        presenceService.setOnline("alice");
-        presenceService.setOnline("bob");
+        presenceService.registerSession("alice", "session-1");
+        presenceService.registerSession("bob", "session-1");
         assertThat(presenceService.getOnlineCount()).isEqualTo(2);
     }
 
     @Test
-    void setOnline_isIdempotent() {
-        presenceService.setOnline("alice");
-        presenceService.setOnline("alice");
+    void registerSession_sameSessionTwiceIsIdempotent() {
+        presenceService.registerSession("alice", "session-1");
+        presenceService.registerSession("alice", "session-1");
         assertThat(presenceService.getOnlineCount()).isEqualTo(1);
     }
 
     @Test
-    void setOffline_doesNotThrowWhenUserNotOnline() {
-        presenceService.setOffline("ghost");
+    void unregisterSession_doesNotThrowWhenUserNotOnline() {
+        assertThat(presenceService.unregisterSession("ghost", "session-1")).isFalse();
         assertThat(presenceService.isOnline("ghost")).isFalse();
     }
 }
