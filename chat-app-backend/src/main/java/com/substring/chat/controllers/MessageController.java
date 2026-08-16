@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
@@ -83,5 +84,18 @@ public class MessageController {
             @PathVariable String messageId,
             Principal principal) {
         return ResponseEntity.ok(messageService.getReadReceipts(messageId, principal.getName()));
+    }
+
+    // ── Media gallery ──────────────────────────────────────────────────
+
+    /**
+     * All shared media (images/video/files/audio) for a room or DM, most recent first.
+     * GET /api/v1/messages/media?roomId=<roomId or "dm:<conversationId>">
+     */
+    @GetMapping("/media")
+    public ResponseEntity<List<MessageResponse>> getMedia(
+            @RequestParam String roomId,
+            Principal principal) {
+        return ResponseEntity.ok(messageService.getMedia(roomId, principal.getName()));
     }
 }

@@ -32,4 +32,9 @@ public interface MessageRepository extends MongoRepository<Message, String> {
 
     // Message requests — remove all messages when a request is declined
     void deleteByRoomId(String roomId);
+
+    // Media gallery: all non-deleted image/video/file/audio messages for a room or DM
+    // ("dm:<conversationId>" — Message.roomId encodes both uniformly, see MessageService).
+    List<Message> findByRoomIdAndMessageTypeInAndDeletedFalseOrderByTimestampDesc(
+            String roomId, List<Message.MessageType> types, Pageable pageable);
 }

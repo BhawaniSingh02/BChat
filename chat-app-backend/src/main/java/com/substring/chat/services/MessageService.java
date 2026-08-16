@@ -61,6 +61,38 @@ public class MessageService {
                 .toList();
     }
 
+    // ── Media gallery ────────────────────────────────────────────────────
+
+    private static final List<Message.MessageType> MEDIA_TYPES =
+            List.of(Message.MessageType.IMAGE, Message.MessageType.VIDEO, Message.MessageType.FILE, Message.MessageType.AUDIO);
+
+    /**
+     * All shared media (images/video/files/audio) for a room or DM, most recent first.
+     * roomId is "dm:&lt;conversationId&gt;" for DMs — same encoding Message.roomId already
+     * uses everywhere else, so one query/endpoint serves both surfaces.
+     */
+    public List<MessageResponse> getMedia(String roomId, String username) {
+        if (roomId.startsWith(DM_PREFIX)) {
+            String conversationId = roomId.substring(DM_PREFIX.length());
+            DirectConversation conv = conversationRepository.findById(conversationId)
+                    .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
+            if (!conv.getParticipants().contains(username)) {
+                throw new org.springframework.security.access.AccessDeniedException("Not a participant of this conversation");
+            }
+        } else {
+            Room room = roomRepository.findByRoomId(roomId);
+            if (room == null || !room.getMembers().contains(username)) {
+                throw new org.springframework.security.access.AccessDeniedException("Must be a member to view this room's media");
+            }
+        }
+        return messageRepository
+                .findByRoomIdAndMessageTypeInAndDeletedFalseOrderByTimestampDesc(
+                        roomId, MEDIA_TYPES, org.springframework.data.domain.PageRequest.of(0, 200))
+                .stream()
+                .map(MessageResponse::from)
+                .toList();
+    }
+
     // ── Phase 18: Forward message ────────────────────────────────────────
 
     /**

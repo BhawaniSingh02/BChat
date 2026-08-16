@@ -129,6 +129,54 @@ class MessageServiceTest {
         assertThat(starred.get(0).getId()).isEqualTo("msg-1");
     }
 
+    // ── Media gallery ─────────────────────────────────────────────────────
+
+    @Test
+    void getMedia_returnsRoomMediaForAMember() {
+        when(roomRepository.findByRoomId("room-1")).thenReturn(testRoom);
+        when(messageRepository.findByRoomIdAndMessageTypeInAndDeletedFalseOrderByTimestampDesc(
+                eq("room-1"), any(), any())).thenReturn(List.of(testMessage));
+
+        List<MessageResponse> media = messageService.getMedia("room-1", "alice");
+
+        assertThat(media).hasSize(1);
+    }
+
+    @Test
+    void getMedia_throwsForNonMemberOfRoom() {
+        when(roomRepository.findByRoomId("room-1")).thenReturn(testRoom);
+
+        assertThatThrownBy(() -> messageService.getMedia("room-1", "charlie"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void getMedia_returnsDmMediaForAParticipant() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(testConversation));
+        when(messageRepository.findByRoomIdAndMessageTypeInAndDeletedFalseOrderByTimestampDesc(
+                eq("dm:conv-1"), any(), any())).thenReturn(List.of(testMessage));
+
+        List<MessageResponse> media = messageService.getMedia("dm:conv-1", "bob");
+
+        assertThat(media).hasSize(1);
+    }
+
+    @Test
+    void getMedia_throwsForNonParticipantOfDm() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(testConversation));
+
+        assertThatThrownBy(() -> messageService.getMedia("dm:conv-1", "charlie"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void getMedia_throwsWhenRoomNotFound() {
+        when(roomRepository.findByRoomId("bad-room")).thenReturn(null);
+
+        assertThatThrownBy(() -> messageService.getMedia("bad-room", "alice"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
     // ── Phase 18: Forward to Room ────────────────────────────────────────
 
     @Test
