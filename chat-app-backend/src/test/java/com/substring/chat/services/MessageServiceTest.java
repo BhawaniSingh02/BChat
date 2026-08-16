@@ -4,10 +4,12 @@ import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.entities.DirectConversation;
 import com.substring.chat.entities.Message;
 import com.substring.chat.entities.Room;
+import com.substring.chat.entities.User;
 import com.substring.chat.exceptions.MessageNotFoundException;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
+import com.substring.chat.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +40,7 @@ class MessageServiceTest {
     @Mock private RoomRepository roomRepository;
     @Mock private DirectConversationRepository conversationRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
+    @Mock private UserRepository userRepository;
 
     @InjectMocks private MessageService messageService;
 
@@ -148,6 +151,39 @@ class MessageServiceTest {
         assertThat(response.getForwardedFrom()).isEqualTo("alice"); // original sender
         assertThat(response.getSender()).isEqualTo("bob");           // forwarded by bob
         verify(messagingTemplate).convertAndSend(eq("/topic/room/room-1"), any(MessageResponse.class));
+    }
+
+    @Test
+    void forwardToRoom_resolvesDisplayNamesForBothForwarderAndOriginalSender() {
+        // Regression test: forwardedFrom and the forwarded message's senderName must be
+        // resolved display names, not raw (opaque) usernames — this previously showed a
+        // raw username/ID in the UI, the same bug class as the missed-call sender fix.
+        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(testMessage));
+        when(roomRepository.findByRoomId("room-1")).thenReturn(testRoom);
+        when(messageRepository.save(any(Message.class))).thenAnswer(inv -> {
+            Message m = inv.getArgument(0);
+            m.setId("msg-fwd");
+            m.setStarred(new ArrayList<>());
+            m.setReadBy(new ArrayList<>());
+            m.setReadAt(new HashMap<>());
+            m.setReactions(new HashMap<>());
+            return m;
+        });
+        when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(userWithDisplayName("alice", "Alice Wonder")));
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWithDisplayName("bob", "Bob Builder")));
+
+        MessageResponse response = messageService.forwardToRoom("msg-1", "room-1", "bob");
+
+        assertThat(response.getForwardedFrom()).isEqualTo("Alice Wonder");
+        assertThat(response.getSenderName()).isEqualTo("Bob Builder");
+    }
+
+    private static User userWithDisplayName(String username, String displayName) {
+        User user = new User();
+        user.setUsername(username);
+        user.setDisplayName(displayName);
+        return user;
     }
 
     @Test

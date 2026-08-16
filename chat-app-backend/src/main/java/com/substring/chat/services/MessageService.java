@@ -8,6 +8,7 @@ import com.substring.chat.exceptions.MessageNotFoundException;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
+import com.substring.chat.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,6 +28,7 @@ public class MessageService {
     private final RoomRepository roomRepository;
     private final DirectConversationRepository conversationRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserRepository userRepository;
 
     // ── Phase 19: Star / Unstar ──────────────────────────────────────────
 
@@ -116,15 +118,26 @@ public class MessageService {
     private Message buildForwardedMessage(Message original, String forwarder) {
         Message msg = new Message();
         msg.setSender(forwarder);
-        msg.setSenderName(forwarder);
+        msg.setSenderName(resolveSenderName(forwarder));
         msg.setContent(original.getContent());
         msg.setMessageType(original.getMessageType());
         msg.setFileUrl(original.getFileUrl());
         msg.setForwardedFrom(original.getForwardedFrom() != null
                 ? original.getForwardedFrom()   // preserve original origin on re-forward
-                : original.getSender());
+                : resolveSenderName(original.getSender()));
         msg.setTimestamp(Instant.now());
         return msg;
+    }
+
+    /** Mirrors ChatController/CallService's resolveSenderName — display name if set, else the public handle, else the raw username. */
+    private String resolveSenderName(String username) {
+        return userRepository.findByUsername(username)
+                .map(u -> {
+                    if (u.getDisplayName() != null && !u.getDisplayName().isBlank()) return u.getDisplayName();
+                    if (u.getUniqueHandle() != null) return u.getUniqueHandle();
+                    return username;
+                })
+                .orElse(username);
     }
 
     // ── Phase 22: Read receipt details ──────────────────────────────────
