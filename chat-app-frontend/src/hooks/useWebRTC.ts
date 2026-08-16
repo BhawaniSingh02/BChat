@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react'
+import apiClient from '../api/client'
 import { buildAudioConstraints, buildVideoConstraints } from '../utils/mediaPreferences'
 
 // ── Safari detection & H.264 codec preference ─────────────────────────────────
@@ -25,38 +26,33 @@ function preferH264(pc: RTCPeerConnection): void {
 
 // ── ICE server configuration ──────────────────────────────────────────────────
 // STUN: free Google STUN servers for NAT traversal in most networks.
-// TURN: required for ~15% of connections behind symmetric NAT/firewalls.
-//       Set VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL in .env
-//       (e.g. using Metered, Twilio, or a self-hosted Coturn server).
-function buildIceServers(): RTCIceServer[] {
-  const servers: RTCIceServer[] = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-  ]
+// TURN: required for ~15% of connections behind symmetric NAT/firewalls, and for
+//       most cross-network calls (e.g. phone on LTE ↔ laptop on WiFi).
+// The full list (including TURN credentials) is served by the backend at
+// GET /api/v1/webrtc/ice-servers, configured there via TURN_* env vars — so the
+// relay can be rotated without redeploying the frontend. The previously
+// hardcoded OpenRelay public TURN was shut down upstream, which silently broke
+// cross-network calls; never hardcode a relay here again.
+const FALLBACK_STUN_ONLY: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+]
 
-  const turnUrl = import.meta.env.VITE_TURN_URL as string | undefined
-  const turnUsername = import.meta.env.VITE_TURN_USERNAME as string | undefined
-  const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL as string | undefined
+let cachedIceServers: RTCIceServer[] | null = null
 
-  if (turnUrl && turnUsername && turnCredential) {
-    // Custom/self-hosted TURN takes priority.
-    servers.push({ urls: turnUrl, username: turnUsername, credential: turnCredential })
-  } else {
-    // Free public TURN fallback (OpenRelay/Metered). Without a relay, calls
-    // between users on different networks behind symmetric NAT often end up with
-    // one-way or no audio. This guarantees a relay path out of the box; for
-    // production scale, set the VITE_TURN_* env vars to your own TURN server.
-    servers.push(
-      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    )
+async function getIceServers(): Promise<RTCIceServer[]> {
+  if (cachedIceServers) return cachedIceServers
+  try {
+    const { data } = await apiClient.get<RTCIceServer[]>('/webrtc/ice-servers')
+    if (Array.isArray(data) && data.length > 0) {
+      cachedIceServers = data
+      return data
+    }
+  } catch {
+    // Backend unreachable — proceed with STUN-only rather than blocking the call.
   }
-
-  return servers
+  return FALLBACK_STUN_ONLY
 }
-
-const ICE_SERVERS = buildIceServers()
 
 // How long to wait after ICE "disconnected" before attempting a restart (ms)
 const ICE_RECONNECT_DELAY_MS = 5000
@@ -158,8 +154,8 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     }
   }, [])
 
-  const createPeerConnection = useCallback(() => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+  const createPeerConnection = useCallback(async () => {
+    const pc = new RTCPeerConnection({ iceServers: await getIceServers() })
     const remoteStream = new MediaStream()
     remoteStreamRef.current = remoteStream
 
@@ -245,7 +241,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     })
     localStreamRef.current = stream
 
-    const pc = createPeerConnection()
+    const pc = await createPeerConnection()
     stream.getTracks().forEach((t) => pc.addTrack(t, stream))
     preferH264(pc)
 
@@ -274,7 +270,7 @@ export function useWebRTC(handlers: WebRTCHandlers) {
     })
     localStreamRef.current = stream
 
-    const pc = createPeerConnection()
+    const pc = await createPeerConnection()
     stream.getTracks().forEach((t) => pc.addTrack(t, stream))
 
     const offer: RTCSessionDescriptionInit = JSON.parse(offerSdpJson)
