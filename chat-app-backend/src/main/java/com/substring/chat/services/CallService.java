@@ -9,6 +9,7 @@ import com.substring.chat.exceptions.ConversationNotFoundException;
 import com.substring.chat.repositories.CallSessionRepository;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
+import com.substring.chat.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -26,6 +27,7 @@ public class CallService {
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final PresenceService presenceService;
+    private final UserRepository userRepository;
 
     // ── Signaling ────────────────────────────────────────────────────────────
 
@@ -322,7 +324,7 @@ public class CallService {
         Message msg = new Message();
         msg.setRoomId("dm:" + conversationId);
         msg.setSender(session.getCallerId());
-        msg.setSenderName(session.getCallerId());
+        msg.setSenderName(resolveSenderName(session.getCallerId()));
         msg.setContent(icon + " Missed " + session.getCallType().name().toLowerCase() + " call");
         msg.setMessageType(Message.MessageType.TEXT);
         msg.setTimestamp(Instant.now());
@@ -330,5 +332,16 @@ public class CallService {
         // Push to both participants so their DM panels update in real-time
         messagingTemplate.convertAndSendToUser(session.getCallerId(), "/queue/messages", saved);
         messagingTemplate.convertAndSendToUser(session.getCalleeId(), "/queue/messages", saved);
+    }
+
+    /** Mirrors ChatController's resolveSenderName — display name if set, else the public handle, else the raw username. */
+    private String resolveSenderName(String username) {
+        return userRepository.findByUsername(username)
+                .map(u -> {
+                    if (u.getDisplayName() != null && !u.getDisplayName().isBlank()) return u.getDisplayName();
+                    if (u.getUniqueHandle() != null) return u.getUniqueHandle();
+                    return username;
+                })
+                .orElse(username);
     }
 }

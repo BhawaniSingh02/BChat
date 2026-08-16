@@ -6,9 +6,11 @@ import com.substring.chat.entities.CallSession;
 import com.substring.chat.entities.DirectConversation;
 import com.substring.chat.entities.Message;
 import com.substring.chat.exceptions.ConversationNotFoundException;
+import com.substring.chat.entities.User;
 import com.substring.chat.repositories.CallSessionRepository;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
+import com.substring.chat.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +43,7 @@ class CallServiceTest {
     @Mock private MessageRepository messageRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private PresenceService presenceService;
+    @Mock private UserRepository userRepository;
 
     @InjectMocks
     private CallService callService;
@@ -247,12 +250,16 @@ class CallServiceTest {
         when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
         when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
         when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(userWithDisplayName("alice", "Alice Wonder")));
 
         CallSession result = callService.endCall("conv-1", "session-1", "alice");
 
         assertThat(result.getStatus()).isEqualTo(CallSession.CallStatus.MISSED);
-        // A missed-call system message should be saved
-        verify(messageRepository).save(any(Message.class));
+        // A missed-call system message should be saved, with the caller's resolved
+        // display name — not their raw (opaque) username/id.
+        ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository).save(msgCaptor.capture());
+        assertThat(msgCaptor.getValue().getSenderName()).isEqualTo("Alice Wonder");
         // Callee notified
         verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call"), any(CallEvent.class));
     }
@@ -362,6 +369,7 @@ class CallServiceTest {
                 .thenReturn(Optional.of(ringingSession));
         when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
         when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(userWithDisplayName("alice", "Alice Wonder")));
 
         callService.cancelCallByConversation("conv-1", "alice");
 
@@ -370,7 +378,9 @@ class CallServiceTest {
         assertThat(sessionCaptor.getValue().getStatus()).isEqualTo(CallSession.CallStatus.MISSED);
         assertThat(sessionCaptor.getValue().getEndedAt()).isNotNull();
 
-        verify(messageRepository).save(any(Message.class));
+        ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository).save(msgCaptor.capture());
+        assertThat(msgCaptor.getValue().getSenderName()).isEqualTo("Alice Wonder");
         verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call"), any(CallEvent.class));
     }
 
@@ -424,13 +434,54 @@ class CallServiceTest {
                 .thenReturn(List.of(ringingSession)); // alice is the caller
         when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
         when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(userWithDisplayName("alice", "Alice Wonder")));
 
         callService.expireSessionsForDisconnectedUser("alice");
 
         ArgumentCaptor<CallSession> cap = ArgumentCaptor.forClass(CallSession.class);
         verify(callSessionRepository).save(cap.capture());
         assertThat(cap.getValue().getStatus()).isEqualTo(CallSession.CallStatus.MISSED);
-        verify(messageRepository).save(any(Message.class));
+        ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository).save(msgCaptor.capture());
+        assertThat(msgCaptor.getValue().getSenderName()).isEqualTo("Alice Wonder");
+    }
+
+    @Test
+    void postMissedCallMessage_fallsBackToUniqueHandleWhenNoDisplayName() {
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+        when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+        User aliceNoDisplayName = new User();
+        aliceNoDisplayName.setUsername("alice");
+        aliceNoDisplayName.setUniqueHandle("alice.4821");
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(aliceNoDisplayName));
+
+        callService.endCall("conv-1", "session-1", "alice");
+
+        ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository).save(msgCaptor.capture());
+        assertThat(msgCaptor.getValue().getSenderName()).isEqualTo("alice.4821");
+    }
+
+    @Test
+    void postMissedCallMessage_fallsBackToRawUsernameWhenUserNotFound() {
+        when(callSessionRepository.findById("session-1")).thenReturn(Optional.of(ringingSession));
+        when(callSessionRepository.save(any(CallSession.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(messageRepository.save(any(Message.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
+
+        callService.endCall("conv-1", "session-1", "alice");
+
+        ArgumentCaptor<Message> msgCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository).save(msgCaptor.capture());
+        assertThat(msgCaptor.getValue().getSenderName()).isEqualTo("alice");
+    }
+
+    private static User userWithDisplayName(String username, String displayName) {
+        User user = new User();
+        user.setUsername(username);
+        user.setDisplayName(displayName);
+        return user;
     }
 
     @Test
