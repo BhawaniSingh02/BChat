@@ -12,6 +12,9 @@ public class SendDirectMessageRequest {
     @NotBlank(message = "Content is required")
     private String content;
 
+    // Client-generated id for optimistic-send reconciliation — echoed back in MessageResponse.
+    private String clientId;
+
     private MessageType messageType = MessageType.TEXT;
 
     private String fileUrl;

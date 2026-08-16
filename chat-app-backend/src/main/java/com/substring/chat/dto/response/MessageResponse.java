@@ -19,6 +19,7 @@ public class MessageResponse {
     private String roomId;
     private String sender;
     private String senderName;
+    private String clientId;
     private String content;
     private MessageType messageType;
     private String fileUrl;
@@ -53,6 +54,7 @@ public class MessageResponse {
         response.setRoomId(message.getRoomId());
         response.setSender(message.getSender());
         response.setSenderName(message.getSenderName());
+        response.setClientId(message.getClientId());
         response.setContent(message.getContent());
         response.setMessageType(message.getMessageType());
         response.setFileUrl(message.getFileUrl());

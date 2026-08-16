@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,6 +46,8 @@ class RoomServiceTest {
     private MessageRepository messageRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
     private RoomService roomService;

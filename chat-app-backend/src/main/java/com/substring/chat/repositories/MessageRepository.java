@@ -37,4 +37,7 @@ public interface MessageRepository extends MongoRepository<Message, String> {
     // ("dm:<conversationId>" — Message.roomId encodes both uniformly, see MessageService).
     List<Message> findByRoomIdAndMessageTypeInAndDeletedFalseOrderByTimestampDesc(
             String roomId, List<Message.MessageType> types, Pageable pageable);
+
+    // Unread counts: messages in this room/DM not sent by the user and not yet read by them.
+    long countByRoomIdAndSenderNotAndReadByNotContaining(String roomId, String sender, String username);
 }

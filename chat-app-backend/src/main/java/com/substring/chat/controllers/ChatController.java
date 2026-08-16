@@ -76,6 +76,7 @@ public class ChatController {
         message.setRoomId(roomId);
         message.setSender(principal.getName());
         message.setSenderName(resolveSenderName(principal.getName()));
+        message.setClientId(request.getClientId());
         message.setContent(request.getContent());
         message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
         message.setFileUrl(request.getFileUrl());
@@ -178,6 +179,7 @@ public class ChatController {
             message.setRoomId(DM_PREFIX + conversationId);
             message.setSender(principal.getName());
             message.setSenderName(resolveSenderName(principal.getName()));
+            message.setClientId(request.getClientId());
             message.setContent(request.getContent());
             message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
             message.setFileUrl(request.getFileUrl());

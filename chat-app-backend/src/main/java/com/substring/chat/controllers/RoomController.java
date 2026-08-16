@@ -55,6 +55,12 @@ public class RoomController {
         return ResponseEntity.ok(roomService.getRoomsForUser(userDetails.getUsername()));
     }
 
+    /** Unread message count per room the user belongs to — always fresh, not cached like /me. */
+    @GetMapping("/me/unread-counts")
+    public ResponseEntity<Map<String, Long>> getUnreadCounts(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(roomService.getUnreadCounts(userDetails.getUsername()));
+    }
+
     @GetMapping("/{roomId}")
     public ResponseEntity<RoomResponse> getRoom(@PathVariable String roomId) {
         return ResponseEntity.ok(roomService.getRoom(roomId));

@@ -77,6 +77,18 @@ public class DirectMessageService {
                 .toList();
     }
 
+    /** Unread message counts per conversation the user is in. Deliberately uncached — always fresh. */
+    public java.util.Map<String, Long> getUnreadCounts(String username) {
+        List<DirectConversation> conversations = conversationRepository.findByParticipantsContaining(username);
+        java.util.Map<String, Long> counts = new java.util.HashMap<>();
+        for (DirectConversation conv : conversations) {
+            long count = messageRepository.countByRoomIdAndSenderNotAndReadByNotContaining(
+                    "dm:" + conv.getId(), username, username);
+            if (count > 0) counts.put(conv.getId(), count);
+        }
+        return counts;
+    }
+
     /** Pending message requests addressed to this user (from people they haven't accepted). */
     public List<DirectConversationResponse> getRequestsForUser(String username) {
         return conversationRepository.findByParticipantsContaining(username)

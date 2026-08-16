@@ -32,6 +32,9 @@ public class Message {
     private String roomId;
     private String sender;
     private String senderName;
+    // Client-generated correlation id, echoed back in MessageResponse so the sender's own
+    // app can swap its optimistic "sending…" bubble for the persisted message.
+    private String clientId;
     @TextIndexed
     private String content;
     private MessageType messageType = MessageType.TEXT;

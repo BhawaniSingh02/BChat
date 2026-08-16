@@ -4,6 +4,7 @@ import com.substring.chat.dto.request.CreateRoomRequest;
 import com.substring.chat.dto.request.UpdateRoomRequest;
 import com.substring.chat.dto.response.CursorPage;
 import com.substring.chat.dto.response.MessageResponse;
+import com.substring.chat.dto.response.RoomEvent;
 import com.substring.chat.dto.response.RoomResponse;
 import com.substring.chat.dto.response.UserResponse;
 import com.substring.chat.entities.Message;
@@ -20,10 +21,12 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +37,7 @@ public class RoomService {
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @CacheEvict(value = "allRooms", key = "'all'")
     public RoomResponse createRoom(CreateRoomRequest request, String createdBy) {
@@ -87,6 +91,9 @@ public class RoomService {
         if (!room.getMembers().contains(username)) {
             room.getMembers().add(username);
             roomRepository.save(room);
+            RoomResponse updated = RoomResponse.from(room);
+            broadcastToMembers(room, username, RoomEvent.Type.MEMBER_JOINED, updated, username);
+            return updated;
         }
         return RoomResponse.from(room);
     }
@@ -99,6 +106,8 @@ public class RoomService {
         }
         room.getMembers().remove(username);
         roomRepository.save(room);
+        RoomResponse updated = RoomResponse.from(room);
+        broadcastToMembers(room, username, RoomEvent.Type.MEMBER_LEFT, updated, username);
     }
 
     /**
@@ -186,7 +195,13 @@ public class RoomService {
         }
         room.getMembers().remove(targetUsername);
         roomRepository.save(room);
-        return RoomResponse.from(room);
+        RoomResponse updated = RoomResponse.from(room);
+        // The kicked user gets no room details (they're no longer a member); remaining
+        // members get the updated member list so their Group Info screen stays live.
+        messagingTemplate.convertAndSendToUser(targetUsername, "/queue/room-events",
+                new RoomEvent(RoomEvent.Type.MEMBER_REMOVED, roomId, null, targetUsername));
+        broadcastToMembers(room, null, RoomEvent.Type.MEMBER_REMOVED, updated, targetUsername);
+        return updated;
     }
 
     /**
@@ -213,7 +228,29 @@ public class RoomService {
             room.setDescription(request.getDescription().isBlank() ? null : request.getDescription().trim());
         }
         roomRepository.save(room);
-        return RoomResponse.from(room);
+        RoomResponse updated = RoomResponse.from(room);
+        broadcastToMembers(room, requestingUsername, RoomEvent.Type.UPDATED, updated, requestingUsername);
+        return updated;
+    }
+
+    private void broadcastToMembers(Room room, String excludeUsername, RoomEvent.Type eventType, RoomResponse roomResponse, String affectedUsername) {
+        RoomEvent event = new RoomEvent(eventType, room.getRoomId(), roomResponse, affectedUsername);
+        for (String member : room.getMembers()) {
+            if (excludeUsername == null || !member.equals(excludeUsername)) {
+                messagingTemplate.convertAndSendToUser(member, "/queue/room-events", event);
+            }
+        }
+    }
+
+    /** Unread message counts per room the user belongs to. Deliberately uncached — always fresh. */
+    public Map<String, Long> getUnreadCounts(String username) {
+        List<Room> rooms = roomRepository.findByMembersContaining(username);
+        Map<String, Long> counts = new HashMap<>();
+        for (Room room : rooms) {
+            long count = messageRepository.countByRoomIdAndSenderNotAndReadByNotContaining(room.getRoomId(), username, username);
+            if (count > 0) counts.put(room.getRoomId(), count);
+        }
+        return counts;
     }
 
     /** Pin a message — max 3 pinned messages per room. Any member can pin. */

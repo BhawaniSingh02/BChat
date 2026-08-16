@@ -40,6 +40,12 @@ public class DirectMessageController {
         return ResponseEntity.ok(directMessageService.getConversationsForUser(userDetails.getUsername()));
     }
 
+    /** Unread message count per conversation the user is in. */
+    @GetMapping("/unread-counts")
+    public ResponseEntity<Map<String, Long>> getUnreadCounts(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(directMessageService.getUnreadCounts(userDetails.getUsername()));
+    }
+
     @PostMapping("/{otherUsername}")
     public ResponseEntity<DirectConversationResponse> getOrCreateConversation(
             @PathVariable String otherUsername,

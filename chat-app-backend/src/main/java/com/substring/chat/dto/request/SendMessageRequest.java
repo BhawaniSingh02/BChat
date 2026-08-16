@@ -14,6 +14,9 @@ public class SendMessageRequest {
 
     private String senderName;
 
+    // Client-generated id for optimistic-send reconciliation — echoed back in MessageResponse.
+    private String clientId;
+
     private MessageType messageType = MessageType.TEXT;
 
     private String fileUrl;
