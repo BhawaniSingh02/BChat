@@ -85,6 +85,16 @@ export default function ChatPage() {
     }
   }, [callState])
 
+  // Call participants are stored as opaque ids (a UUID for any account created through
+  // the current signup flow) — resolve to a display name/@handle the same way the DM
+  // list and CallLogList already do, instead of showing the raw id in the call UI.
+  useEffect(() => {
+    if (callOtherUser) prefetchUsers([callOtherUser])
+  }, [callOtherUser, prefetchUsers])
+  const callOtherDisplayName = callOtherUser
+    ? cache[callOtherUser]?.displayName || cache[callOtherUser]?.uniqueHandle || callOtherUser
+    : ''
+
   // ── Browser tab title flash for incoming calls ────────────────────────────
   useEffect(() => {
     const originalTitle = document.title
@@ -95,7 +105,7 @@ export default function ChatPage() {
 
     let shown = false
     const id = setInterval(() => {
-      document.title = shown ? originalTitle : `📞 Incoming call from ${callOtherUser}…`
+      document.title = shown ? originalTitle : `📞 Incoming call from ${callOtherDisplayName}…`
       shown = !shown
     }, 1000)
 
@@ -103,7 +113,7 @@ export default function ChatPage() {
       clearInterval(id)
       document.title = originalTitle
     }
-  }, [callState, callOtherUser])
+  }, [callState, callOtherUser, callOtherDisplayName])
 
   // ── ICE candidate buffering ───────────────────────────────────────────────
   // callConvId and callSessionId may be null when the first ICE candidates fire
@@ -702,7 +712,7 @@ export default function ChatPage() {
 
       {callState === 'ringing_incoming' && callOtherUser && callType && (
         <IncomingCallOverlay
-          callerUsername={callOtherUser}
+          callerUsername={callOtherDisplayName}
           callType={callType}
           callerAvatarUrl={cache[callOtherUser]?.avatarUrl}
           onAccept={handleAcceptCall}
@@ -712,7 +722,7 @@ export default function ChatPage() {
 
       {callState === 'ringing_outgoing' && callOtherUser && callType && (
         <OutgoingCallView
-          calleeUsername={callOtherUser}
+          calleeUsername={callOtherDisplayName}
           callType={callType}
           calleeAvatarUrl={cache[callOtherUser]?.avatarUrl}
           onCancel={handleHangUp}
@@ -721,7 +731,7 @@ export default function ChatPage() {
 
       {callState === 'active' && callOtherUser && callType && (
         <ActiveCallView
-          otherUsername={callOtherUser}
+          otherUsername={callOtherDisplayName}
           callType={callType}
           localStream={localStream.current}
           remoteStream={remoteStream}
@@ -753,7 +763,7 @@ export default function ChatPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <div>
-            <p className="text-sm font-semibold">{callOtherUser}</p>
+            <p className="text-sm font-semibold">{callOtherDisplayName}</p>
             <p className="text-xs text-gray-400">{busyReason ?? 'On another call'}</p>
           </div>
         </div>
