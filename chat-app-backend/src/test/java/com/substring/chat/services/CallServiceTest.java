@@ -44,6 +44,8 @@ class CallServiceTest {
     @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private PresenceService presenceService;
     @Mock private UserRepository userRepository;
+    @Mock private WebPushService webPushService;
+    @Mock private ExpoPushService expoPushService;
 
     @InjectMocks
     private CallService callService;

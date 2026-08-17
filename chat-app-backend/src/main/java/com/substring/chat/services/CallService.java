@@ -28,6 +28,8 @@ public class CallService {
     private final SimpMessagingTemplate messagingTemplate;
     private final PresenceService presenceService;
     private final UserRepository userRepository;
+    private final WebPushService webPushService;
+    private final ExpoPushService expoPushService;
 
     // ── Signaling ────────────────────────────────────────────────────────────
 
@@ -74,6 +76,13 @@ public class CallService {
                 .payload(sdpPayload)
                 .build();
         messagingTemplate.convertAndSendToUser(calleeUsername, "/queue/call", event);
+
+        // Background push so a closed/backgrounded app still surfaces the call — same
+        // best-effort, client-suppressed-if-focused pattern as message notifications.
+        String callerDisplayName = resolveSenderName(callerUsername);
+        String callBody = "Incoming " + callType.toLowerCase() + " call";
+        webPushService.sendToUser(calleeUsername, callerDisplayName, callBody, conversationId, null);
+        expoPushService.sendToUser(calleeUsername, callerDisplayName, callBody, conversationId, null);
 
         return saved;
     }
