@@ -97,7 +97,7 @@ public class ChatController {
         // Background push to every other member (their service worker suppresses it
         // if the app is focused). Best-effort and async.
         String roomLabel = "#" + room.getName();
-        String roomBody = principal.getName() + ": " + pushPreview(saved);
+        String roomBody = saved.getSenderName() + ": " + pushPreview(saved);
         for (String member : room.getMembers()) {
             if (!member.equals(principal.getName())) {
                 webPushService.sendToUser(member, roomLabel, roomBody, null, roomId);
@@ -213,8 +213,8 @@ public class ChatController {
             // message request (the recipient just sees a Requests badge instead).
             boolean stillPendingRequest = "PENDING".equals(conv.getStatus());
             if (recipient != null && !stillPendingRequest) {
-                webPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
-                expoPushService.sendToUser(recipient, principal.getName(), pushPreview(saved), conversationId, null);
+                webPushService.sendToUser(recipient, saved.getSenderName(), pushPreview(saved), conversationId, null);
+                expoPushService.sendToUser(recipient, saved.getSenderName(), pushPreview(saved), conversationId, null);
             }
         });
     }
