@@ -65,7 +65,7 @@ export default function RegisterForm() {
   const lightBg = 'bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)]'
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden flex items-center justify-center p-4 transition-colors ${darkMode ? darkBg : lightBg}`}>
+    <div className={`relative min-h-screen w-full overflow-x-hidden flex items-center justify-center p-4 transition-colors ${darkMode ? darkBg : lightBg}`}>
       {/* Dark mode toggle */}
       <button
         type="button"
@@ -322,6 +322,16 @@ export default function RegisterForm() {
             )}
           </div>
         </div>
+      </div>
+
+      <div
+        className={`absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-4 text-xs font-medium ${
+          darkMode ? 'text-slate-500' : 'text-slate-400'
+        }`}
+      >
+        <Link to="/privacy-policy" className={darkMode ? 'hover:text-slate-300' : 'hover:text-slate-600'}>Privacy</Link>
+        <Link to="/terms" className={darkMode ? 'hover:text-slate-300' : 'hover:text-slate-600'}>Terms</Link>
+        <Link to="/cookie-policy" className={darkMode ? 'hover:text-slate-300' : 'hover:text-slate-600'}>Cookies</Link>
       </div>
     </div>
   )
