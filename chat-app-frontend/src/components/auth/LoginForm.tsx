@@ -23,7 +23,7 @@ export default function LoginForm() {
   }
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden flex items-center justify-center p-4 transition-colors ${
+    <div className={`relative min-h-screen w-full overflow-x-hidden flex items-center justify-center p-4 transition-colors ${
       darkMode
         ? 'bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]'
         : 'bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.12),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)]'
@@ -162,6 +162,15 @@ export default function LoginForm() {
           </div>
         </div>
       </div>
+
+      <Link
+        to="/privacy-policy"
+        className={`absolute bottom-4 left-1/2 -translate-x-1/2 text-xs font-medium ${
+          darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
+        }`}
+      >
+        Privacy Policy
+      </Link>
     </div>
   )
 }

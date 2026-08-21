@@ -24,6 +24,18 @@ export default function HelpPanel() {
           <a href="mailto:baaat.app@gmail.com" className="font-medium text-teal-700 hover:underline">baaat.app@gmail.com</a>.
         </p>
       </div>
+
+      <div className="mt-4 space-y-1 text-sm">
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Legal</p>
+        <a
+          href="/privacy-policy"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block font-medium text-teal-700 hover:underline"
+        >
+          Privacy Policy
+        </a>
+      </div>
     </div>
   )
 }
