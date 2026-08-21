@@ -163,14 +163,15 @@ export default function LoginForm() {
         </div>
       </div>
 
-      <Link
-        to="/privacy-policy"
-        className={`absolute bottom-4 left-1/2 -translate-x-1/2 text-xs font-medium ${
-          darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
+      <div
+        className={`absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-4 text-xs font-medium ${
+          darkMode ? 'text-slate-500' : 'text-slate-400'
         }`}
       >
-        Privacy Policy
-      </Link>
+        <Link to="/privacy-policy" className={darkMode ? 'hover:text-slate-300' : 'hover:text-slate-600'}>Privacy</Link>
+        <Link to="/terms" className={darkMode ? 'hover:text-slate-300' : 'hover:text-slate-600'}>Terms</Link>
+        <Link to="/cookie-policy" className={darkMode ? 'hover:text-slate-300' : 'hover:text-slate-600'}>Cookies</Link>
+      </div>
     </div>
   )
 }

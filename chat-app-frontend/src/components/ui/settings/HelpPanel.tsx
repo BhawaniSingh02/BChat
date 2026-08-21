@@ -25,16 +25,19 @@ export default function HelpPanel() {
         </p>
       </div>
 
-      <div className="mt-4 space-y-1 text-sm">
+      <div className="mt-4 space-y-1.5 text-sm">
         <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Legal</p>
-        <a
-          href="/privacy-policy"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block font-medium text-teal-700 hover:underline"
-        >
-          Privacy Policy
-        </a>
+        <div className="flex flex-col gap-1">
+          <a href="/privacy-policy" target="_blank" rel="noreferrer" className="inline-block font-medium text-teal-700 hover:underline">
+            Privacy Policy
+          </a>
+          <a href="/terms" target="_blank" rel="noreferrer" className="inline-block font-medium text-teal-700 hover:underline">
+            Terms &amp; Conditions
+          </a>
+          <a href="/cookie-policy" target="_blank" rel="noreferrer" className="inline-block font-medium text-teal-700 hover:underline">
+            Cookie Policy
+          </a>
+        </div>
       </div>
     </div>
   )
