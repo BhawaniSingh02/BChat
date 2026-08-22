@@ -8,6 +8,7 @@ interface StoryState {
   fetchFeed: () => Promise<void>
   createStory: (req: CreateStoryRequest) => Promise<void>
   markViewed: (storyId: string) => Promise<void>
+  reactToStory: (storyId: string, emoji: string) => Promise<void>
   deleteStory: (storyId: string) => Promise<void>
 }
 
@@ -43,6 +44,32 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     try {
       await storiesApi.markViewed(storyId)
     } catch { /* best-effort */ }
+  },
+
+  reactToStory: async (storyId, emoji) => {
+    const prevGroups = get().groups
+    // Optimistic toggle: mirror the backend's one-reaction-per-user toggle logic.
+    set((s) => ({
+      groups: s.groups.map((g) => ({
+        ...g,
+        stories: g.stories.map((st) => {
+          if (st.id !== storyId) return st
+          const reactions = { ...st.reactions }
+          if (st.myReaction) {
+            reactions[st.myReaction] = Math.max(0, (reactions[st.myReaction] ?? 1) - 1)
+            if (reactions[st.myReaction] === 0) delete reactions[st.myReaction]
+          }
+          const isNew = st.myReaction !== emoji
+          if (isNew) reactions[emoji] = (reactions[emoji] ?? 0) + 1
+          return { ...st, reactions, myReaction: isNew ? emoji : null }
+        }),
+      })),
+    }))
+    try {
+      await storiesApi.react(storyId, emoji)
+    } catch {
+      set({ groups: prevGroups })
+    }
   },
 
   deleteStory: async (storyId) => {

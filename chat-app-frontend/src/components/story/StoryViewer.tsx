@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { StoryGroup } from '../../types'
 import { useStoryStore } from '../../store/storyStore'
 import { useUserCacheStore } from '../../store/userCacheStore'
@@ -15,6 +15,7 @@ interface StoryViewerProps {
 }
 
 const STORY_DURATION = 5000
+const QUICK_REACTIONS = ['❤️', '😂', '😮', '😢', '👍']
 
 export default function StoryViewer({ groups, startGroupIndex, currentUsername, onClose }: StoryViewerProps) {
   const [groupIndex, setGroupIndex] = useState(startGroupIndex)
@@ -28,8 +29,12 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
   const [showViewers, setShowViewers] = useState(false)
   const [viewers, setViewers] = useState<string[]>([])
   const [viewersLoading, setViewersLoading] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [reacted, setReacted] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const markViewed = useStoryStore((s) => s.markViewed)
   const deleteStory = useStoryStore((s) => s.deleteStory)
+  const reactToStory = useStoryStore((s) => s.reactToStory)
   const cache = useUserCacheStore((s) => s.cache)
   const prefetch = useUserCacheStore((s) => s.prefetch)
 
@@ -69,20 +74,31 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
     }
   }, [story, currentUsername, markViewed])
 
-  // Auto-advance, restarted on each story; suspended when paused.
+  // Auto-advance, restarted on each story; suspended when paused. Video stories
+  // advance on their own `onEnded` event instead of this fixed timer.
   useEffect(() => {
-    if (!story || isPaused) return
+    if (!story || isPaused || story.type === 'VIDEO') return
     const t = setTimeout(goNext, STORY_DURATION)
     return () => clearTimeout(t)
   }, [groupIndex, storyIndex, story, goNext, isPaused])
+
+  // Keep the video element's play state in sync with the pause/play controls.
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || story?.type !== 'VIDEO') return
+    if (isPaused) v.pause()
+    else v.play()?.catch?.(() => {})
+  }, [isPaused, story])
 
   // Reset transient per-story state when the story changes.
   useEffect(() => {
     setReplyText('')
     setSent(false)
+    setReacted(false)
     setManualPaused(false)
     setShowViewers(false)
     setConfirmDelete(false)
+    setVideoProgress(0)
   }, [groupIndex, storyIndex])
 
   // Keyboard controls.
@@ -124,6 +140,12 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
     finally { setSending(false) }
   }
 
+  const handleQuickReact = async (emoji: string) => {
+    await reactToStory(story.id, emoji)
+    setReacted(true)
+    setTimeout(() => setReacted(false), 1500)
+  }
+
   const openViewers = async () => {
     setShowViewers(true)
     setViewersLoading(true)
@@ -159,10 +181,14 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
         <div className="absolute left-0 right-0 top-0 z-20 flex gap-1 px-3 pt-3">
           {group.stories.map((s, i) => (
             <div key={s.id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
-              <div
-                key={i === storyIndex ? `${groupIndex}-${storyIndex}` : `static-${i}`}
-                className={`h-full bg-white ${i < storyIndex ? 'w-full' : i === storyIndex ? `story-progress ${isPaused ? 'is-paused' : ''}` : 'w-0'}`}
-              />
+              {i === storyIndex && s.type === 'VIDEO' ? (
+                <div className="h-full bg-white" style={{ width: `${videoProgress}%` }} />
+              ) : (
+                <div
+                  key={i === storyIndex ? `${groupIndex}-${storyIndex}` : `static-${i}`}
+                  className={`h-full bg-white ${i < storyIndex ? 'w-full' : i === storyIndex ? `story-progress ${isPaused ? 'is-paused' : ''}` : 'w-0'}`}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -206,6 +232,25 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
           <div className={`flex h-full w-full items-center justify-center p-8 ${backgroundClass(story.backgroundColor)}`}>
             <p className="text-center text-2xl font-semibold leading-snug text-white" data-testid="story-text-content">{story.content}</p>
           </div>
+        ) : story.type === 'VIDEO' ? (
+          <div className="flex h-full w-full items-center justify-center bg-black">
+            <video
+              ref={videoRef}
+              src={story.mediaUrl}
+              className="max-h-full max-w-full object-contain"
+              autoPlay
+              playsInline
+              onTimeUpdate={(e) => {
+                const v = e.currentTarget
+                if (v.duration) setVideoProgress((v.currentTime / v.duration) * 100)
+              }}
+              onEnded={goNext}
+              data-testid="story-video-content"
+            />
+            {story.content && (
+              <p className="absolute bottom-16 left-0 right-0 px-6 text-center text-sm text-white drop-shadow">{story.content}</p>
+            )}
+          </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-black">
             <img src={story.mediaUrl} alt="Story" className="max-h-full max-w-full object-contain" data-testid="story-image-content" />
@@ -216,8 +261,8 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
         )}
 
         {/* Tap zones (stop above the bottom bar so the reply input stays usable) */}
-        <button className="absolute bottom-20 left-0 top-0 z-10 w-1/3 cursor-default" onClick={goPrev} aria-label="Previous" data-testid="story-prev-zone" />
-        <button className="absolute bottom-20 right-0 top-0 z-10 w-2/3 cursor-default" onClick={goNext} aria-label="Next" data-testid="story-next-zone" />
+        <button className={`absolute left-0 top-0 z-10 w-1/3 cursor-default ${isOwn ? 'bottom-20' : 'bottom-32'}`} onClick={goPrev} aria-label="Previous" data-testid="story-prev-zone" />
+        <button className={`absolute right-0 top-0 z-10 w-2/3 cursor-default ${isOwn ? 'bottom-20' : 'bottom-32'}`} onClick={goNext} aria-label="Next" data-testid="story-next-zone" />
 
         {/* Bottom bar: viewers button for own stories, reply box for others' */}
         {isOwn ? (
@@ -237,6 +282,20 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
         ) : (
           <div className="absolute bottom-0 left-0 right-0 z-20 p-3">
             {sent && <p className="mb-2 text-center text-xs text-white/80" data-testid="story-reply-sent">Reply sent ✓</p>}
+            {reacted && <p className="mb-2 text-center text-xs text-white/80" data-testid="story-react-sent">Reaction sent ✓</p>}
+            <div className="mb-2 flex items-center justify-center gap-3" data-testid="story-quick-reactions">
+              {QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleQuickReact(emoji)}
+                  className={`text-2xl transition-transform hover:scale-125 ${story.myReaction === emoji ? 'scale-125' : ''}`}
+                  aria-label={`React with ${emoji}`}
+                  data-testid={`story-quick-react-${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center gap-2">
               <input
                 value={replyText}

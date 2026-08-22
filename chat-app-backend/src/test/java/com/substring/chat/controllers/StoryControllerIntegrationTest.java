@@ -172,6 +172,48 @@ class StoryControllerIntegrationTest {
     }
 
     @Test
+    void react_addsReactionAndTogglesOffOnSecondTap() throws Exception {
+        String storyId = createTextStory(bobToken, "good morning");
+
+        mockMvc.perform(post("/api/v1/stories/" + storyId + "/react")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"emoji\":\"😮\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reactions['😮']").value(1))
+                .andExpect(jsonPath("$.myReaction").value("😮"));
+
+        // tapping the same emoji again removes it
+        mockMvc.perform(post("/api/v1/stories/" + storyId + "/react")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"emoji\":\"😮\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.myReaction").doesNotExist());
+    }
+
+    @Test
+    void react_rejectsReactingToOwnStory() throws Exception {
+        String storyId = createTextStory(aliceToken, "my story");
+
+        mockMvc.perform(post("/api/v1/stories/" + storyId + "/react")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"emoji\":\"😮\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createStory_acceptsVideoType() throws Exception {
+        mockMvc.perform(post("/api/v1/stories")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"VIDEO\",\"mediaUrl\":\"https://cdn.example.com/clip.mp4\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("VIDEO"));
+    }
+
+    @Test
     void deleteStory_removesOwnStory() throws Exception {
         String storyId = createTextStory(aliceToken, "alice story");
         mockMvc.perform(delete("/api/v1/stories/" + storyId)

@@ -44,15 +44,19 @@ public class StoryService {
 
     /** Create a 24-hour story for the author. */
     public StoryResponse createStory(String authorId, CreateStoryRequest request) {
-        Story.StoryType type = "IMAGE".equalsIgnoreCase(request.getType())
-                ? Story.StoryType.IMAGE : Story.StoryType.TEXT;
+        Story.StoryType type = switch (request.getType() != null ? request.getType().toUpperCase() : "TEXT") {
+            case "IMAGE" -> Story.StoryType.IMAGE;
+            case "VIDEO" -> Story.StoryType.VIDEO;
+            default -> Story.StoryType.TEXT;
+        };
 
         String content = request.getContent() != null ? request.getContent().trim() : "";
         if (content.length() > MAX_CONTENT) content = content.substring(0, MAX_CONTENT);
 
-        if (type == Story.StoryType.IMAGE) {
+        boolean isMedia = type == Story.StoryType.IMAGE || type == Story.StoryType.VIDEO;
+        if (isMedia) {
             if (request.getMediaUrl() == null || request.getMediaUrl().isBlank()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An image story needs a mediaUrl");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A media story needs a mediaUrl");
             }
         } else if (content.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A text story needs content");
@@ -63,11 +67,12 @@ public class StoryService {
         story.setAuthorId(authorId);
         story.setType(type);
         story.setContent(content);
-        story.setMediaUrl(type == Story.StoryType.IMAGE ? request.getMediaUrl() : null);
+        story.setMediaUrl(isMedia ? request.getMediaUrl() : null);
         story.setBackgroundColor(request.getBackgroundColor());
         story.setCreatedAt(now);
         story.setExpiresAt(now.plus(STORY_TTL_HOURS, ChronoUnit.HOURS));
         story.setViewedBy(new ArrayList<>());
+        story.setReactions(new java.util.HashMap<>());
 
         return StoryResponse.from(storyRepository.save(story), authorId);
     }
@@ -170,6 +175,68 @@ public class StoryService {
         expoPushService.sendToUser(author, resolveName(fromUser), text.trim(), conv.getId(), null);
 
         return response;
+    }
+
+    /**
+     * Toggle an emoji reaction on a story (one reaction per user, tap-again to remove).
+     * On a new (non-removal) reaction, notifies the author the same way a reply does —
+     * a DM-style message marked with {@code storyReactionEmoji} so clients can render it
+     * as "Reacted 😮 to your story" — plus the existing push channels.
+     */
+    public StoryResponse reactToStory(String storyId, String username, String emoji) {
+        if (emoji == null || emoji.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Emoji is required");
+        }
+        Story story = activeStoryOrThrow(storyId);
+        String author = story.getAuthorId();
+        if (author.equals(username)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't react to your own story");
+        }
+        if (!audienceFor(username).contains(author)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can't react to this story");
+        }
+
+        Map<String, List<String>> reactions = story.getReactions();
+        if (reactions == null) {
+            reactions = new java.util.HashMap<>();
+            story.setReactions(reactions);
+        }
+        String existingEmoji = null;
+        for (Map.Entry<String, List<String>> entry : reactions.entrySet()) {
+            if (entry.getValue().contains(username)) {
+                existingEmoji = entry.getKey();
+                break;
+            }
+        }
+        if (existingEmoji != null) {
+            List<String> existingUsers = reactions.get(existingEmoji);
+            existingUsers.remove(username);
+            if (existingUsers.isEmpty()) reactions.remove(existingEmoji);
+        }
+        boolean isNewReaction = !emoji.equals(existingEmoji);
+        if (isNewReaction) {
+            reactions.computeIfAbsent(emoji, k -> new ArrayList<>()).add(username);
+        }
+        Story saved = storyRepository.save(story);
+
+        if (isNewReaction) {
+            DirectConversationResponse conv = directMessageService.getOrCreateConversation(username, author);
+            SendDirectMessageRequest req = new SendDirectMessageRequest();
+            req.setContent(emoji);
+            req.setStoryReactionEmoji(emoji);
+            req.setReplyToSnippet(storyPreview(story));
+            req.setReplyToSender(resolveName(author));
+
+            MessageResponse response = directMessageService.sendMessage(conv.getId(), username, req);
+            for (String participant : conv.getParticipants()) {
+                messagingTemplate.convertAndSendToUser(participant, "/queue/messages", response);
+            }
+            String name = resolveName(username);
+            webPushService.sendToUser(author, name, name + " reacted " + emoji + " to your story", conv.getId(), null);
+            expoPushService.sendToUser(author, name, name + " reacted " + emoji + " to your story", conv.getId(), null);
+        }
+
+        return StoryResponse.from(saved, username);
     }
 
     /** Delete an own story. */

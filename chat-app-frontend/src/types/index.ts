@@ -134,7 +134,7 @@ export interface DirectConversation {
 }
 
 // Stories (24h ephemeral status)
-export type StoryType = 'TEXT' | 'IMAGE'
+export type StoryType = 'TEXT' | 'IMAGE' | 'VIDEO'
 
 export interface Story {
   id: string
@@ -147,6 +147,8 @@ export interface Story {
   expiresAt: string
   viewedByMe: boolean
   viewerCount: number
+  reactions: Record<string, number>
+  myReaction: string | null
 }
 
 export interface StoryGroup {

@@ -4,6 +4,29 @@ import { useUserCacheStore } from '../../store/userCacheStore'
 import Avatar from '../ui/Avatar'
 import StoryComposer from './StoryComposer'
 import StoryViewer from './StoryViewer'
+import type { Story } from '../../types'
+
+// One arc per story in the group (Instagram/WhatsApp-style segmented ring),
+// filled teal-cyan while unviewed and gray once seen — instead of one solid
+// ring regardless of how many stories are in the group.
+function ringGradient(stories: Story[]): string {
+  const n = stories.length
+  if (n === 0) return '#d1d5db'
+  if (n === 1) {
+    return stories[0].viewedByMe ? '#9ca3af' : 'conic-gradient(#14b8a6, #06b6d4)'
+  }
+  const gapDeg = 6
+  const segDeg = 360 / n
+  const stops: string[] = []
+  stories.forEach((s, i) => {
+    const start = i * segDeg
+    const end = start + segDeg - gapDeg
+    const color = s.viewedByMe ? '#9ca3af' : '#14b8a6'
+    stops.push(`${color} ${start}deg ${end}deg`)
+    stops.push(`transparent ${end}deg ${start + segDeg}deg`)
+  })
+  return `conic-gradient(${stops.join(', ')})`
+}
 
 interface StoriesBarProps {
   currentUsername: string
@@ -45,7 +68,10 @@ export default function StoriesBar({ currentUsername }: StoriesBarProps) {
           data-testid="your-story-tile"
         >
           <div className="relative">
-            <span className={ownGroup ? `block rounded-full p-[2px] ${ownGroup.hasUnviewed ? 'bg-gradient-to-tr from-teal-500 to-cyan-500' : 'bg-gray-300 dark:bg-gray-600'}` : 'block'}>
+            <span
+              className="block rounded-full p-[2px]"
+              style={ownGroup ? { background: ringGradient(ownGroup.stories) } : undefined}
+            >
               <span className="block rounded-full ring-2 ring-white dark:ring-[#111b21]">
                 <Avatar name="You" size="md" src={cache[currentUsername]?.avatarUrl ?? undefined} />
               </span>
@@ -74,7 +100,7 @@ export default function StoriesBar({ currentUsername }: StoriesBarProps) {
               className="flex w-16 flex-shrink-0 flex-col items-center gap-1"
               data-testid="story-tile"
             >
-              <span className={`block rounded-full p-[2px] ${g.hasUnviewed ? 'bg-gradient-to-tr from-teal-500 to-cyan-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+              <span className="block rounded-full p-[2px]" style={{ background: ringGradient(g.stories) }}>
                 <span className="block rounded-full ring-2 ring-white dark:ring-[#111b21]">
                   <Avatar name={label} size="md" src={u?.avatarUrl ?? undefined} />
                 </span>

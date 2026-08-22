@@ -55,6 +55,9 @@ public class Message {
     // Phase 18 — Forwarded messages
     private String forwardedFrom;   // Original sender username if this is a forward
 
+    // Stories v3 — story reaction notifications
+    private String storyReactionEmoji; // set when this message is a "reacted X to your story" marker
+
     // Phase 19 — Message starring
     private List<String> starred = new ArrayList<>(); // usernames who starred
 

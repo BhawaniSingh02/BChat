@@ -181,6 +181,7 @@ public class DirectMessageService {
         message.setReplyToSnippet(request.getReplyToSnippet());
         message.setReplyToSender(request.getReplyToSender());
         message.setForwardedFrom(request.getForwardedFrom());
+        message.setStoryReactionEmoji(request.getStoryReactionEmoji());
 
         Message saved = messageRepository.save(message);
 

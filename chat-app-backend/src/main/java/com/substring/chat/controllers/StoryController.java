@@ -1,6 +1,7 @@
 package com.substring.chat.controllers;
 
 import com.substring.chat.dto.request.CreateStoryRequest;
+import com.substring.chat.dto.request.StoryReactRequest;
 import com.substring.chat.dto.request.StoryReplyRequest;
 import com.substring.chat.dto.response.MessageResponse;
 import com.substring.chat.dto.response.StoryGroupResponse;
@@ -55,6 +56,15 @@ public class StoryController {
             @AuthenticationPrincipal UserDetails user) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(storyService.replyToStory(storyId, user.getUsername(), request.getText()));
+    }
+
+    /** Toggle an emoji reaction on a story. */
+    @PostMapping("/{storyId}/react")
+    public ResponseEntity<StoryResponse> react(
+            @PathVariable String storyId,
+            @RequestBody StoryReactRequest request,
+            @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.ok(storyService.reactToStory(storyId, user.getUsername(), request.getEmoji()));
     }
 
     /** Who viewed a story (author only). */

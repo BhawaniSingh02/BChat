@@ -4,9 +4,10 @@ import type { StoryGroup, User } from '../../types'
 
 const markViewed = vi.fn()
 const deleteStory = vi.fn()
+const reactToStory = vi.fn()
 vi.mock('../../store/storyStore', () => ({
-  useStoryStore: (selector: (s: { markViewed: typeof markViewed; deleteStory: typeof deleteStory }) => unknown) =>
-    selector({ markViewed, deleteStory }),
+  useStoryStore: (selector: (s: { markViewed: typeof markViewed; deleteStory: typeof deleteStory; reactToStory: typeof reactToStory }) => unknown) =>
+    selector({ markViewed, deleteStory, reactToStory }),
 }))
 vi.mock('../../api/stories', () => ({
   storiesApi: {
@@ -26,6 +27,7 @@ const makeGroup = (authorId: string, ...ids: string[]): StoryGroup => ({
   stories: ids.map((id) => ({
     id, authorId, type: 'TEXT', content: `story ${id}`, backgroundColor: 'teal',
     createdAt: '2026-06-20T10:00:00Z', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 3,
+    reactions: {}, myReaction: null,
   })),
 })
 
@@ -34,6 +36,7 @@ describe('StoryViewer', () => {
     vi.clearAllMocks()
     markViewed.mockResolvedValue(undefined)
     deleteStory.mockResolvedValue(undefined)
+    reactToStory.mockResolvedValue(undefined)
     useUserCacheStore.setState({ cache: { bob }, fetching: new Set() })
   })
 
@@ -91,6 +94,28 @@ describe('StoryViewer', () => {
     fireEvent.click(screen.getByTestId('story-reply-send'))
     await waitFor(() => expect(storiesApi.reply).toHaveBeenCalledWith('s1', 'love this!'))
     expect(await screen.findByTestId('story-reply-sent')).toBeInTheDocument()
+  })
+
+  it('sends a quick-react and shows a confirmation on others’ stories', async () => {
+    render(<StoryViewer groups={[makeGroup('bob', 's1')]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('story-quick-react-😮'))
+    await waitFor(() => expect(reactToStory).toHaveBeenCalledWith('s1', '😮'))
+    expect(await screen.findByTestId('story-react-sent')).toBeInTheDocument()
+  })
+
+  it('renders video content and advances to the next story onEnded', () => {
+    const group: StoryGroup = {
+      authorId: 'bob', hasUnviewed: true, lastStoryAt: '2026-06-20T10:00:00Z',
+      stories: [
+        { id: 's1', authorId: 'bob', type: 'VIDEO', mediaUrl: 'https://cdn/clip.mp4', createdAt: '', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null },
+        { id: 's2', authorId: 'bob', type: 'TEXT', content: 'story s2', createdAt: '', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null },
+      ],
+    }
+    render(<StoryViewer groups={[group]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    const video = screen.getByTestId('story-video-content')
+    expect(video).toBeInTheDocument()
+    fireEvent.ended(video)
+    expect(screen.getByTestId('story-text-content')).toHaveTextContent('story s2')
   })
 
   it('does not show a reply box on your own story', () => {

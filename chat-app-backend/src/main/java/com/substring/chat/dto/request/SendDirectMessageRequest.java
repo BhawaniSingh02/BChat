@@ -26,4 +26,7 @@ public class SendDirectMessageRequest {
 
     // Phase 18 — Forwarded message
     private String forwardedFrom;
+
+    // Stories v3 — story reaction notification marker
+    private String storyReactionEmoji;
 }

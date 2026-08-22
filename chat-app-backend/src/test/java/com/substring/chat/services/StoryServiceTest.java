@@ -102,6 +102,29 @@ class StoryServiceTest {
     }
 
     @Test
+    void createStory_acceptsVideoWithMediaUrl() {
+        when(storyRepository.save(any(Story.class))).thenAnswer(i -> i.getArgument(0));
+        CreateStoryRequest req = new CreateStoryRequest();
+        req.setType("VIDEO");
+        req.setMediaUrl("https://cdn.example.com/clip.mp4");
+
+        StoryResponse res = storyService.createStory("alice", req);
+
+        assertThat(res.getType()).isEqualTo("VIDEO");
+        assertThat(res.getExpiresAt()).isAfter(Instant.now());
+    }
+
+    @Test
+    void createStory_rejectsVideoWithoutMediaUrl() {
+        CreateStoryRequest req = new CreateStoryRequest();
+        req.setType("VIDEO");
+
+        assertThatThrownBy(() -> storyService.createStory("alice", req))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(storyRepository, never()).save(any());
+    }
+
+    @Test
     void getFeed_groupsActiveStoriesAndPutsOwnFirst() {
         when(conversationRepository.findByParticipantsContaining("alice"))
                 .thenReturn(List.of(conv("alice", "bob")));
@@ -199,6 +222,74 @@ class StoryServiceTest {
         assertThatThrownBy(() -> storyService.replyToStory("s1", "alice", "hi"))
                 .isInstanceOf(ResponseStatusException.class);
         verify(directMessageService, never()).sendMessage(any(), any(), any());
+    }
+
+    @Test
+    void reactToStory_addsReactionAndNotifiesAuthor() {
+        Story s = story("s1", "bob");
+        when(storyRepository.findById("s1")).thenReturn(Optional.of(s));
+        when(conversationRepository.findByParticipantsContaining("alice")).thenReturn(List.of(conv("alice", "bob")));
+        when(storyRepository.save(any(Story.class))).thenAnswer(i -> i.getArgument(0));
+
+        DirectConversationResponse conv = new DirectConversationResponse();
+        conv.setId("c1");
+        conv.setParticipants(List.of("alice", "bob"));
+        when(directMessageService.getOrCreateConversation("alice", "bob")).thenReturn(conv);
+        MessageResponse msg = org.mockito.Mockito.mock(MessageResponse.class);
+        when(directMessageService.sendMessage(eq("c1"), eq("alice"), any())).thenReturn(msg);
+        when(userRepository.findByUsername(any())).thenReturn(Optional.of(new User()));
+
+        StoryResponse res = storyService.reactToStory("s1", "alice", "😮");
+
+        assertThat(res.getReactions()).containsEntry("😮", 1);
+        assertThat(res.getMyReaction()).isEqualTo("😮");
+        verify(directMessageService).sendMessage(eq("c1"), eq("alice"), any());
+        verify(webPushService).sendToUser(eq("bob"), any(), any(), eq("c1"), any());
+    }
+
+    @Test
+    void reactToStory_tappingSameEmojiTwiceTogglesOff() {
+        Story s = story("s1", "bob");
+        when(storyRepository.findById("s1")).thenReturn(Optional.of(s));
+        when(conversationRepository.findByParticipantsContaining("alice")).thenReturn(List.of(conv("alice", "bob")));
+        when(storyRepository.save(any(Story.class))).thenAnswer(i -> i.getArgument(0));
+
+        DirectConversationResponse conv = new DirectConversationResponse();
+        conv.setId("c1");
+        conv.setParticipants(List.of("alice", "bob"));
+        when(directMessageService.getOrCreateConversation("alice", "bob")).thenReturn(conv);
+        when(directMessageService.sendMessage(eq("c1"), eq("alice"), any()))
+                .thenReturn(org.mockito.Mockito.mock(MessageResponse.class));
+        when(userRepository.findByUsername(any())).thenReturn(Optional.of(new User()));
+
+        storyService.reactToStory("s1", "alice", "😮");
+        StoryResponse res = storyService.reactToStory("s1", "alice", "😮");
+
+        assertThat(res.getReactions()).isEmpty();
+        assertThat(res.getMyReaction()).isNull();
+        // only the first (adding) reaction should have notified the author
+        verify(directMessageService, org.mockito.Mockito.times(1)).sendMessage(eq("c1"), eq("alice"), any());
+    }
+
+    @Test
+    void reactToStory_rejectsReactingToOwnStory() {
+        Story s = story("s1", "alice");
+        when(storyRepository.findById("s1")).thenReturn(Optional.of(s));
+
+        assertThatThrownBy(() -> storyService.reactToStory("s1", "alice", "😮"))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(directMessageService, never()).sendMessage(any(), any(), any());
+    }
+
+    @Test
+    void reactToStory_rejectsOutsideAudience() {
+        Story s = story("s1", "bob");
+        when(storyRepository.findById("s1")).thenReturn(Optional.of(s));
+        when(conversationRepository.findByParticipantsContaining("stranger")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> storyService.reactToStory("s1", "stranger", "😮"))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(storyRepository, never()).save(any());
     }
 
     @Test

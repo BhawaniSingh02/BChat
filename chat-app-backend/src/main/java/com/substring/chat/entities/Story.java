@@ -10,7 +10,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An ephemeral 24-hour status ("story"). A TTL index on {@code expiresAt} lets
@@ -30,9 +32,9 @@ public class Story {
     @Indexed
     private String authorId;            // opaque username of the poster
 
-    private StoryType type;             // TEXT | IMAGE
-    private String content;             // text body (TEXT) or caption (IMAGE), may be blank
-    private String mediaUrl;            // Cloudinary URL for IMAGE stories
+    private StoryType type;             // TEXT | IMAGE | VIDEO
+    private String content;             // text body (TEXT) or caption (IMAGE/VIDEO), may be blank
+    private String mediaUrl;            // Cloudinary URL for IMAGE/VIDEO stories
     private String backgroundColor;     // hex/gradient key for TEXT stories
 
     private Instant createdAt;
@@ -43,7 +45,9 @@ public class Story {
 
     private List<String> viewedBy = new ArrayList<>();  // usernames who have seen it
 
+    private Map<String, List<String>> reactions = new HashMap<>(); // emoji -> list of usernames
+
     public enum StoryType {
-        TEXT, IMAGE
+        TEXT, IMAGE, VIDEO
     }
 }

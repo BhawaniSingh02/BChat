@@ -36,6 +36,7 @@ public class MessageResponse {
     private String replyToSnippet;
     private String replyToSender;
     private String forwardedFrom;
+    private String storyReactionEmoji;
 
     // Phase 19
     private List<String> starred;
@@ -69,6 +70,7 @@ public class MessageResponse {
         response.setReplyToSnippet(message.getReplyToSnippet());
         response.setReplyToSender(message.getReplyToSender());
         response.setForwardedFrom(message.getForwardedFrom());
+        response.setStoryReactionEmoji(message.getStoryReactionEmoji());
         response.setStarred(message.getStarred() != null ? message.getStarred() : new ArrayList<>());
         response.setDisappearsAt(message.getDisappearsAt());
         response.setThreadId(message.getThreadId());

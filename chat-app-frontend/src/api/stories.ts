@@ -20,6 +20,11 @@ export const storiesApi = {
     await client.post(`/stories/${storyId}/reply`, { text })
   },
 
+  react: async (storyId: string, emoji: string): Promise<Story> => {
+    const { data } = await client.post<Story>(`/stories/${storyId}/react`, { emoji })
+    return data
+  },
+
   getViewers: async (storyId: string): Promise<string[]> => {
     const { data } = await client.get<{ viewers: string[] }>(`/stories/${storyId}/viewers`)
     return data.viewers

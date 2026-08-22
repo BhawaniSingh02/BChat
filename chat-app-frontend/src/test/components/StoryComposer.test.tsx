@@ -66,6 +66,20 @@ describe('StoryComposer', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
+  it('shows a video preview when a video file is picked, and uploads it as VIDEO on Share', async () => {
+    const onClose = vi.fn()
+    vi.mocked(uploadApi.uploadFile).mockResolvedValueOnce({ url: 'https://cdn/x.mp4', messageType: 'VIDEO', bytes: 1 })
+    render(<StoryComposer open onClose={onClose} />)
+    const file = new File(['x'], 'clip.mp4', { type: 'video/mp4' })
+    fireEvent.change(screen.getByTestId('story-image-input'), { target: { files: [file] } })
+    expect(screen.getByTestId('story-video-preview')).toBeInTheDocument()
+    expect(create).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByTestId('story-post-btn'))
+    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: 'VIDEO', mediaUrl: 'https://cdn/x.mp4' })))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
   it('can remove the selected photo and return to text mode', () => {
     render(<StoryComposer open onClose={vi.fn()} />)
     const file = new File(['x'], 'pic.png', { type: 'image/png' })

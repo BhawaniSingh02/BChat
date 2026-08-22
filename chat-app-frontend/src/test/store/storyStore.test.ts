@@ -6,6 +6,7 @@ vi.mock('../../api/stories', () => ({
     getFeed: vi.fn(),
     create: vi.fn(),
     markViewed: vi.fn(),
+    react: vi.fn(),
     remove: vi.fn(),
   },
 }))
@@ -20,6 +21,7 @@ const group = (authorId: string, ...storyIds: string[]): StoryGroup => ({
   stories: storyIds.map((id) => ({
     id, authorId, type: 'TEXT', content: 'hi', createdAt: '2026-06-20T10:00:00Z',
     expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0,
+    reactions: {}, myReaction: null,
   })),
 })
 
@@ -51,6 +53,30 @@ describe('storyStore', () => {
     const g = useStoryStore.getState().groups[0]
     expect(g.stories[0].viewedByMe).toBe(true)
     expect(g.hasUnviewed).toBe(false)
+  })
+
+  it('reactToStory optimistically toggles the reaction on, then off on a second tap', async () => {
+    useStoryStore.setState({ groups: [group('bob', 's1')] })
+    vi.mocked(storiesApi.react).mockResolvedValue({} as never)
+
+    await useStoryStore.getState().reactToStory('s1', '😮')
+    let st = useStoryStore.getState().groups[0].stories[0]
+    expect(st.myReaction).toBe('😮')
+    expect(st.reactions['😮']).toBe(1)
+
+    await useStoryStore.getState().reactToStory('s1', '😮')
+    st = useStoryStore.getState().groups[0].stories[0]
+    expect(st.myReaction).toBeNull()
+    expect(st.reactions['😮']).toBeUndefined()
+  })
+
+  it('reactToStory rolls back the optimistic update on failure', async () => {
+    useStoryStore.setState({ groups: [group('bob', 's1')] })
+    vi.mocked(storiesApi.react).mockRejectedValue(new Error('network'))
+
+    await useStoryStore.getState().reactToStory('s1', '😮')
+    const st = useStoryStore.getState().groups[0].stories[0]
+    expect(st.myReaction).toBeNull()
   })
 
   it('deleteStory removes the story and drops empty groups', async () => {
