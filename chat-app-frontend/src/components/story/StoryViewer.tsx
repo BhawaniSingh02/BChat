@@ -31,6 +31,11 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
   const [viewersLoading, setViewersLoading] = useState(false)
   const [videoProgress, setVideoProgress] = useState(0)
   const [reacted, setReacted] = useState(false)
+  // Gate the timer/progress-bar on the media actually being ready to show — on a
+  // slow connection the bar must not run (and the story must not auto-advance)
+  // before the image/video has loaded, matching WhatsApp/Instagram behavior.
+  const [mediaLoading, setMediaLoading] = useState(false)
+  const [mediaFailed, setMediaFailed] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const markViewed = useStoryStore((s) => s.markViewed)
   const deleteStory = useStoryStore((s) => s.deleteStory)
@@ -74,13 +79,22 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
     }
   }, [story, currentUsername, markViewed])
 
-  // Auto-advance, restarted on each story; suspended when paused. Video stories
-  // advance on their own `onEnded` event instead of this fixed timer.
+  // Auto-advance, restarted on each story; suspended when paused, or while the
+  // media hasn't finished loading yet. Video stories advance on their own
+  // `onEnded` event instead of this fixed timer.
   useEffect(() => {
-    if (!story || isPaused || story.type === 'VIDEO') return
+    if (!story || isPaused || story.type === 'VIDEO' || mediaLoading) return
     const t = setTimeout(goNext, STORY_DURATION)
     return () => clearTimeout(t)
-  }, [groupIndex, storyIndex, story, goNext, isPaused])
+  }, [groupIndex, storyIndex, story, goNext, isPaused, mediaLoading])
+
+  // A story that failed to load entirely (broken URL, offline) shouldn't strand
+  // the viewer — skip it after a brief pause instead of hanging forever.
+  useEffect(() => {
+    if (!mediaFailed) return
+    const t = setTimeout(goNext, 1500)
+    return () => clearTimeout(t)
+  }, [mediaFailed, goNext])
 
   // Keep the video element's play state in sync with the pause/play controls.
   useEffect(() => {
@@ -99,7 +113,14 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
     setShowViewers(false)
     setConfirmDelete(false)
     setVideoProgress(0)
+    setMediaFailed(false)
   }, [groupIndex, storyIndex])
+
+  // Media-loading state depends on the story's type — reset per story, and as
+  // soon as the type is known (TEXT never "loads", IMAGE/VIDEO start pending).
+  useEffect(() => {
+    setMediaLoading(story?.type === 'IMAGE' || story?.type === 'VIDEO')
+  }, [groupIndex, storyIndex, story?.type])
 
   // Keyboard controls.
   useEffect(() => {
@@ -186,7 +207,13 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
               ) : (
                 <div
                   key={i === storyIndex ? `${groupIndex}-${storyIndex}` : `static-${i}`}
-                  className={`h-full bg-white ${i < storyIndex ? 'w-full' : i === storyIndex ? `story-progress ${isPaused ? 'is-paused' : ''}` : 'w-0'}`}
+                  className={`h-full bg-white ${
+                    i < storyIndex
+                      ? 'w-full'
+                      : i === storyIndex
+                        ? (mediaLoading ? 'w-0' : `story-progress ${isPaused ? 'is-paused' : ''}`)
+                        : 'w-0'
+                  }`}
                 />
               )}
             </div>
@@ -234,29 +261,57 @@ export default function StoryViewer({ groups, startGroupIndex, currentUsername, 
           </div>
         ) : story.type === 'VIDEO' ? (
           <div className="flex h-full w-full items-center justify-center bg-black">
-            <video
-              ref={videoRef}
-              src={story.mediaUrl}
-              className="max-h-full max-w-full object-contain"
-              autoPlay
-              playsInline
-              onTimeUpdate={(e) => {
-                const v = e.currentTarget
-                if (v.duration) setVideoProgress((v.currentTime / v.duration) * 100)
-              }}
-              onEnded={goNext}
-              data-testid="story-video-content"
-            />
-            {story.content && (
+            {!mediaFailed && (
+              <video
+                ref={videoRef}
+                src={story.mediaUrl}
+                className="max-h-full max-w-full object-contain"
+                autoPlay
+                playsInline
+                onTimeUpdate={(e) => {
+                  const v = e.currentTarget
+                  if (v.duration) setVideoProgress((v.currentTime / v.duration) * 100)
+                }}
+                onLoadedData={() => setMediaLoading(false)}
+                onWaiting={() => setMediaLoading(true)}
+                onPlaying={() => setMediaLoading(false)}
+                onEnded={goNext}
+                onError={() => { setMediaLoading(false); setMediaFailed(true) }}
+                data-testid="story-video-content"
+              />
+            )}
+            {story.content && !mediaFailed && (
               <p className="absolute bottom-16 left-0 right-0 px-6 text-center text-sm text-white drop-shadow">{story.content}</p>
             )}
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-black">
-            <img src={story.mediaUrl} alt="Story" className="max-h-full max-w-full object-contain" data-testid="story-image-content" />
-            {story.content && (
+            {!mediaFailed && (
+              <img
+                src={story.mediaUrl}
+                alt="Story"
+                className="max-h-full max-w-full object-contain"
+                onLoad={() => setMediaLoading(false)}
+                onError={() => { setMediaLoading(false); setMediaFailed(true) }}
+                data-testid="story-image-content"
+              />
+            )}
+            {story.content && !mediaFailed && (
               <p className="absolute bottom-16 left-0 right-0 px-6 text-center text-sm text-white drop-shadow">{story.content}</p>
             )}
+          </div>
+        )}
+
+        {/* Loading / failed states — matches WhatsApp/Instagram not racing the
+            progress bar ahead of media that hasn't actually loaded yet. */}
+        {story.type !== 'TEXT' && mediaLoading && !mediaFailed && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30" data-testid="story-media-loading">
+            <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          </div>
+        )}
+        {mediaFailed && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black" data-testid="story-media-failed">
+            <p className="text-sm text-white/70">Couldn&apos;t load this story</p>
           </div>
         )}
 

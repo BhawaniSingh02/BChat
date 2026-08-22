@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import type { StoryGroup, User } from '../../types'
 
 const markViewed = vi.fn()
@@ -38,6 +38,10 @@ describe('StoryViewer', () => {
     deleteStory.mockResolvedValue(undefined)
     reactToStory.mockResolvedValue(undefined)
     useUserCacheStore.setState({ cache: { bob }, fetching: new Set() })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders the first story and marks it viewed (not own)', async () => {
@@ -116,6 +120,45 @@ describe('StoryViewer', () => {
     expect(video).toBeInTheDocument()
     fireEvent.ended(video)
     expect(screen.getByTestId('story-text-content')).toHaveTextContent('story s2')
+  })
+
+  it('does not auto-advance an image story until it has finished loading, and does so once loaded', () => {
+    vi.useFakeTimers()
+    const group: StoryGroup = {
+      authorId: 'bob', hasUnviewed: true, lastStoryAt: '2026-06-20T10:00:00Z',
+      stories: [
+        { id: 's1', authorId: 'bob', type: 'IMAGE', mediaUrl: 'https://cdn/x.png', createdAt: '', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null },
+        { id: 's2', authorId: 'bob', type: 'TEXT', content: 'story s2', createdAt: '', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null },
+      ],
+    }
+    render(<StoryViewer groups={[group]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+
+    // Even well past the normal 5s duration, a still-loading image must not advance.
+    act(() => { vi.advanceTimersByTime(10000) })
+    expect(screen.getByTestId('story-image-content')).toBeInTheDocument()
+
+    // Once it reports loaded, the timer starts fresh and advances normally.
+    fireEvent.load(screen.getByTestId('story-image-content'))
+    act(() => { vi.advanceTimersByTime(5000) })
+    expect(screen.getByTestId('story-text-content')).toHaveTextContent('story s2')
+    vi.useRealTimers()
+  })
+
+  it('skips a story whose media fails to load after a brief pause', () => {
+    vi.useFakeTimers()
+    const group: StoryGroup = {
+      authorId: 'bob', hasUnviewed: true, lastStoryAt: '2026-06-20T10:00:00Z',
+      stories: [
+        { id: 's1', authorId: 'bob', type: 'IMAGE', mediaUrl: 'https://cdn/broken.png', createdAt: '', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null },
+        { id: 's2', authorId: 'bob', type: 'TEXT', content: 'story s2', createdAt: '', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null },
+      ],
+    }
+    render(<StoryViewer groups={[group]} startGroupIndex={0} currentUsername="me" onClose={vi.fn()} />)
+    fireEvent.error(screen.getByTestId('story-image-content'))
+    expect(screen.getByTestId('story-media-failed')).toBeInTheDocument()
+    act(() => { vi.advanceTimersByTime(1500) })
+    expect(screen.getByTestId('story-text-content')).toHaveTextContent('story s2')
+    vi.useRealTimers()
   })
 
   it('does not show a reply box on your own story', () => {
