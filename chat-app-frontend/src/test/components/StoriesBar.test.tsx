@@ -15,7 +15,7 @@ const bob: User = { id: 'b', username: 'bob', email: 'b@e.com', displayName: 'Bo
 
 const group = (authorId: string, hasUnviewed = true): StoryGroup => ({
   authorId, hasUnviewed, lastStoryAt: '2026-06-20T10:00:00Z',
-  stories: [{ id: `${authorId}-1`, authorId, type: 'TEXT', content: 'hi', createdAt: '2026-06-20T10:00:00Z', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0 }],
+  stories: [{ id: `${authorId}-1`, authorId, type: 'TEXT', content: 'hi', createdAt: '2026-06-20T10:00:00Z', expiresAt: '2026-06-21T10:00:00Z', viewedByMe: false, viewerCount: 0, reactions: {}, myReaction: null }],
 })
 
 describe('StoriesBar', () => {
