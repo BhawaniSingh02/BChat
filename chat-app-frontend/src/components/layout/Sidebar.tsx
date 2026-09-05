@@ -42,9 +42,10 @@ function RoomSkeleton() {
 interface SidebarProps {
   onSelectChat?: () => void
   onStartCall?: (conversationId: string, otherUsername: string, type: CallType) => void
+  onOpenSearch?: () => void
 }
 
-export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
+export default function Sidebar({ onSelectChat, onStartCall, onOpenSearch }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const { myRooms, activeRoomId, setActiveRoom, joinRoom, rooms, isLoading } = useRoomStore()
   const { conversations, activeDMId, setActiveDM, getOrCreateConversation, removeConversation, updateConversation } = useDMStore()
@@ -191,6 +192,17 @@ export default function Sidebar({ onSelectChat, onStartCall }: SidebarProps) {
           <BrandLogo size="md" tone="light" showIcon={false} interactive className="origin-left scale-x-[1.06]" />
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenSearch}
+            className="flex items-center text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"
+            title="Search messages"
+            aria-label="Search messages"
+            data-testid="sidebar-search-btn"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
           <button
             onClick={handlePlus}
             className="flex items-center text-white/75 hover:text-white hover:bg-white/12 p-1.5 rounded-lg transition-colors text-sm"

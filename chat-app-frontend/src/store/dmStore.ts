@@ -19,6 +19,7 @@ interface DMState {
   loadMoreMessages: (conversationId: string) => Promise<void>
   addMessage: (message: Message) => void
   upsertDMMessage: (message: Message) => void
+  markMessageFailed: (conversationId: string, id: string) => void
   setActiveDM: (id: string | null) => void
   updateLastMessage: (conversationId: string, message: Message) => void
   incrementDMUnread: (conversationId: string) => void
@@ -127,13 +128,36 @@ export const useDMStore = create<DMState>((set, get) => ({
     set((s) => {
       const existing = s.messages[conversationId] ?? []
       const idx = existing.findIndex((m) => m.id === message.id)
-      const updated = idx >= 0
-        ? existing.map((m, i) => i === idx ? message : m)
+      if (idx >= 0) {
+        return { messages: { ...s.messages, [conversationId]: existing.map((m, i) => i === idx ? message : m) } }
+      }
+      // Reconcile with our own optimistic (pending) copy of this message, if one is still sitting there
+      const pendingIdx = existing.findIndex((m) =>
+        m.pending && m.sender === message.sender && m.content === message.content
+        && m.fileUrl === message.fileUrl && m.messageType === message.messageType
+      )
+      const updated = pendingIdx >= 0
+        ? existing.map((m, i) => i === pendingIdx ? message : m)
         : [...existing, message]
       return { messages: { ...s.messages, [conversationId]: updated } }
     })
     // Only bump lastMessageAt for genuinely new messages — not edits, deletes, or reactions
     if (isNew && !message.edited && !message.deleted) get().updateLastMessage(conversationId, message)
+  },
+
+  // Flip a still-pending optimistic message to failed (e.g. it never got a server echo)
+  markMessageFailed: (conversationId, id) => {
+    set((s) => {
+      const existing = s.messages[conversationId] ?? []
+      const idx = existing.findIndex((m) => m.id === id && m.pending)
+      if (idx < 0) return s
+      return {
+        messages: {
+          ...s.messages,
+          [conversationId]: existing.map((m, i) => (i === idx ? { ...m, pending: false, failed: true } : m)),
+        },
+      }
+    })
   },
 
   setActiveDM: (id) => set({ activeDMId: id }),

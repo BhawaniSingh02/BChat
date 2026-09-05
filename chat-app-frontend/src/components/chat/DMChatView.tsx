@@ -29,12 +29,15 @@ interface DMChatViewProps {
   onCallBack?: () => void
   /** Phase 27: open thread side panel for a message */
   onOpenThread?: (message: Message) => void
+  /** Set (from global search) to briefly flash and scroll to a specific message */
+  highlightedMessageId?: string | null
 }
 
 export default function DMChatView({
   conversation, currentUsername, onSend, onMarkRead, onViewProfile,
   onEditMessage, onDeleteMessage, onReactMessage, onBack, onConversationUpdated,
   onAudioCall, onVideoCall, onViewCallHistory, onCallBack, onOpenThread,
+  highlightedMessageId,
 }: DMChatViewProps) {
   const rawMessages = useDMStore((s) => s.messages[conversation.id])
   const messages = useMemo(() => rawMessages ?? [], [rawMessages])
@@ -388,6 +391,7 @@ export default function DMChatView({
           hasMoreOlder={hasMoreOlder}
           isLoadingOlder={isLoadingOlder}
           onLoadOlder={() => loadMoreMessages(conversation.id)}
+          highlightedMessageId={highlightedMessageId}
         />
       )}
 

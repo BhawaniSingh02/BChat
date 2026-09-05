@@ -119,6 +119,13 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: 'Rooms' })).toHaveClass('text-teal-700')
   })
 
+  it('calls onOpenSearch when the search button is clicked', async () => {
+    const onOpenSearch = vi.fn()
+    render(<Sidebar onOpenSearch={onOpenSearch} />)
+    await userEvent.click(screen.getByTestId('sidebar-search-btn'))
+    expect(onOpenSearch).toHaveBeenCalledOnce()
+  })
+
   it('shows the total unread DM count on the Messages tab', () => {
     mocks.conversations = [makeConv('c1'), makeConv('c2')]
     mocks.dmUnreadCounts = { c1: 1, c2: 1 }

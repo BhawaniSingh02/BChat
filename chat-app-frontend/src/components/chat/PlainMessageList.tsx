@@ -23,6 +23,7 @@ export interface MessageListProps {
   hasMoreOlder?: boolean
   isLoadingOlder?: boolean
   onLoadOlder?: () => void
+  highlightedMessageId?: string | null
 }
 
 /** Plain, un-virtualized message list — used for shorter histories (see MessageList.tsx). */
@@ -32,7 +33,7 @@ export default function PlainMessageList({
   selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
   editingMessageId, onEditMessage,
   onDropdownAction, isAdmin, pinnedMessageIds, onCallBack,
-  hasMoreOlder, isLoadingOlder, onLoadOlder,
+  hasMoreOlder, isLoadingOlder, onLoadOlder, highlightedMessageId,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -73,7 +74,7 @@ export default function PlainMessageList({
 
   const callbacks: MessageRowCallbacks = {
     currentUsername, onReactMessage, selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
-    editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack,
+    editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack, highlightedMessageId,
   }
 
   return (

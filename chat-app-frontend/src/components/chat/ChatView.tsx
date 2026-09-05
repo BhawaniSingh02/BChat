@@ -26,12 +26,17 @@ interface ChatViewProps {
   onPinMessage?: (messageId: string) => void
   onUnpinMessage?: (messageId: string) => void
   onOpenThread?: (message: Message) => void
+  /** Set (from global search) to briefly flash and scroll to a specific message */
+  highlightedMessageId?: string | null
+  /** Falls back to a plain scrollIntoView (no highlight flash) when omitted */
+  onScrollToMessage?: (messageId: string) => void
 }
 
 export default function ChatView({
   room, currentUsername, onSendMessage, onTyping, onSubscribe, onLeave,
   onEditMessage, onDeleteMessage, onReactMessage, onViewProfile, onBack,
   onKickMember, onOpenSettings, onPinMessage, onUnpinMessage, onOpenThread,
+  highlightedMessageId, onScrollToMessage,
 }: ChatViewProps) {
   const [showMembers, setShowMembers] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
@@ -351,8 +356,8 @@ export default function ChatView({
             messages={messages}
             onClose={() => setShowSearch(false)}
             onScrollTo={(messageId) => {
-              const el = document.getElementById(`msg-${messageId}`)
-              el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              if (onScrollToMessage) onScrollToMessage(messageId)
+              else document.getElementById(`msg-${messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }}
           />
         )}
@@ -380,6 +385,7 @@ export default function ChatView({
             hasMoreOlder={hasMoreOlder}
             isLoadingOlder={isLoadingOlder}
             onLoadOlder={() => loadMoreMessages(room.roomId)}
+            highlightedMessageId={highlightedMessageId}
           />
         )}
 

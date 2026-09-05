@@ -41,6 +41,8 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const subscribedRooms = useRef<Set<string>>(new Set())
 
   const upsertRoomMessage = useChatStore((s) => s.upsertMessage)
+  const addRoomMessage = useChatStore((s) => s.addMessage)
+  const markRoomMessageFailed = useChatStore((s) => s.markMessageFailed)
   const roomMessages = useChatStore((s) => s.messages)
   const setTyping = useChatStore((s) => s.setTyping)
   const updateReadBy = useChatStore((s) => s.updateReadBy)
@@ -51,6 +53,8 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const myRooms = useRoomStore((s) => s.myRooms)
   const applyPresenceEvent = usePresenceStore((s) => s.applyEvent)
   const upsertDMMessage = useDMStore((s) => s.upsertDMMessage)
+  const addDMMessage = useDMStore((s) => s.addMessage)
+  const markDMMessageFailed = useDMStore((s) => s.markMessageFailed)
   const dmMessages = useDMStore((s) => s.messages)
   const incrementDMUnread = useDMStore((s) => s.incrementDMUnread)
   const activeDMId = useDMStore((s) => s.activeDMId)
@@ -59,6 +63,7 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
   const fetchRequests = useDMStore((s) => s.fetchRequests)
   const addNotification = useNotificationStore((s) => s.addNotification)
   const currentUsername = useAuthStore((s) => s.user?.username)
+  const currentDisplayName = useAuthStore((s) => s.user?.displayName)
 
   const [connected, setConnected] = useState(false)
   const activeRoomIdRef = useRef<string | null>(null)
@@ -283,17 +288,37 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     roomId: string,
     content: string,
     fileUrl?: string,
-    messageType = 'TEXT',
+    messageType: string = 'TEXT',
     replyToId?: string,
     replyToSnippet?: string,
     replyToSender?: string,
     forwardedFrom?: string,
   ) => {
+    if (currentUsername) {
+      const pendingId = `pending-${crypto.randomUUID()}`
+      addRoomMessage({
+        id: pendingId,
+        roomId,
+        sender: currentUsername,
+        senderName: currentDisplayName ?? currentUsername,
+        content,
+        messageType: messageType as Message['messageType'],
+        fileUrl,
+        readBy: [],
+        timestamp: new Date().toISOString(),
+        pending: true,
+        replyToId,
+        replyToSnippet,
+        replyToSender,
+        forwardedFrom,
+      })
+      setTimeout(() => markRoomMessageFailed(roomId, pendingId), 15000)
+    }
     clientRef.current?.publish({
       destination: `/app/chat.sendMessage/${roomId}`,
       body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom }),
     })
-  }, [])
+  }, [currentUsername, currentDisplayName, addRoomMessage, markRoomMessageFailed])
 
   const sendTyping = useCallback((roomId: string, typing: boolean) => {
     clientRef.current?.publish({
@@ -313,17 +338,37 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     conversationId: string,
     content: string,
     fileUrl?: string,
-    messageType = 'TEXT',
+    messageType: string = 'TEXT',
     replyToId?: string,
     replyToSnippet?: string,
     replyToSender?: string,
     forwardedFrom?: string,
   ) => {
+    if (currentUsername) {
+      const pendingId = `pending-${crypto.randomUUID()}`
+      addDMMessage({
+        id: pendingId,
+        roomId: `dm:${conversationId}`,
+        sender: currentUsername,
+        senderName: currentDisplayName ?? currentUsername,
+        content,
+        messageType: messageType as Message['messageType'],
+        fileUrl,
+        readBy: [],
+        timestamp: new Date().toISOString(),
+        pending: true,
+        replyToId,
+        replyToSnippet,
+        replyToSender,
+        forwardedFrom,
+      })
+      setTimeout(() => markDMMessageFailed(conversationId, pendingId), 15000)
+    }
     clientRef.current?.publish({
       destination: `/app/dm.send/${conversationId}`,
       body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom }),
     })
-  }, [])
+  }, [currentUsername, currentDisplayName, addDMMessage, markDMMessageFailed])
 
   const editMessage = useCallback((roomId: string, messageId: string, content: string) => {
     clientRef.current?.publish({

@@ -161,10 +161,58 @@ interface MessageBubbleProps {
   isEditing?: boolean
   /** Called when user taps "Call back" on a missed call bubble */
   onCallBack?: () => void
+  /** Briefly flashes this bubble — set when jumping here from search or a reply quote tap. */
+  highlighted?: boolean
 }
 
-function ReadTicks({ readBy, sender, isMine }: { readBy: string[]; sender: string; isMine: boolean }) {
+/** Shared-image bubble: shows a pulsing skeleton until the image finishes loading, then fades it in. */
+function ChatImage({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false)
+  const [errored, setErrored] = useState(false)
+  return (
+    <div className="relative mb-1 max-w-full">
+      {!loaded && !errored && (
+        <div className="rounded-xl w-56 h-44 bg-gray-200 dark:bg-gray-700 animate-pulse" data-testid="image-skeleton" />
+      )}
+      {!errored && (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+          className={`rounded-xl max-w-full max-h-64 object-cover transition-opacity duration-300 ${
+            loaded ? 'opacity-100' : 'absolute inset-0 h-44 w-56 opacity-0'
+          }`}
+        />
+      )}
+      {errored && (
+        <div className="rounded-xl w-56 h-44 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-xs">
+          Image failed to load
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReadTicks({ readBy, sender, isMine, pending, failed }: { readBy: string[]; sender: string; isMine: boolean; pending?: boolean; failed?: boolean }) {
   if (!isMine) return null
+  if (failed) {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" className="ml-0.5 inline-block flex-shrink-0" fill="none" stroke="#f15c6d" strokeWidth={2} aria-label="Failed to send">
+        <circle cx="12" cy="12" r="10" />
+        <path strokeLinecap="round" d="M12 8v5m0 3h.01" />
+      </svg>
+    )
+  }
+  if (pending) {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" className="ml-0.5 inline-block flex-shrink-0 text-[#8696a0]" fill="none" stroke="currentColor" strokeWidth={2} aria-label="Sending">
+        <circle cx="12" cy="12" r="9" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+      </svg>
+    )
+  }
   const readByOthers = readBy.filter((u) => u !== sender).length > 0
   const color = readByOthers ? '#0b63ce' : '#8696a0'
   return (
@@ -204,7 +252,7 @@ function MessageMeta({
         aria-label="View read receipts"
         data-testid="read-ticks-btn"
       >
-        <ReadTicks readBy={message.readBy} sender={message.sender} isMine={isMine} />
+        <ReadTicks readBy={message.readBy} sender={message.sender} isMine={isMine} pending={message.pending} failed={message.failed} />
       </button>
     </>
   )
@@ -247,7 +295,7 @@ function MessageBubble({
   onEdit, onReact, onScrollToMessage,
   onDropdownAction, isAdmin = false, isPinned = false,
   isSelected = false, selectionMode = false, onSelect, onEnterSelectionMode,
-  isEditing = false, onCallBack,
+  isEditing = false, onCallBack, highlighted = false,
 }: MessageBubbleProps) {
   const [hovered, setHovered] = useState(false)
   const [dismissedEditing, setDismissedEditing] = useState(false)
@@ -402,6 +450,7 @@ function MessageBubble({
       className={`
         ${isGrouped ? 'mb-0.5' : 'mb-2'}
         msg-enter
+        ${highlighted ? 'msg-highlight' : ''}
         ${isSelected ? 'bg-emerald-50' : ''}
         ${selectionMode ? 'cursor-pointer select-none' : ''}
         transition-colors duration-100 rounded-sm
@@ -443,13 +492,15 @@ function MessageBubble({
             <div className="flex flex-col">
               <div
                 className={`
-                  relative px-3.5 py-2 shadow-sm
+                  relative px-3.5 py-2 shadow-sm transition-opacity duration-150
+                  ${message.pending ? 'opacity-60' : ''}
                   ${isMine
                     ? `bg-[#dcf8c6] text-gray-900 dark:bg-[#005c4b] dark:text-gray-100 rounded-t-2xl rounded-bl-2xl ${!isGrouped ? 'rounded-br-sm bubble-mine' : 'rounded-br-2xl'}`
                     : `bg-white text-gray-900 dark:bg-[#202c33] dark:text-gray-100 rounded-t-2xl rounded-br-2xl ${!isGrouped ? 'rounded-bl-sm bubble-other' : 'rounded-bl-2xl'}`
                   }
                 `}
                 data-testid="message-bubble"
+                data-pending={message.pending ? 'true' : undefined}
               >
                 {showSender && !isMine && (
                   <p className="text-xs font-bold text-emerald-600 mb-0.5">{message.senderName}</p>
@@ -496,7 +547,7 @@ function MessageBubble({
                   </>
                 ) : message.messageType === 'IMAGE' && isTrustedUrl(message.fileUrl) ? (
                   <>
-                    <img src={message.fileUrl} alt="shared" className="rounded-xl max-w-full mb-1 max-h-64 object-cover" loading="lazy" />
+                    <ChatImage src={message.fileUrl!} alt="shared" />
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>
                 ) : message.messageType === 'VIDEO' && isTrustedUrl(message.fileUrl) ? (

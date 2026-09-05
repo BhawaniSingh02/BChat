@@ -51,6 +51,7 @@ export interface MessageRowCallbacks {
   isAdmin?: boolean
   pinnedMessageIds?: string[]
   onCallBack?: () => void
+  highlightedMessageId?: string | null
 }
 
 /** One message row: optional date divider + the message bubble, grouped with its neighbor when applicable. */
@@ -63,7 +64,7 @@ export function MessageRow({
 }) {
   const {
     currentUsername, onReactMessage, selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
-    editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack,
+    editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack, highlightedMessageId,
   } = callbacks
 
   const showDateDivider = !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp)
@@ -97,6 +98,7 @@ export function MessageRow({
             isAdmin={isAdmin}
             isPinned={pinnedMessageIds?.includes(message.id) ?? false}
             onCallBack={onCallBack}
+            highlighted={highlightedMessageId === message.id}
           />
         </div>
       </div>

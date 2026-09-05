@@ -16,7 +16,7 @@ export default function VirtualizedMessageList({
   selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
   editingMessageId, onEditMessage,
   onDropdownAction, isAdmin, pinnedMessageIds, onCallBack,
-  hasMoreOlder, isLoadingOlder, onLoadOlder,
+  hasMoreOlder, isLoadingOlder, onLoadOlder, highlightedMessageId,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
@@ -51,8 +51,19 @@ export default function VirtualizedMessageList({
 
   const callbacks: MessageRowCallbacks = {
     currentUsername, onReactMessage, selectionMode, selectedIds, onSelectMessage, onEnterSelectionMode,
-    editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack,
+    editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack, highlightedMessageId,
   }
+
+  // A highlighted message (from search / jump-to-reply) may not be in the currently rendered
+  // window — react-virtual only mounts DOM for visible + overscanned rows, so a plain
+  // getElementById+scrollIntoView (fine for PlainMessageList) would silently no-op here.
+  // Also re-checks when `messages` changes: a cross-conversation search jump sets the
+  // highlight before that room's fetch has landed, so the target index isn't known yet.
+  useEffect(() => {
+    if (!highlightedMessageId) return
+    const index = messages.findIndex((m) => m.id === highlightedMessageId)
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: 'center', behavior: 'smooth' })
+  }, [highlightedMessageId, messages, virtualizer])
 
   const items = virtualizer.getVirtualItems()
 

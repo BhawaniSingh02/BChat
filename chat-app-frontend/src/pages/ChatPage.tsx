@@ -1,4 +1,4 @@
-import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { type MutableRefObject, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import type { CallEvent, CallType, Message } from '../types'
 import { useAuthStore } from '../store/authStore'
 import { useRoomStore } from '../store/roomStore'
@@ -14,23 +14,26 @@ import { startRingtone, startDialTone, playConnectedChime, playHangUpTone, type 
 import Sidebar from '../components/layout/Sidebar'
 import ChatView from '../components/chat/ChatView'
 import DMChatView from '../components/chat/DMChatView'
-import ThreadPanel from '../components/chat/ThreadPanel'
 import CreateRoomModal from '../components/rooms/CreateRoomModal'
-import RoomSettingsModal from '../components/rooms/RoomSettingsModal'
 import Modal from '../components/ui/Modal'
 import RoomList from '../components/rooms/RoomList'
 import QuickSwitcher from '../components/ui/QuickSwitcher'
 import UserProfileModal from '../components/ui/UserProfileModal'
+import GlobalSearchModal from '../components/ui/GlobalSearchModal'
 import BrandLogo from '../components/ui/BrandLogo'
-import IncomingCallOverlay from '../components/call/IncomingCallOverlay'
-import ActiveCallView from '../components/call/ActiveCallView'
-import OutgoingCallView from '../components/call/OutgoingCallView'
-import CallHistoryPanel from '../components/call/CallHistoryPanel'
 import NotificationToaster from '../components/ui/NotificationToaster'
 import { ensureNotificationPermission } from '../utils/browserNotify'
 import { registerServiceWorker, subscribeToPush, initPushNavigationBridge } from '../utils/push'
 import { useUserCacheStore } from '../store/userCacheStore'
 import { Link } from 'react-router-dom'
+
+// Conditionally-mounted panels/overlays — split into their own chunks, fetched only when actually opened
+const ThreadPanel = lazy(() => import('../components/chat/ThreadPanel'))
+const RoomSettingsModal = lazy(() => import('../components/rooms/RoomSettingsModal'))
+const IncomingCallOverlay = lazy(() => import('../components/call/IncomingCallOverlay'))
+const ActiveCallView = lazy(() => import('../components/call/ActiveCallView'))
+const OutgoingCallView = lazy(() => import('../components/call/OutgoingCallView'))
+const CallHistoryPanel = lazy(() => import('../components/call/CallHistoryPanel'))
 
 export default function ChatPage() {
   const { user, token } = useAuthStore()
@@ -242,6 +245,10 @@ export default function ChatPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(true)
   // Phase 27: Thread panel
   const [threadRootMessage, setThreadRootMessage] = useState<Message | null>(null)
+  // Global message search
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -315,12 +322,15 @@ export default function ChatPage() {
     if (activeDMId) resetDMUnread(activeDMId)
   }, [activeDMId, resetDMUnread])
 
-  // Global Ctrl+K / Cmd+K handler for quick switcher
+  // Global Ctrl+K / Cmd+K handler for quick switcher, Ctrl+F / Cmd+F for message search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
         setQuickSwitcherOpen((open) => !open)
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        setGlobalSearchOpen((open) => !open)
       }
     }
     document.addEventListener('keydown', handler)
@@ -403,6 +413,43 @@ export default function ChatPage() {
     setActiveRoom(roomId)
     setDiscoverOpen(false)
   }
+
+  // ── Jump-to-message (global search results + in-room search) ───────────────
+  // The target conversation's messages may still be loading (fetchMessages runs in
+  // ChatView/DMChatView's own mount effect), so this polls briefly for the DOM node
+  // rather than assuming it's already there — covers both a same-room jump (instant)
+  // and a cross-conversation jump from global search (needs the fetch to land first).
+  const scrollAndHighlightMessage = useCallback((messageId: string, attemptsLeft = 12) => {
+    const el = document.getElementById(`msg-${messageId}`)
+    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setHighlightedMessageId(messageId)
+      highlightTimeoutRef.current = setTimeout(() => setHighlightedMessageId(null), 1600)
+      return
+    }
+    if (attemptsLeft <= 0) {
+      // Not found even after waiting — either it's further back than the loaded page (no
+      // pagination-until-found here), or this is a virtualized long room: still set the id
+      // so VirtualizedMessageList's own scrollToIndex effect can pick it up once `messages` loads.
+      setHighlightedMessageId(messageId)
+      highlightTimeoutRef.current = setTimeout(() => setHighlightedMessageId(null), 1600)
+      return
+    }
+    setTimeout(() => scrollAndHighlightMessage(messageId, attemptsLeft - 1), 200)
+  }, [])
+
+  const handleSearchNavigate = useCallback((message: Message) => {
+    if (message.roomId.startsWith('dm:')) {
+      setActiveDM(message.roomId.slice(3))
+      setActiveRoom(null)
+    } else {
+      setActiveRoom(message.roomId)
+      setActiveDM(null)
+    }
+    setMobileSidebarOpen(false)
+    scrollAndHighlightMessage(message.id)
+  }, [setActiveDM, setActiveRoom, scrollAndHighlightMessage])
 
   // ── Call handlers ─────────────────────────────────────────────────────────
 
@@ -503,6 +550,7 @@ export default function ChatPage() {
         <Sidebar
           onSelectChat={() => setMobileSidebarOpen(false)}
           onStartCall={handleInitiateCall}
+          onOpenSearch={() => setGlobalSearchOpen(true)}
         />
       </div>
 
@@ -560,6 +608,8 @@ export default function ChatPage() {
             onPinMessage={handlePinMessage}
             onUnpinMessage={handleUnpinMessage}
             onOpenThread={setThreadRootMessage}
+            highlightedMessageId={highlightedMessageId}
+            onScrollToMessage={scrollAndHighlightMessage}
           />
         ) : showDM ? (
           <DMChatView
@@ -578,6 +628,7 @@ export default function ChatPage() {
             onViewCallHistory={async () => { await fetchCallHistory(activeConversation.id); setShowCallHistory(true) }}
             onCallBack={() => handleInitiateCall(activeConversation.id, activeConversation.participants.find(p => p !== user.username) ?? '', 'AUDIO')}
             onOpenThread={setThreadRootMessage}
+            highlightedMessageId={highlightedMessageId}
           />
         ) : roomsLoading ? (
           <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -661,14 +712,16 @@ export default function ChatPage() {
 
         {/* Phase 27: Thread panel — shown alongside chat when open */}
         {threadRootMessage && user && (
-          <ThreadPanel
-            rootMessage={threadRootMessage}
-            currentUsername={user.username}
-            onClose={() => setThreadRootMessage(null)}
-            onSendReply={(rootId, content, fileUrl, messageType) => {
-              sendThreadReply(rootId, content, user.username, fileUrl, messageType)
-            }}
-          />
+          <Suspense fallback={null}>
+            <ThreadPanel
+              rootMessage={threadRootMessage}
+              currentUsername={user.username}
+              onClose={() => setThreadRootMessage(null)}
+              onSendReply={(rootId, content, fileUrl, messageType) => {
+                sendThreadReply(rootId, content, user.username, fileUrl, messageType)
+              }}
+            />
+          </Suspense>
         )}
       </main>
 
@@ -698,18 +751,31 @@ export default function ChatPage() {
         activeDMId={activeDMId}
       />
 
+      <GlobalSearchModal
+        open={globalSearchOpen}
+        onClose={() => setGlobalSearchOpen(false)}
+        onNavigate={handleSearchNavigate}
+        currentUsername={user?.username ?? ''}
+        rooms={myRooms}
+        conversations={conversations}
+        userCache={cache}
+      />
+
       <UserProfileModal username={viewingUser} onClose={() => setViewingUser(null)} />
 
       {activeRoom && (
-        <RoomSettingsModal
-          room={activeRoom}
-          open={roomSettingsOpen}
-          onClose={() => setRoomSettingsOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <RoomSettingsModal
+            room={activeRoom}
+            open={roomSettingsOpen}
+            onClose={() => setRoomSettingsOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* ── Call UI overlays ─────────────────────────────────────────── */}
 
+      <Suspense fallback={null}>
       {callState === 'ringing_incoming' && callOtherUser && callType && (
         <IncomingCallOverlay
           callerUsername={callOtherDisplayName}
@@ -752,6 +818,7 @@ export default function ChatPage() {
           onClose={() => setShowCallHistory(false)}
         />
       )}
+      </Suspense>
 
       {callState === 'busy' && callOtherUser && (
         <div

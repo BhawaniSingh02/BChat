@@ -41,6 +41,16 @@ describe('MessageBubble', () => {
     expect(screen.getByTestId('message-bubble')).toHaveClass('bg-white')
   })
 
+  it('does not flash-highlight by default', () => {
+    render(<MessageBubble message={baseMessage} isMine={false} />)
+    expect(document.getElementById(`msg-${baseMessage.id}`)).not.toHaveClass('msg-highlight')
+  })
+
+  it('flashes a highlight when highlighted=true (jumped to from search)', () => {
+    render(<MessageBubble message={baseMessage} isMine={false} highlighted />)
+    expect(document.getElementById(`msg-${baseMessage.id}`)).toHaveClass('msg-highlight')
+  })
+
   it('shows sender name when showSender=true and not mine', () => {
     render(<MessageBubble message={baseMessage} isMine={false} showSender />)
     expect(screen.getByText('alice')).toBeInTheDocument()

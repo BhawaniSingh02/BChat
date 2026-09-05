@@ -117,3 +117,12 @@ body {
 .msg-enter {
   animation: msgIn 0.18s ease-out;
 }
+
+/* Jump-to-message flash — used by global search results and reply-quote taps */
+@keyframes msgHighlight {
+  0%   { background-color: rgba(20, 184, 166, 0.28); }
+  100% { background-color: rgba(20, 184, 166, 0); }
+}
+.msg-highlight {
+  animation: msgHighlight 1.6s ease-out;
+}

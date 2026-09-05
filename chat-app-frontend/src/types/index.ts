@@ -78,6 +78,10 @@ export interface Message {
   deleted?: boolean
   reactions?: Record<string, string[]>
 
+  // Optimistic send — set locally while a message awaits the server echo, never sent by the backend
+  pending?: boolean
+  failed?: boolean
+
   // Phase 18 — Quote reply
   replyToId?: string
   replyToSnippet?: string

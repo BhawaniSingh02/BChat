@@ -1,18 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { useAuthStore } from './store/authStore'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ChatPage from './pages/ChatPage'
-import DownloadPage from './pages/DownloadPage'
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
-import TermsPage from './pages/TermsPage'
-import CookiePolicyPage from './pages/CookiePolicyPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import VerifyEmailPage from './pages/VerifyEmailPage'
 import ChooseUsername from './components/auth/ChooseUsername'
+
+// Route-level code splitting — each page ships as its own chunk, fetched on navigation
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const ChatPage = lazy(() => import('./pages/ChatPage'))
+const DownloadPage = lazy(() => import('./pages/DownloadPage'))
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const CookiePolicyPage = lazy(() => import('./pages/CookiePolicyPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+
+function RouteFallback() {
+  return <div className="h-screen w-screen" style={{ background: '#0b141a' }} />
+}
 
 // ─── Desktop update banner (only shown inside Electron) ───────────────────────
 function UpdateBanner() {
@@ -124,6 +130,7 @@ export default function App() {
     <Analytics />
     <UpdateBanner />
     <BrowserRouter>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route
           path="/login"
@@ -158,6 +165,7 @@ export default function App() {
         <Route path="/cookie-policy" element={<CookiePolicyPage />} />
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
     </>
   )

@@ -19,6 +19,7 @@ interface ChatState {
   loadMoreMessages: (roomId: string) => Promise<void>
   addMessage: (message: Message) => void
   upsertMessage: (message: Message) => void
+  markMessageFailed: (roomId: string, id: string) => void
   setTyping: (roomId: string, username: string, typing: boolean) => void
   updateReadBy: (message: Message) => void
   clearRoom: (roomId: string) => void
@@ -76,10 +77,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => {
       const existing = s.messages[message.roomId] ?? []
       const idx = existing.findIndex((m) => m.id === message.id)
-      const updated = idx >= 0
-        ? existing.map((m, i) => (i === idx ? message : m))
+      if (idx >= 0) {
+        return { messages: { ...s.messages, [message.roomId]: existing.map((m, i) => (i === idx ? message : m)) } }
+      }
+      // Reconcile with our own optimistic (pending) copy of this message, if one is still sitting there
+      const pendingIdx = existing.findIndex((m) =>
+        m.pending && m.sender === message.sender && m.content === message.content
+        && m.fileUrl === message.fileUrl && m.messageType === message.messageType
+      )
+      const updated = pendingIdx >= 0
+        ? existing.map((m, i) => (i === pendingIdx ? message : m))
         : [...existing, message]
       return { messages: { ...s.messages, [message.roomId]: updated } }
+    })
+  },
+
+  // Flip a still-pending optimistic message to failed (e.g. it never got a server echo)
+  markMessageFailed: (roomId, id) => {
+    set((s) => {
+      const existing = s.messages[roomId] ?? []
+      const idx = existing.findIndex((m) => m.id === id && m.pending)
+      if (idx < 0) return s
+      return {
+        messages: {
+          ...s.messages,
+          [roomId]: existing.map((m, i) => (i === idx ? { ...m, pending: false, failed: true } : m)),
+        },
+      }
     })
   },
 
