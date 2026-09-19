@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MessageBubble from '../../components/chat/MessageBubble'
 import type { Message } from '../../types'
@@ -103,6 +103,55 @@ describe('MessageBubble', () => {
     }
     render(<MessageBubble message={videoMsg} isMine={false} />)
     expect(screen.queryByTestId('message-video')).not.toBeInTheDocument()
+  })
+
+  describe('AUDIO messages (voice message waveform + scrubbing)', () => {
+    const audioMsg: Message = {
+      ...baseMessage,
+      messageType: 'AUDIO',
+      fileUrl: 'https://res.cloudinary.com/demo/video/upload/voice.mp3',
+      content: 'Voice message (0:40)',
+      durationSeconds: 40,
+      waveform: [10, 20, 30, 40, 50, 60, 70, 80],
+    }
+
+    it('renders a static waveform bar for each sample instead of the plain range slider', () => {
+      render(<MessageBubble message={audioMsg} isMine={false} />)
+      const waveform = screen.getByTestId('audio-waveform')
+      expect(waveform).toBeInTheDocument()
+      expect(waveform.children).toHaveLength(audioMsg.waveform!.length)
+      expect(screen.queryByTestId('audio-scrubber')).not.toBeInTheDocument()
+    })
+
+    it('shows the persisted duration instantly, before the <audio> element loads metadata', () => {
+      render(<MessageBubble message={audioMsg} isMine={false} />)
+      // 40s -> "0:40"; this comes from durationSeconds, not from any loaded <audio> metadata
+      expect(screen.getByText('0:40')).toBeInTheDocument()
+    })
+
+    it('seeks the underlying <audio> element to the clicked fraction of the waveform', () => {
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+        left: 0, width: 100, top: 0, height: 24, right: 100, bottom: 24, x: 0, y: 0, toJSON: () => {},
+      })
+
+      const { container } = render(<MessageBubble message={audioMsg} isMine={false} />)
+      const waveform = screen.getByTestId('audio-waveform')
+
+      fireEvent.click(waveform, { clientX: 50 }) // 50% across a 100px-wide track
+
+      const audioEl = container.querySelector('audio') as HTMLAudioElement
+      // 50% of the 40s persisted duration
+      expect(audioEl.currentTime).toBeCloseTo(20, 0)
+
+      vi.restoreAllMocks()
+    })
+
+    it('falls back to the plain range-slider scrubber for legacy AUDIO messages with no waveform', () => {
+      const legacyAudioMsg: Message = { ...audioMsg, waveform: undefined }
+      render(<MessageBubble message={legacyAudioMsg} isMine={false} />)
+      expect(screen.getByTestId('audio-scrubber')).toBeInTheDocument()
+      expect(screen.queryByTestId('audio-waveform')).not.toBeInTheDocument()
+    })
   })
 
   it('does not render image for IMAGE message type with untrusted URL', () => {

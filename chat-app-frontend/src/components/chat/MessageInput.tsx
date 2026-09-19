@@ -19,7 +19,7 @@ const EMOJI_CATEGORIES = [
 ]
 
 interface MessageInputProps {
-  onSend: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null) => void
+  onSend: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null, durationSeconds?: number, waveform?: number[]) => void
   onTyping?: (typing: boolean) => void
   disabled?: boolean
   placeholder?: string
@@ -161,9 +161,9 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
   const isUploading = uploadProgress !== null
   const canSend = (value.trim().length > 0) && !isUploading && !disabled
 
-  const handleVoiceSend = useCallback((url: string, durationSeconds: number) => {
+  const handleVoiceSend = useCallback((url: string, durationSeconds: number, waveform: number[]) => {
     const caption = `Voice message (${Math.floor(durationSeconds / 60)}:${String(durationSeconds % 60).padStart(2, '0')})`
-    onSend(caption, url, 'AUDIO', replyTo)
+    onSend(caption, url, 'AUDIO', replyTo, durationSeconds, waveform)
     onCancelReply?.()
     setShowVoiceRecorder(false)
   }, [onSend, replyTo, onCancelReply])

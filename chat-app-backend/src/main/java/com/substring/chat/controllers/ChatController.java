@@ -14,6 +14,7 @@ import com.substring.chat.entities.Room;
 import com.substring.chat.services.DirectMessageService;
 import com.substring.chat.services.ExpoPushService;
 import com.substring.chat.services.MessageRateLimiter;
+import com.substring.chat.services.VoiceMessageSanitizer;
 import com.substring.chat.services.WebPushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +79,8 @@ public class ChatController {
         message.setSenderName(resolveSenderName(principal.getName()));
         message.setClientId(request.getClientId());
         message.setContent(request.getContent());
-        message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
+        Message.MessageType resolvedType = request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT;
+        message.setMessageType(resolvedType);
         message.setFileUrl(request.getFileUrl());
         message.setTimestamp(Instant.now());
         // Phase 18 — reply and forward
@@ -86,6 +88,9 @@ public class ChatController {
         message.setReplyToSnippet(request.getReplyToSnippet());
         message.setReplyToSender(request.getReplyToSender());
         message.setForwardedFrom(request.getForwardedFrom());
+        // Voice message polish — clamp client-supplied duration/waveform before persisting
+        message.setDurationSeconds(VoiceMessageSanitizer.sanitizeDuration(resolvedType, request.getDurationSeconds()));
+        message.setWaveform(VoiceMessageSanitizer.sanitizeWaveform(resolvedType, request.getWaveform()));
         // Phase 21 — apply disappearing timer if set on the conversation (n/a for rooms, handled at DM level)
 
         Message saved = messageRepository.save(message);
@@ -181,7 +186,8 @@ public class ChatController {
             message.setSenderName(resolveSenderName(principal.getName()));
             message.setClientId(request.getClientId());
             message.setContent(request.getContent());
-            message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
+            Message.MessageType resolvedType = request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT;
+            message.setMessageType(resolvedType);
             message.setFileUrl(request.getFileUrl());
             message.setTimestamp(Instant.now());
             // Phase 18 — reply and forward
@@ -189,6 +195,9 @@ public class ChatController {
             message.setReplyToSnippet(request.getReplyToSnippet());
             message.setReplyToSender(request.getReplyToSender());
             message.setForwardedFrom(request.getForwardedFrom());
+            // Voice message polish — clamp client-supplied duration/waveform before persisting
+            message.setDurationSeconds(VoiceMessageSanitizer.sanitizeDuration(resolvedType, request.getDurationSeconds()));
+            message.setWaveform(VoiceMessageSanitizer.sanitizeWaveform(resolvedType, request.getWaveform()));
             // Phase 21 — apply disappearing timer if set on this conversation
             if (conv.getDisappearingMessagesTimer() != null && !"OFF".equals(conv.getDisappearingMessagesTimer())) {
                 message.setDisappearsAt(computeDisappearsAt(conv.getDisappearingMessagesTimer()));

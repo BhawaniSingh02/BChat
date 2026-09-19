@@ -69,6 +69,10 @@ public class Message {
     private int threadReplyCount = 0; // only set on root messages
     private Instant lastThreadReplyAt; // timestamp of most recent thread reply
 
+    // Voice message polish — duration + waveform (AUDIO messages only; server-clamped, see ChatController)
+    private Integer durationSeconds;
+    private List<Integer> waveform;
+
     public Message(String sender, String senderName, String roomId, String content) {
         this.sender = sender;
         this.senderName = senderName;

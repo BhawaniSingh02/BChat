@@ -12,7 +12,7 @@ import type { DropdownAction } from './MessageBubble'
 interface ChatViewProps {
   room: Room
   currentUsername: string
-  onSendMessage: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null) => void
+  onSendMessage: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null, durationSeconds?: number, waveform?: number[]) => void
   onTyping: (typing: boolean) => void
   onSubscribe: () => void
   onLeave?: () => void

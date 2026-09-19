@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class SendMessageRequest {
@@ -28,4 +30,8 @@ public class SendMessageRequest {
 
     // Phase 18 — Forwarded message
     private String forwardedFrom;
+
+    // Voice message polish — client-computed; server clamps to sane bounds before persisting (see ChatController)
+    private Integer durationSeconds;
+    private List<Integer> waveform;
 }

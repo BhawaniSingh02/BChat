@@ -125,6 +125,73 @@ class ThreadControllerTest {
     }
 
     @Test
+    void replyInThread_clampsOversizedDurationAndWaveformForAudioReply() {
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+
+        Message root = new Message("bob", "Bob", "general", "root message");
+        root.setId("root1");
+        root.setRoomId("general");
+        root.setTimestamp(Instant.now());
+
+        Room room = new Room();
+        room.setRoomId("general");
+        room.setMembers(List.of("alice", "bob"));
+
+        when(messageRepository.findById("root1")).thenReturn(Optional.of(root));
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+
+        var request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Voice message (5:00)");
+        request.setMessageType(Message.MessageType.AUDIO);
+        request.setFileUrl("https://res.cloudinary.com/demo/video/upload/voice.mp3");
+        request.setDurationSeconds(99_999); // absurd client-reported duration
+        List<Integer> hugeWaveform = new java.util.ArrayList<>();
+        for (int i = 0; i < 500; i++) hugeWaveform.add(1000 + i); // too many points, out-of-range values
+        request.setWaveform(hugeWaveform);
+
+        controller.replyInThread("root1", request, principal);
+
+        ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository, times(2)).save(captor.capture()); // reply + updated root
+        Message savedReply = captor.getAllValues().get(0);
+
+        assertThat(savedReply.getDurationSeconds()).isEqualTo(120);
+        assertThat(savedReply.getWaveform()).hasSize(60);
+        assertThat(savedReply.getWaveform()).allMatch(v -> v >= 0 && v <= 100);
+    }
+
+    @Test
+    void replyInThread_dropsDurationAndWaveformForNonAudioReply() {
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+
+        Message root = new Message("bob", "Bob", "general", "root message");
+        root.setId("root1");
+        root.setRoomId("general");
+        root.setTimestamp(Instant.now());
+
+        Room room = new Room();
+        room.setRoomId("general");
+        room.setMembers(List.of("alice", "bob"));
+
+        when(messageRepository.findById("root1")).thenReturn(Optional.of(root));
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+
+        var request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("just text");
+        request.setDurationSeconds(30);
+        request.setWaveform(List.of(10, 20, 30));
+
+        controller.replyInThread("root1", request, principal);
+
+        ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
+        verify(messageRepository, times(2)).save(captor.capture());
+        Message savedReply = captor.getAllValues().get(0);
+
+        assertThat(savedReply.getDurationSeconds()).isNull();
+        assertThat(savedReply.getWaveform()).isNull();
+    }
+
+    @Test
     void replyInThread_dropsWhenRateLimited() {
         when(rateLimiter.isAllowed("alice")).thenReturn(false);
 

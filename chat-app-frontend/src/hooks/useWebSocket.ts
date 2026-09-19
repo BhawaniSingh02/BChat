@@ -293,6 +293,8 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     replyToSnippet?: string,
     replyToSender?: string,
     forwardedFrom?: string,
+    durationSeconds?: number,
+    waveform?: number[],
   ) => {
     if (currentUsername) {
       const pendingId = `pending-${crypto.randomUUID()}`
@@ -311,12 +313,14 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
         replyToSnippet,
         replyToSender,
         forwardedFrom,
+        durationSeconds,
+        waveform,
       })
       setTimeout(() => markRoomMessageFailed(roomId, pendingId), 15000)
     }
     clientRef.current?.publish({
       destination: `/app/chat.sendMessage/${roomId}`,
-      body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom }),
+      body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom, durationSeconds, waveform }),
     })
   }, [currentUsername, currentDisplayName, addRoomMessage, markRoomMessageFailed])
 
@@ -343,6 +347,8 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
     replyToSnippet?: string,
     replyToSender?: string,
     forwardedFrom?: string,
+    durationSeconds?: number,
+    waveform?: number[],
   ) => {
     if (currentUsername) {
       const pendingId = `pending-${crypto.randomUUID()}`
@@ -361,12 +367,14 @@ export function useWebSocket(token: string | null, onCallEvent?: (event: CallEve
         replyToSnippet,
         replyToSender,
         forwardedFrom,
+        durationSeconds,
+        waveform,
       })
       setTimeout(() => markDMMessageFailed(conversationId, pendingId), 15000)
     }
     clientRef.current?.publish({
       destination: `/app/dm.send/${conversationId}`,
-      body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom }),
+      body: JSON.stringify({ content, fileUrl, messageType, replyToId, replyToSnippet, replyToSender, forwardedFrom, durationSeconds, waveform }),
     })
   }, [currentUsername, currentDisplayName, addDMMessage, markDMMessageFailed])
 

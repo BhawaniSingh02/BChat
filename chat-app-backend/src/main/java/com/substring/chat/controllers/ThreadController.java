@@ -8,6 +8,7 @@ import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
 import com.substring.chat.services.MessageRateLimiter;
+import com.substring.chat.services.VoiceMessageSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -93,10 +94,14 @@ public class ThreadController {
         reply.setSenderName(request.getSenderName() != null ? request.getSenderName() : principal.getName());
         reply.setRoomId(roomId);
         reply.setContent(request.getContent());
-        reply.setMessageType(request.getMessageType() != null
+        Message.MessageType resolvedType = request.getMessageType() != null
                 ? request.getMessageType()
-                : Message.MessageType.TEXT);
+                : Message.MessageType.TEXT;
+        reply.setMessageType(resolvedType);
         reply.setFileUrl(request.getFileUrl());
+        // Voice message polish — clamp client-supplied duration/waveform before persisting
+        reply.setDurationSeconds(VoiceMessageSanitizer.sanitizeDuration(resolvedType, request.getDurationSeconds()));
+        reply.setWaveform(VoiceMessageSanitizer.sanitizeWaveform(resolvedType, request.getWaveform()));
         reply.setThreadId(rootMessageId);  // link to parent
         reply.setTimestamp(Instant.now());
         messageRepository.save(reply);

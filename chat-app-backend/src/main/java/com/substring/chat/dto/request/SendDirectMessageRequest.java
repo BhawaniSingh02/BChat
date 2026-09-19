@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class SendDirectMessageRequest {
@@ -29,4 +31,8 @@ public class SendDirectMessageRequest {
 
     // Stories v3 — story reaction notification marker
     private String storyReactionEmoji;
+
+    // Voice message polish — client-computed; server clamps to sane bounds before persisting (see ChatController)
+    private Integer durationSeconds;
+    private List<Integer> waveform;
 }

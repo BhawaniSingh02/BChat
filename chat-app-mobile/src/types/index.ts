@@ -23,6 +23,9 @@ export interface Message {
   starred?: string[];
   /** Local-only optimistic-send state — absent/'sent' for a normal persisted message. */
   status?: 'sending' | 'sent' | 'failed';
+  // Voice message polish — AUDIO messages only
+  durationSeconds?: number;
+  waveform?: number[];
 }
 
 export interface Room {

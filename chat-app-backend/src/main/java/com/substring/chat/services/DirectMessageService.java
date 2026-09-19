@@ -173,7 +173,8 @@ public class DirectMessageService {
         message.setSender(senderUsername);
         message.setSenderName(senderUsername);
         message.setContent(request.getContent());
-        message.setMessageType(request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT);
+        Message.MessageType resolvedType = request.getMessageType() != null ? request.getMessageType() : Message.MessageType.TEXT;
+        message.setMessageType(resolvedType);
         message.setFileUrl(request.getFileUrl());
         message.setTimestamp(Instant.now());
         // Phase 18 — reply and forward
@@ -182,6 +183,9 @@ public class DirectMessageService {
         message.setReplyToSender(request.getReplyToSender());
         message.setForwardedFrom(request.getForwardedFrom());
         message.setStoryReactionEmoji(request.getStoryReactionEmoji());
+        // Voice message polish — clamp client-supplied duration/waveform before persisting
+        message.setDurationSeconds(VoiceMessageSanitizer.sanitizeDuration(resolvedType, request.getDurationSeconds()));
+        message.setWaveform(VoiceMessageSanitizer.sanitizeWaveform(resolvedType, request.getWaveform()));
 
         Message saved = messageRepository.save(message);
 

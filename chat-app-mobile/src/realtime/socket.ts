@@ -14,6 +14,8 @@ export interface OutgoingMessage {
   replyToSnippet?: string;
   replyToSender?: string;
   clientId?: string;
+  durationSeconds?: number;
+  waveform?: number[];
 }
 
 type ErrorListener = (detail: string) => void;

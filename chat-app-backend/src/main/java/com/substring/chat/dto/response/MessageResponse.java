@@ -49,6 +49,10 @@ public class MessageResponse {
     private int threadReplyCount;
     private Instant lastThreadReplyAt;
 
+    // Voice message polish
+    private Integer durationSeconds;
+    private List<Integer> waveform;
+
     public static MessageResponse from(Message message) {
         MessageResponse response = new MessageResponse();
         response.setId(message.getId());
@@ -76,6 +80,8 @@ public class MessageResponse {
         response.setThreadId(message.getThreadId());
         response.setThreadReplyCount(message.getThreadReplyCount());
         response.setLastThreadReplyAt(message.getLastThreadReplyAt());
+        response.setDurationSeconds(message.getDurationSeconds());
+        response.setWaveform(message.getWaveform());
         return response;
     }
 }

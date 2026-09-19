@@ -49,7 +49,19 @@ let activeAudioStop: (() => void) | null = null;
 
 const PLAYBACK_RATES = [1, 1.5, 2];
 
-function AudioPlayer({ url, mine, tokens }: { url: string; mine: boolean; tokens: ThemeTokens }) {
+function AudioPlayer({
+  url,
+  mine,
+  tokens,
+  waveform,
+  durationSeconds,
+}: {
+  url: string;
+  mine: boolean;
+  tokens: ThemeTokens;
+  waveform?: number[];
+  durationSeconds?: number;
+}) {
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -117,10 +129,14 @@ function AudioPlayer({ url, mine, tokens }: { url: string; mine: boolean; tokens
     soundRef.current?.setRateAsync(PLAYBACK_RATES[nextIndex], true);
   };
 
+  // Persisted duration is authoritative and available instantly; the loaded Sound's own
+  // duration (once known) takes over for accurate scrubbing bounds.
+  const effectiveDurationMillis = durationMillis || (durationSeconds ? durationSeconds * 1000 : 0);
+
   const seekToLocationX = (locationX: number) => {
-    if (!soundRef.current || !durationMillis || !trackWidth) return;
+    if (!soundRef.current || !effectiveDurationMillis || !trackWidth) return;
     const ratio = Math.max(0, Math.min(1, locationX / trackWidth));
-    const target = ratio * durationMillis;
+    const target = ratio * effectiveDurationMillis;
     setPositionMillis(target);
     soundRef.current.setPositionAsync(target);
   };
@@ -133,7 +149,7 @@ function AudioPlayer({ url, mine, tokens }: { url: string; mine: boolean; tokens
     }),
   ).current;
 
-  const progress = durationMillis > 0 ? positionMillis / durationMillis : 0;
+  const progress = effectiveDurationMillis > 0 ? positionMillis / effectiveDurationMillis : 0;
   const iconColor = tokens.onAccent;
   const trackColor = mine ? 'rgba(255,255,255,0.3)' : tokens.surface2;
   const fillColor = mine ? tokens.onAccent : tokens.accent;
@@ -159,17 +175,37 @@ function AudioPlayer({ url, mine, tokens }: { url: string; mine: boolean; tokens
         )}
       </TouchableOpacity>
       <View style={{ flex: 1, gap: 3 }}>
-        <View
-          onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
-          {...panResponder.panHandlers}
-          style={{ height: 16, justifyContent: 'center' }}
-        >
-          <View style={{ height: 3, borderRadius: 2, backgroundColor: trackColor }}>
-            <View style={{ height: 3, borderRadius: 2, backgroundColor: fillColor, width: `${progress * 100}%` }} />
+        {waveform && waveform.length > 0 ? (
+          <View
+            onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+            {...panResponder.panHandlers}
+            style={{ height: 16, flexDirection: 'row', alignItems: 'center', gap: 1.5 }}
+          >
+            {waveform.map((v, i) => (
+              <View
+                key={i}
+                style={{
+                  flex: 1,
+                  height: Math.max(3, Math.round((v / 100) * 14)),
+                  borderRadius: 2,
+                  backgroundColor: i / waveform.length <= progress ? fillColor : trackColor,
+                }}
+              />
+            ))}
           </View>
-        </View>
+        ) : (
+          <View
+            onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+            {...panResponder.panHandlers}
+            style={{ height: 16, justifyContent: 'center' }}
+          >
+            <View style={{ height: 3, borderRadius: 2, backgroundColor: trackColor }}>
+              <View style={{ height: 3, borderRadius: 2, backgroundColor: fillColor, width: `${progress * 100}%` }} />
+            </View>
+          </View>
+        )}
         <Text style={{ color: mine ? tokens.onAccent : tokens.textMuted, opacity: mine ? 0.85 : 1, fontSize: 10.5 }}>
-          {formatDuration(Math.floor((durationMillis || positionMillis) / 1000))}
+          {formatDuration(Math.floor((effectiveDurationMillis || positionMillis) / 1000))}
         </Text>
       </View>
       <TouchableOpacity
@@ -299,7 +335,7 @@ export default function MessageBubbleContent({ item, mine, tokens, onPressImage,
       </TouchableOpacity>
     );
   } else if (item.messageType === 'AUDIO' && item.fileUrl) {
-    content = <AudioPlayer url={item.fileUrl} mine={mine} tokens={tokens} />;
+    content = <AudioPlayer url={item.fileUrl} mine={mine} tokens={tokens} waveform={item.waveform} durationSeconds={item.durationSeconds} />;
   } else if (item.messageType === 'VIDEO' && item.fileUrl) {
     content = (
       <TouchableOpacity onPress={() => onPressFile(item)}>

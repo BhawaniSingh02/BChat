@@ -356,12 +356,15 @@ export default function ChatPage() {
     ?? rooms.find((r) => r.roomId === activeRoomId)
   const activeConversation = conversations.find((c) => c.id === activeDMId)
 
-  const handleSendRoomMessage = (content: string, fileUrl?: string, messageType?: string, replyTo?: Message | null) => {
+  const handleSendRoomMessage = (content: string, fileUrl?: string, messageType?: string, replyTo?: Message | null, durationSeconds?: number, waveform?: number[]) => {
     if (activeRoomId) sendMessage(
       activeRoomId, content, fileUrl, messageType,
       replyTo?.id,
       replyTo ? replyTo.content.substring(0, 80) : undefined,
       replyTo?.senderName,
+      undefined,
+      durationSeconds,
+      waveform,
     )
   }
   const handleTyping = (typing: boolean) => {
@@ -373,12 +376,15 @@ export default function ChatPage() {
   const handleLeaveRoom = async () => {
     if (activeRoomId) { await leaveRoom(activeRoomId); setActiveRoom(null); setMobileSidebarOpen(true) }
   }
-  const handleSendDM = (content: string, fileUrl?: string, messageType?: string, replyTo?: Message | null) => {
+  const handleSendDM = (content: string, fileUrl?: string, messageType?: string, replyTo?: Message | null, durationSeconds?: number, waveform?: number[]) => {
     if (activeDMId) sendDM(
       activeDMId, content, fileUrl, messageType,
       replyTo?.id,
       replyTo ? replyTo.content.substring(0, 80) : undefined,
       replyTo?.senderName,
+      undefined,
+      durationSeconds,
+      waveform,
     )
   }
   const handleEditMessage = (messageId: string, newContent: string) => {

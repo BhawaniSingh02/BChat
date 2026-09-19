@@ -55,12 +55,15 @@ export function playableAudioSrc(url: string): string {
 }
 
 /** Inline audio player for voice messages (Phase 24) */
-function AudioPlayer({ src }: { src: string }) {
+function AudioPlayer({ src, waveform, durationSeconds }: { src: string; waveform?: number[]; durationSeconds?: number }) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const playableSrc = playableAudioSrc(src)
+  // Persisted duration is authoritative and available instantly; the <audio> element's own
+  // duration (once loaded) takes over as soon as it's known, for accurate scrubbing bounds.
+  const displayDuration = duration || durationSeconds || 0
 
   const togglePlay = () => {
     const audio = audioRef.current
@@ -72,10 +75,19 @@ function AudioPlayer({ src }: { src: string }) {
   const handleDurationChange = () => setDuration(audioRef.current?.duration ?? 0)
   const handleEnded = () => { setPlaying(false); setCurrentTime(0) }
 
+  const seekToFraction = (fraction: number) => {
+    const audio = audioRef.current
+    const target = Math.min(1, Math.max(0, fraction)) * displayDuration
+    if (audio) { audio.currentTime = target }
+    setCurrentTime(target)
+  }
+
   const formatSecs = (s: number) => {
     if (!isFinite(s)) return '0:00'
     return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   }
+
+  const playedFraction = displayDuration > 0 ? currentTime / displayDuration : 0
 
   return (
     <div className="flex items-center gap-2 min-w-[200px]" data-testid="audio-player">
@@ -107,24 +119,47 @@ function AudioPlayer({ src }: { src: string }) {
       </button>
 
       <div className="flex-1 flex flex-col gap-0.5">
-        <input
-          type="range"
-          min={0}
-          max={duration || 1}
-          step={0.1}
-          value={currentTime}
-          onChange={(e) => {
-            const t = Number(e.target.value)
-            if (audioRef.current) { audioRef.current.currentTime = t }
-            setCurrentTime(t)
-          }}
-          className="w-full h-1.5 accent-[#075e54] cursor-pointer"
-          aria-label="Audio scrubber"
-          data-testid="audio-scrubber"
-        />
+        {waveform && waveform.length > 0 ? (
+          <div
+            className="flex items-center gap-[1.5px] h-6 cursor-pointer"
+            role="slider"
+            aria-label="Audio scrubber"
+            aria-valuemin={0}
+            aria-valuemax={displayDuration}
+            aria-valuenow={currentTime}
+            data-testid="audio-waveform"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              seekToFraction((e.clientX - rect.left) / rect.width)
+            }}
+          >
+            {waveform.map((v, i) => {
+              const played = (i / waveform.length) <= playedFraction
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-full transition-colors ${played ? 'bg-[#075e54]' : 'bg-gray-300'}`}
+                  style={{ height: `${Math.max(3, Math.round((v / 100) * 24))}px` }}
+                />
+              )
+            })}
+          </div>
+        ) : (
+          <input
+            type="range"
+            min={0}
+            max={displayDuration || 1}
+            step={0.1}
+            value={currentTime}
+            onChange={(e) => seekToFraction(Number(e.target.value) / (displayDuration || 1))}
+            className="w-full h-1.5 accent-[#075e54] cursor-pointer"
+            aria-label="Audio scrubber"
+            data-testid="audio-scrubber"
+          />
+        )}
         <div className="flex justify-between text-[10px] text-gray-400">
           <span>{formatSecs(currentTime)}</span>
-          <span>{formatSecs(duration)}</span>
+          <span>{formatSecs(displayDuration)}</span>
         </div>
       </div>
     </div>
@@ -557,7 +592,7 @@ function MessageBubble({
                   </>
                 ) : message.messageType === 'AUDIO' && isTrustedUrl(message.fileUrl) ? (
                   <>
-                    <AudioPlayer src={message.fileUrl!} />
+                    <AudioPlayer src={message.fileUrl!} waveform={message.waveform} durationSeconds={message.durationSeconds} />
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>
                 ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (

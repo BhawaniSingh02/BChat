@@ -154,6 +154,8 @@ public class MessageService {
         msg.setContent(original.getContent());
         msg.setMessageType(original.getMessageType());
         msg.setFileUrl(original.getFileUrl());
+        msg.setDurationSeconds(original.getDurationSeconds());
+        msg.setWaveform(original.getWaveform());
         msg.setForwardedFrom(original.getForwardedFrom() != null
                 ? original.getForwardedFrom()   // preserve original origin on re-forward
                 : resolveSenderName(original.getSender()));

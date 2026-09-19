@@ -150,6 +150,79 @@ class ChatControllerTest {
         verify(expoPushService).sendToUser(eq("bob"), any(), any(), any(), any());
     }
 
+    // ── Voice message polish: server-side duration/waveform clamping ──────────
+
+    @Test
+    void sendMessage_clampsOversizedDurationAndWaveformForAudioMessage() {
+        com.substring.chat.entities.Room room = new com.substring.chat.entities.Room();
+        room.setRoomId("general");
+        room.setMembers(List.of("alice"));
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+        ArgumentCaptor<Message> savedCaptor = ArgumentCaptor.forClass(Message.class);
+        when(messageRepository.save(savedCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendMessageRequest request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Voice message (5:00)");
+        request.setMessageType(Message.MessageType.AUDIO);
+        request.setFileUrl("https://res.cloudinary.com/demo/video/upload/voice.mp3");
+        request.setDurationSeconds(99_999); // absurd client-reported duration
+        List<Integer> hugeWaveform = new ArrayList<>();
+        for (int i = 0; i < 500; i++) hugeWaveform.add(1000 + i); // too many points, out-of-range values
+
+        request.setWaveform(hugeWaveform);
+
+        chatController.sendMessage("general", request, principal);
+
+        Message saved = savedCaptor.getValue();
+        assertThat(saved.getDurationSeconds()).isEqualTo(120); // clamped to MAX_VOICE_DURATION_SECONDS
+        assertThat(saved.getWaveform()).hasSize(60); // truncated to MAX_WAVEFORM_POINTS
+        assertThat(saved.getWaveform()).allMatch(v -> v >= 0 && v <= 100); // clamped per-sample
+    }
+
+    @Test
+    void sendMessage_dropsDurationAndWaveformForNonAudioMessage() {
+        com.substring.chat.entities.Room room = new com.substring.chat.entities.Room();
+        room.setRoomId("general");
+        room.setMembers(List.of("alice"));
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+        ArgumentCaptor<Message> savedCaptor = ArgumentCaptor.forClass(Message.class);
+        when(messageRepository.save(savedCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendMessageRequest request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Hello");
+        request.setMessageType(Message.MessageType.TEXT);
+        request.setDurationSeconds(30);
+        request.setWaveform(List.of(10, 20, 30));
+
+        chatController.sendMessage("general", request, principal);
+
+        Message saved = savedCaptor.getValue();
+        assertThat(saved.getDurationSeconds()).isNull();
+        assertThat(saved.getWaveform()).isNull();
+    }
+
+    @Test
+    void sendDirectMessage_clampsOversizedDurationAndWaveformForAudioMessage() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
+        ArgumentCaptor<Message> savedCaptor = ArgumentCaptor.forClass(Message.class);
+        when(messageRepository.save(savedCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendDirectMessageRequest request = new com.substring.chat.dto.request.SendDirectMessageRequest();
+        request.setContent("Voice message (5:00)");
+        request.setMessageType(Message.MessageType.AUDIO);
+        request.setFileUrl("https://res.cloudinary.com/demo/video/upload/voice.mp3");
+        request.setDurationSeconds(-50); // negative — should clamp to 0
+        request.setWaveform(List.of(-10, 500, 42));
+
+        chatController.sendDirectMessage("conv-1", request, principal);
+
+        Message saved = savedCaptor.getValue();
+        assertThat(saved.getDurationSeconds()).isEqualTo(0);
+        assertThat(saved.getWaveform()).containsExactly(0, 100, 42);
+    }
+
     // ── react to message ──────────────────────────────────────────────────────
 
     @Test

@@ -427,7 +427,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
 
   /** Inserts an instant local bubble and fires the send — sending() builds the socket payload. */
   const sendOptimistic = (
-    fields: Pick<Message, 'content' | 'messageType' | 'fileUrl'>,
+    fields: Pick<Message, 'content' | 'messageType' | 'fileUrl' | 'durationSeconds' | 'waveform'>,
     sending: (payload: OutgoingMessage) => void,
   ) => {
     const clientId = generateClientId();
@@ -448,6 +448,8 @@ export default function ConversationScreen({ route, navigation }: Props) {
       content: fields.content,
       fileUrl: fields.fileUrl,
       messageType: fields.messageType,
+      durationSeconds: fields.durationSeconds,
+      waveform: fields.waveform,
       clientId,
       ...(replyingTo ? { replyToId: replyingTo.id, replyToSnippet: replyingTo.snippet, replyToSender: replyingTo.sender } : {}),
     });
@@ -462,6 +464,8 @@ export default function ConversationScreen({ route, navigation }: Props) {
       fileUrl: message.fileUrl,
       messageType: message.messageType,
       clientId: message.clientId,
+      durationSeconds: message.durationSeconds,
+      waveform: message.waveform,
       ...(message.replyToId
         ? { replyToId: message.replyToId, replyToSnippet: message.replyToSnippet, replyToSender: message.replyToSender }
         : {}),
@@ -563,9 +567,9 @@ export default function ConversationScreen({ route, navigation }: Props) {
     stopTyping();
   };
 
-  const handleVoiceSend = (url: string, durationSeconds: number) => {
+  const handleVoiceSend = (url: string, durationSeconds: number, waveform: number[]) => {
     sendOptimistic(
-      { content: `Voice message (${formatDuration(durationSeconds)})`, fileUrl: url, messageType: 'AUDIO' },
+      { content: `Voice message (${formatDuration(durationSeconds)})`, fileUrl: url, messageType: 'AUDIO', durationSeconds, waveform },
       (payload) =>
         kind === 'dm' && conversationId
           ? socketManager.sendDMMessage(conversationId, payload)

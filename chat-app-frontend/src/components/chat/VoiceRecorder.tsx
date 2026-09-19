@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { uploadApi } from '../../api/upload'
 
 const MAX_DURATION_SECONDS = 120
+const WAVEFORM_POINTS = 40
 
 interface VoiceRecorderProps {
-  onSend: (url: string, durationSeconds: number) => void
+  onSend: (url: string, durationSeconds: number, waveform: number[]) => void
   onCancel: () => void
 }
 
@@ -13,6 +14,38 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+/**
+ * Downsamples a recorded audio blob into a fixed number of normalized (0-100) amplitude
+ * peaks, for a static waveform rendered at playback time. Best-effort: returns [] if the
+ * blob can't be decoded (e.g. unsupported codec in a given browser), which callers treat
+ * as "no waveform" rather than a fatal error.
+ */
+async function computeWaveformPeaks(blob: Blob, points = WAVEFORM_POINTS): Promise<number[]> {
+  try {
+    const arrayBuffer = await blob.arrayBuffer()
+    const audioCtx = new AudioContext()
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+    const channelData = audioBuffer.getChannelData(0)
+    const blockSize = Math.max(1, Math.floor(channelData.length / points))
+    const raw: number[] = []
+    for (let i = 0; i < points; i++) {
+      const start = i * blockSize
+      let sum = 0
+      let count = 0
+      for (let j = start; j < start + blockSize && j < channelData.length; j++) {
+        sum += Math.abs(channelData[j])
+        count++
+      }
+      raw.push(count > 0 ? sum / count : 0)
+    }
+    audioCtx.close()
+    const max = Math.max(...raw, 0.0001)
+    return raw.map((v) => Math.round((v / max) * 100))
+  } catch {
+    return []
+  }
 }
 
 export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) {
@@ -33,6 +66,10 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
   const audioCtxRef = useRef<AudioContext | null>(null)
   // Stable ref so the timer interval can invoke stopAndUpload without a stale closure
   const stopAndUploadRef = useRef<() => void>(() => {})
+  // Retained after a failed upload so the user can retry without re-recording
+  const recordedBlobRef = useRef<Blob | null>(null)
+  const recordedDurationRef = useRef<number>(0)
+  const recordedWaveformRef = useRef<number[]>([])
 
   const stopTimerAndAnimation = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
@@ -100,6 +137,20 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
     }
   }, [])
 
+  const attemptUpload = useCallback(async (blob: Blob, durationSeconds: number, waveformPeaks: number[]) => {
+    setError(null)
+    setUploading(true)
+    setUploadProgress(0)
+    try {
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type })
+      const result = await uploadApi.uploadFile(file, (pct) => setUploadProgress(pct))
+      onSend(result.url, durationSeconds, waveformPeaks)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+      setUploading(false)
+    }
+  }, [onSend])
+
   const stopAndUpload = useCallback(() => {
     const recorder = mediaRecorderRef.current
     if (!recorder || recorder.state === 'inactive') return
@@ -115,20 +166,22 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
       if (blob.size === 0) { setError('Recording was empty.'); setRecording(false); return }
 
       setRecording(false)
-      setUploading(true)
 
-      try {
-        const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type })
-        const result = await uploadApi.uploadFile(file, (pct) => setUploadProgress(pct))
-        onSend(result.url, durationSeconds)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
-        setUploading(false)
-      }
+      const waveformPeaks = await computeWaveformPeaks(blob)
+      recordedBlobRef.current = blob
+      recordedDurationRef.current = durationSeconds
+      recordedWaveformRef.current = waveformPeaks
+
+      attemptUpload(blob, durationSeconds, waveformPeaks)
     }
 
     recorder.stop()
-  }, [onSend, stopTimerAndAnimation])
+  }, [attemptUpload, stopTimerAndAnimation])
+
+  const handleRetry = useCallback(() => {
+    if (!recordedBlobRef.current) return
+    attemptUpload(recordedBlobRef.current, recordedDurationRef.current, recordedWaveformRef.current)
+  }, [attemptUpload])
 
   const handleCancel = useCallback(() => {
     const recorder = mediaRecorderRef.current
@@ -224,9 +277,18 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-red-500 absolute bottom-14 left-4 right-4 bg-white/90 dark:bg-[#1a242b]/95 rounded px-2 py-1 shadow" data-testid="voice-error">
-          {error}
-        </p>
+        <div className="flex items-center gap-2 absolute bottom-14 left-4 right-4 bg-white/90 dark:bg-[#1a242b]/95 rounded px-2 py-1 shadow">
+          <p className="text-xs text-red-500 flex-1" data-testid="voice-error">{error}</p>
+          {recordedBlobRef.current && (
+            <button
+              onClick={handleRetry}
+              className="text-xs font-semibold text-[#075e54] hover:underline flex-shrink-0"
+              data-testid="voice-retry-btn"
+            >
+              Retry
+            </button>
+          )}
+        </div>
       )}
 
       {/* Send */}

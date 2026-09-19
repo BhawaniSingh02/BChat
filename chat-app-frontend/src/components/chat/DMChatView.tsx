@@ -14,7 +14,7 @@ import type { DropdownAction } from './MessageBubble'
 interface DMChatViewProps {
   conversation: DirectConversation
   currentUsername: string
-  onSend: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null) => void
+  onSend: (content: string, fileUrl?: string, messageType?: MessageType, replyTo?: Message | null, durationSeconds?: number, waveform?: number[]) => void
   onMarkRead?: (messageId: string) => void
   onViewProfile?: (username: string) => void
   onEditMessage?: (messageId: string, newContent: string) => void

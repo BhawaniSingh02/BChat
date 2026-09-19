@@ -100,6 +100,10 @@ export interface Message {
   threadId?: string
   threadReplyCount?: number
   lastThreadReplyAt?: string
+
+  // Voice message polish — AUDIO messages only
+  durationSeconds?: number
+  waveform?: number[]
 }
 
 export interface PagedResponse<T> {

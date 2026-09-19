@@ -143,6 +143,51 @@ class DirectMessageServiceTest {
     }
 
     @Test
+    void sendMessage_clampsOversizedDurationAndWaveformForAudioMessage() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
+        when(conversationRepository.save(any(DirectConversation.class))).thenReturn(existingConversation);
+
+        org.mockito.ArgumentCaptor<Message> savedCaptor = org.mockito.ArgumentCaptor.forClass(Message.class);
+        when(messageRepository.save(savedCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        SendDirectMessageRequest request = new SendDirectMessageRequest();
+        request.setContent("Voice message (5:00)");
+        request.setMessageType(Message.MessageType.AUDIO);
+        request.setFileUrl("https://res.cloudinary.com/demo/video/upload/voice.mp3");
+        request.setDurationSeconds(99_999); // absurd client-reported duration
+        List<Integer> hugeWaveform = new ArrayList<>();
+        for (int i = 0; i < 500; i++) hugeWaveform.add(1000 + i); // too many points, out-of-range values
+        request.setWaveform(hugeWaveform);
+
+        directMessageService.sendMessage("conv-1", "alice", request);
+
+        Message saved = savedCaptor.getValue();
+        assertThat(saved.getDurationSeconds()).isEqualTo(120);
+        assertThat(saved.getWaveform()).hasSize(60);
+        assertThat(saved.getWaveform()).allMatch(v -> v >= 0 && v <= 100);
+    }
+
+    @Test
+    void sendMessage_dropsDurationAndWaveformForNonAudioMessage() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
+        when(conversationRepository.save(any(DirectConversation.class))).thenReturn(existingConversation);
+
+        org.mockito.ArgumentCaptor<Message> savedCaptor = org.mockito.ArgumentCaptor.forClass(Message.class);
+        when(messageRepository.save(savedCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        SendDirectMessageRequest request = new SendDirectMessageRequest();
+        request.setContent("Hello Bob!");
+        request.setDurationSeconds(30);
+        request.setWaveform(List.of(10, 20, 30));
+
+        directMessageService.sendMessage("conv-1", "alice", request);
+
+        Message saved = savedCaptor.getValue();
+        assertThat(saved.getDurationSeconds()).isNull();
+        assertThat(saved.getWaveform()).isNull();
+    }
+
+    @Test
     void sendMessage_denormalizesTextPreviewOntoConversation() {
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(existingConversation));
 
