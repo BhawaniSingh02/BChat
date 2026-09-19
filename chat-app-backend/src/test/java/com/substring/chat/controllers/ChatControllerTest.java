@@ -5,7 +5,9 @@ import com.substring.chat.entities.Message;
 import com.substring.chat.repositories.DirectConversationRepository;
 import com.substring.chat.repositories.MessageRepository;
 import com.substring.chat.repositories.RoomRepository;
+import com.substring.chat.services.ExpoPushService;
 import com.substring.chat.services.MessageRateLimiter;
+import com.substring.chat.services.WebPushService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,9 @@ class ChatControllerTest {
     @Mock private RoomRepository roomRepository;
     @Mock private DirectConversationRepository conversationRepository;
     @Mock private MessageRateLimiter rateLimiter;
+    @Mock private com.substring.chat.repositories.UserRepository userRepository;
+    @Mock private WebPushService webPushService;
+    @Mock private ExpoPushService expoPushService;
 
     @InjectMocks
     private ChatController chatController;
@@ -99,6 +104,50 @@ class ChatControllerTest {
         chatController.sendMessage("nonexistent", request, principal);
 
         verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void sendMessage_skipsPushForMutedMemberButNotOthers() {
+        com.substring.chat.entities.Room room = new com.substring.chat.entities.Room();
+        room.setRoomId("general");
+        room.setName("General");
+        room.setMembers(List.of("alice", "bob", "carol"));
+        room.getMutedBy().put("bob", Instant.now().plusSeconds(3600)); // bob muted, carol not
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendMessageRequest request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Hello");
+
+        chatController.sendMessage("general", request, principal);
+
+        verify(webPushService, never()).sendToUser(eq("bob"), any(), any(), any(), any());
+        verify(expoPushService, never()).sendToUser(eq("bob"), any(), any(), any(), any());
+        verify(webPushService).sendToUser(eq("carol"), any(), any(), any(), any());
+        verify(expoPushService).sendToUser(eq("carol"), any(), any(), any(), any());
+        // Broadcast still happens regardless of mute state
+        verify(messagingTemplate).convertAndSend(eq("/topic/room/general"), any(Object.class));
+    }
+
+    @Test
+    void sendMessage_sendsPushWhenMuteHasExpired() {
+        com.substring.chat.entities.Room room = new com.substring.chat.entities.Room();
+        room.setRoomId("general");
+        room.setName("General");
+        room.setMembers(List.of("alice", "bob"));
+        room.getMutedBy().put("bob", Instant.now().minusSeconds(3600)); // mute already expired
+        when(roomRepository.findByRoomId("general")).thenReturn(room);
+        when(rateLimiter.isAllowed("alice")).thenReturn(true);
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendMessageRequest request = new com.substring.chat.dto.request.SendMessageRequest();
+        request.setContent("Hello");
+
+        chatController.sendMessage("general", request, principal);
+
+        verify(webPushService).sendToUser(eq("bob"), any(), any(), any(), any());
+        verify(expoPushService).sendToUser(eq("bob"), any(), any(), any(), any());
     }
 
     // ── react to message ──────────────────────────────────────────────────────
@@ -301,6 +350,41 @@ class ChatControllerTest {
         chatController.editDMMessage("bad-conv", request, principal);
 
         verify(messageRepository, never()).findById(any());
+    }
+
+    // ── sendDirectMessage ────────────────────────────────────────────────────
+
+    @Test
+    void sendDirectMessage_skipsPushWhenRecipientHasMutedConversation() {
+        conversation.getMutedBy().put("bob", Instant.now().plusSeconds(3600));
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendDirectMessageRequest request = new com.substring.chat.dto.request.SendDirectMessageRequest();
+        request.setContent("Hello bob");
+
+        chatController.sendDirectMessage("conv-1", request, principal);
+
+        // Message still delivered over the socket to both participants
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/messages"), any(Object.class));
+        verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/messages"), any(Object.class));
+        // But no push, since bob has this conversation muted
+        verify(webPushService, never()).sendToUser(eq("bob"), any(), any(), any(), any());
+        verify(expoPushService, never()).sendToUser(eq("bob"), any(), any(), any(), any());
+    }
+
+    @Test
+    void sendDirectMessage_sendsPushWhenRecipientNotMuted() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        com.substring.chat.dto.request.SendDirectMessageRequest request = new com.substring.chat.dto.request.SendDirectMessageRequest();
+        request.setContent("Hello bob");
+
+        chatController.sendDirectMessage("conv-1", request, principal);
+
+        verify(webPushService).sendToUser(eq("bob"), any(), any(), eq("conv-1"), any());
+        verify(expoPushService).sendToUser(eq("bob"), any(), any(), eq("conv-1"), any());
     }
 
     // ── DM delete message ─────────────────────────────────────────────────────

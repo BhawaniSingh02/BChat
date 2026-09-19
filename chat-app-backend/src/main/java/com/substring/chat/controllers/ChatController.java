@@ -99,7 +99,7 @@ public class ChatController {
         String roomLabel = "#" + room.getName();
         String roomBody = saved.getSenderName() + ": " + pushPreview(saved);
         for (String member : room.getMembers()) {
-            if (!member.equals(principal.getName())) {
+            if (!member.equals(principal.getName()) && !isMutedFor(room.getMutedBy(), member)) {
                 webPushService.sendToUser(member, roomLabel, roomBody, null, roomId);
                 expoPushService.sendToUser(member, roomLabel, roomBody, null, roomId);
             }
@@ -212,7 +212,7 @@ public class ChatController {
             // Background push to the recipient — but stay quiet for a not-yet-accepted
             // message request (the recipient just sees a Requests badge instead).
             boolean stillPendingRequest = "PENDING".equals(conv.getStatus());
-            if (recipient != null && !stillPendingRequest) {
+            if (recipient != null && !stillPendingRequest && !isMutedFor(conv.getMutedBy(), recipient)) {
                 webPushService.sendToUser(recipient, saved.getSenderName(), pushPreview(saved), conversationId, null);
                 expoPushService.sendToUser(recipient, saved.getSenderName(), pushPreview(saved), conversationId, null);
             }
@@ -252,6 +252,11 @@ public class ChatController {
                     return username;
                 })
                 .orElse(username);
+    }
+
+    private boolean isMutedFor(Map<String, Instant> mutedBy, String username) {
+        Instant until = mutedBy.get(username);
+        return until != null && until.isAfter(Instant.now());
     }
 
     /** Short human-readable preview for a push body (handles empty media messages). */

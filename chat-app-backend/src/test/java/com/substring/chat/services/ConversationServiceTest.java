@@ -99,6 +99,14 @@ class ConversationServiceTest {
         assertThat(response.getMutedBy()).doesNotContainKey("alice");
     }
 
+    @Test
+    void unmuteDMConversation_throwsWhenUserNotParticipant() {
+        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(testConversation));
+
+        assertThatThrownBy(() -> conversationService.unmuteDMConversation("conv-1", "charlie"))
+                .isInstanceOf(ConversationNotFoundException.class);
+    }
+
     // ── Phase 20: DM Archive ─────────────────────────────────────────────
 
     @Test
@@ -222,6 +230,22 @@ class ConversationServiceTest {
         when(roomRepository.findByRoomId("bad-room")).thenReturn(null);
 
         assertThatThrownBy(() -> conversationService.muteRoom("bad-room", "alice", "ALWAYS"))
+                .isInstanceOf(RoomNotFoundException.class);
+    }
+
+    @Test
+    void unmuteRoom_throwsWhenUserNotMember() {
+        when(roomRepository.findByRoomId("test-room")).thenReturn(testRoom);
+
+        assertThatThrownBy(() -> conversationService.unmuteRoom("test-room", "charlie"))
+                .isInstanceOf(RoomNotFoundException.class);
+    }
+
+    @Test
+    void unmuteRoom_throwsWhenRoomNotFound() {
+        when(roomRepository.findByRoomId("bad-room")).thenReturn(null);
+
+        assertThatThrownBy(() -> conversationService.unmuteRoom("bad-room", "alice"))
                 .isInstanceOf(RoomNotFoundException.class);
     }
 }
