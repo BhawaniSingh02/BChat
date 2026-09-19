@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 import type { Message } from '../../types'
 import { formatTime } from '../../utils/date'
+import ImageLightbox from './ImageLightbox'
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉']
 
@@ -18,7 +19,7 @@ function getLocalApiOrigin(): string {
 const LOCAL_API_ORIGIN = getLocalApiOrigin()
 const IS_DEV = import.meta.env.DEV
 
-function isTrustedUrl(url: string | undefined): boolean {
+export function isTrustedUrl(url: string | undefined): boolean {
   if (!url) return false
   try {
     const { origin, hostname } = new URL(url)
@@ -200,14 +201,22 @@ interface MessageBubbleProps {
   highlighted?: boolean
 }
 
-/** Shared-image bubble: shows a pulsing skeleton until the image finishes loading, then fades it in. */
-function ChatImage({ src, alt }: { src: string; alt: string }) {
+/**
+ * Shared-image bubble: fixed-aspect-ratio frame so every image bubble reads the same
+ * consistent size/shape regardless of the photo's intrinsic dimensions, instead of the old
+ * unbounded max-height crop that made portrait/landscape/panorama photos look wildly
+ * inconsistent next to each other. Shows a pulsing skeleton until the image finishes loading.
+ */
+function ChatImage({ src, alt, onClick }: { src: string; alt: string; onClick?: () => void }) {
   const [loaded, setLoaded] = useState(false)
   const [errored, setErrored] = useState(false)
   return (
-    <div className="relative mb-1 max-w-full">
+    <div
+      className={`relative mb-1 w-64 max-w-full aspect-[4/3] rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 ${onClick && !errored ? 'cursor-pointer' : ''}`}
+      onClick={!errored ? onClick : undefined}
+    >
       {!loaded && !errored && (
-        <div className="rounded-xl w-56 h-44 bg-gray-200 dark:bg-gray-700 animate-pulse" data-testid="image-skeleton" />
+        <div className="absolute inset-0 animate-pulse bg-gray-200 dark:bg-gray-700" data-testid="image-skeleton" />
       )}
       {!errored && (
         <img
@@ -216,17 +225,70 @@ function ChatImage({ src, alt }: { src: string; alt: string }) {
           loading="lazy"
           onLoad={() => setLoaded(true)}
           onError={() => setErrored(true)}
-          className={`rounded-xl max-w-full max-h-64 object-cover transition-opacity duration-300 ${
-            loaded ? 'opacity-100' : 'absolute inset-0 h-44 w-56 opacity-0'
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+            loaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
       )}
       {errored && (
-        <div className="rounded-xl w-56 h-44 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-xs">
+        <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs bg-gray-100 dark:bg-gray-800">
           Image failed to load
         </div>
       )}
     </div>
+  )
+}
+
+/** Best-effort filename from a Cloudinary/upload URL — decodes and strips the query string. */
+export function fileNameFromUrl(url: string): string {
+  const last = url.split('/').pop() || ''
+  const base = last.split('?')[0]
+  if (!base) return 'file'
+  try {
+    return decodeURIComponent(base)
+  } catch {
+    return base
+  }
+}
+
+function fileExtension(filename: string): string {
+  const idx = filename.lastIndexOf('.')
+  return idx >= 0 ? filename.slice(idx + 1).toLowerCase() : ''
+}
+
+const FILE_TYPE_STYLES: Record<string, { label: string; bg: string; fg: string }> = {
+  pdf: { label: 'PDF', bg: 'bg-red-100 dark:bg-red-900/30', fg: 'text-red-600 dark:text-red-400' },
+  doc: { label: 'DOC', bg: 'bg-blue-100 dark:bg-blue-900/30', fg: 'text-blue-600 dark:text-blue-400' },
+  docx: { label: 'DOC', bg: 'bg-blue-100 dark:bg-blue-900/30', fg: 'text-blue-600 dark:text-blue-400' },
+  txt: { label: 'TXT', bg: 'bg-gray-200 dark:bg-gray-700', fg: 'text-gray-600 dark:text-gray-300' },
+}
+const DEFAULT_FILE_STYLE = { label: 'FILE', bg: 'bg-gray-200 dark:bg-gray-700', fg: 'text-gray-600 dark:text-gray-300' }
+
+/** File-attachment bubble: icon-by-type + filename card, replacing the old bare "Download file" link. */
+function FileCard({ url }: { url: string }) {
+  const filename = fileNameFromUrl(url)
+  const style = FILE_TYPE_STYLES[fileExtension(filename)] ?? DEFAULT_FILE_STYLE
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-3 min-w-[200px] max-w-[260px] bg-white dark:bg-[#2a3942] rounded-xl px-3 py-2.5 shadow-sm hover:bg-gray-50 dark:hover:bg-[#33444f] transition-colors"
+      data-testid="file-card"
+    >
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${style.bg} ${style.fg}`}>
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" title={filename}>{filename}</p>
+        <p className="text-xs text-gray-400 uppercase">{style.label}</p>
+      </div>
+      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+      </svg>
+    </a>
   )
 }
 
@@ -301,7 +363,7 @@ function MessageMeta({
   )
 }
 
-function MenuItem({
+export function MenuItem({
   icon, label, onClick, danger = false, testId,
 }: {
   icon: ReactNode
@@ -338,6 +400,7 @@ function MessageBubble({
   const [showDropdown, setShowDropdown] = useState(false)
   const [dropdownDir, setDropdownDir] = useState<'down' | 'up'>('down')
   const [showReadReceipts, setShowReadReceipts] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
@@ -582,8 +645,19 @@ function MessageBubble({
                   </>
                 ) : message.messageType === 'IMAGE' && isTrustedUrl(message.fileUrl) ? (
                   <>
-                    <ChatImage src={message.fileUrl!} alt="shared" />
+                    <ChatImage
+                      src={message.fileUrl!}
+                      alt="shared"
+                      onClick={selectionMode ? undefined : () => setLightboxOpen(true)}
+                    />
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
+                    {lightboxOpen && (
+                      <ImageLightbox
+                        images={[{ url: message.fileUrl!, alt: 'shared' }]}
+                        initialIndex={0}
+                        onClose={() => setLightboxOpen(false)}
+                      />
+                    )}
                   </>
                 ) : message.messageType === 'VIDEO' && isTrustedUrl(message.fileUrl) ? (
                   <>
@@ -597,9 +671,7 @@ function MessageBubble({
                   </>
                 ) : message.messageType === 'FILE' && isTrustedUrl(message.fileUrl) ? (
                   <>
-                    <a href={message.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline">
-                      📎 Download file
-                    </a>
+                    <FileCard url={message.fileUrl!} />
                     <MessageMeta message={message} isMine={isMine} isStarredByMe={isStarredByMe} selectionMode={selectionMode} onShowReceipts={() => setShowReadReceipts(v => !v)} block />
                   </>
                 ) : isMissedCallMessage(message.content) ? (

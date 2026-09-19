@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Message } from '../../types'
 import { formatTime } from '../../utils/date'
+import { previewForMessage } from '../../utils/conversation'
 
 export interface NotificationItem {
   id: string
@@ -103,7 +104,7 @@ export default function NotificationBell({
                     <span className="flex-shrink-0 text-[10px] text-slate-400">{formatTime(n.at)}</span>
                   </div>
                   <p className="truncate text-xs text-slate-500">{n.conversationLabel}</p>
-                  <p className="line-clamp-2 break-words text-sm text-slate-700">{n.message.content}</p>
+                  <p className="line-clamp-2 break-words text-sm text-slate-700">{previewForMessage(n.message)}</p>
                   {!n.read && (
                     <span className="absolute right-3 top-4 h-2 w-2 rounded-full bg-teal-500" aria-hidden />
                   )}

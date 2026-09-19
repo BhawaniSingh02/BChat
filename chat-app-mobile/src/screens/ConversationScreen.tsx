@@ -24,6 +24,7 @@ import Avatar from '../components/Avatar';
 import FilePreviewModal from '../components/FilePreviewModal';
 import ForwardMessageModal from '../components/ForwardMessageModal';
 import ImageViewerModal from '../components/ImageViewerModal';
+import MediaGrid from '../components/MediaGrid';
 import MessageActionSheet from '../components/MessageActionSheet';
 import MessageRow from '../components/MessageRow';
 import VideoPlayerModal from '../components/VideoPlayerModal';
@@ -46,6 +47,7 @@ import { useUserCacheStore } from '../store/userCacheStore';
 import { useTheme } from '../theme/ThemeContext';
 import { fonts, radii } from '../theme/tokens';
 import { Message, UserSummary } from '../types';
+import { buildRenderUnits, renderUnitKey, RenderUnit } from '../utils/messageGrouping';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Conversation'>;
 
@@ -117,7 +119,8 @@ export default function ConversationScreen({ route, navigation }: Props) {
   const [socketError, setSocketError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const [otherUser, setOtherUser] = useState<UserSummary | null>(null);
   const [replyingTo, setReplyingTo] = useState<ReplyDraft | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -143,8 +146,15 @@ export default function ConversationScreen({ route, navigation }: Props) {
   const messages = messagesByRoom[roomId] ?? [];
   // FlatList is rendered `inverted` (WhatsApp-style: newest message anchored at the
   // bottom without any scroll-to-end call, and immune to keyboard-driven resizes) which
-  // requires the underlying data newest-first.
-  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
+  // requires the underlying data newest-first. buildRenderUnits needs chronological
+  // (oldest-first) `messages` to detect consecutive-image runs correctly — reversing its
+  // *output* (not the input) is what gets us back to the newest-first order FlatList needs.
+  const invertedRenderUnits = useMemo(() => buildRenderUnits(messages).reverse(), [messages]);
+
+  const openImageViewer = useCallback((images: string[], index: number) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+  }, []);
 
   const scheduleSendTimeout = useCallback((clientId: string) => {
     if (sendTimeoutsRef.current[clientId]) clearTimeout(sendTimeoutsRef.current[clientId]);
@@ -165,7 +175,11 @@ export default function ConversationScreen({ route, navigation }: Props) {
   }, [messages, username]);
 
   const jumpToMessage = useCallback((messageId: string) => {
-    const index = invertedMessages.findIndex((m) => m.id === messageId);
+    // Target may be inside a grouped imageGroup unit — find whichever unit contains it,
+    // not just a unit whose own id matches.
+    const index = invertedRenderUnits.findIndex((unit) =>
+      unit.type === 'single' ? unit.message.id === messageId : unit.messages.some((m) => m.id === messageId),
+    );
     if (index === -1) {
       Alert.alert('Message not found', 'This message is too far back to jump to right now.');
       return;
@@ -174,7 +188,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
     if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
     setHighlightedMessageId(messageId);
     highlightTimeoutRef.current = setTimeout(() => setHighlightedMessageId(null), 1500);
-  }, [invertedMessages]);
+  }, [invertedRenderUnits]);
 
   // Jump to a message passed in from global search — waits for this room's fetchMessages/
   // fetchDMMessages (triggered by the mount effect below) to land before attempting the jump,
@@ -483,7 +497,24 @@ export default function ConversationScreen({ route, navigation }: Props) {
 
   // Stable renderItem — combined with MessageRow's React.memo, this keeps a new message or a
   // typing-indicator update from re-rendering every already-mounted row in the thread.
-  const renderMessageItem = useCallback(({ item }: { item: Message }) => {
+  const renderMessageItem = useCallback(({ item: unit }: { item: RenderUnit }) => {
+    if (unit.type === 'imageGroup') {
+      const mine = unit.messages[0].sender === username;
+      return (
+        <View style={styles.invertedItem}>
+          <MediaGrid
+            messages={unit.messages}
+            mine={mine}
+            tokens={tokens}
+            onOpenViewer={openImageViewer}
+            onLongPressTile={setActionSheetMessage}
+            selectionMode={isSelecting}
+            highlightedMessageId={highlightedMessageId}
+          />
+        </View>
+      );
+    }
+    const item = unit.message;
     const mine = item.sender === username;
     const read = kind === 'dm' ? (otherUsername ? item.readBy.includes(otherUsername) : false) : item.readBy.length > 0;
     return (
@@ -496,7 +527,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
           tokens={tokens}
           myUsername={username}
           formatTime={formatTime}
-          onPressImage={setViewerUrl}
+          onPressImage={(url) => openImageViewer([url], 0)}
           onPressFile={handlePressFile}
           onLongPress={setActionSheetMessage}
           onReply={startReply}
@@ -511,7 +542,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
     );
   }, [
     username, kind, otherUsername, highlightedMessageId, tokens, formatTime, handlePressFile,
-    startReply, handleRowReact, jumpToMessage, retryMessage, isSelecting, selectedIds, toggleSelect,
+    startReply, handleRowReact, jumpToMessage, retryMessage, isSelecting, selectedIds, toggleSelect, openImageViewer,
   ]);
 
   const handleSend = async () => {
@@ -724,8 +755,8 @@ export default function ConversationScreen({ route, navigation }: Props) {
       <FlatList
         ref={listRef}
         inverted
-        data={invertedMessages}
-        keyExtractor={(item) => item.id}
+        data={invertedRenderUnits}
+        keyExtractor={renderUnitKey}
         contentContainerStyle={styles.thread}
         onScroll={(e) => {
           // Inverted list: offset 0 is the newest message (visually the bottom), so
@@ -740,7 +771,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
           // scroll to the nearest approximate offset, then retry once layout settles.
           listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
           setTimeout(() => {
-            if (info.index < invertedMessages.length) {
+            if (info.index < invertedRenderUnits.length) {
               listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
             }
           }, 100);
@@ -877,7 +908,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
       </View>
       </KeyboardAvoidingView>
 
-      <ImageViewerModal url={viewerUrl} onClose={() => setViewerUrl(null)} />
+      <ImageViewerModal images={viewerImages} initialIndex={viewerIndex} onClose={() => setViewerImages([])} />
 
       <MessageActionSheet
         visible={!!actionSheetMessage}

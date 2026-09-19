@@ -29,6 +29,7 @@ export default function MediaGalleryScreen({ route, navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const viewerImages = viewerUrl ? [viewerUrl] : [];
   const [openingId, setOpeningId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,7 +125,7 @@ export default function MediaGalleryScreen({ route, navigation }: Props) {
         />
       )}
 
-      <ImageViewerModal url={viewerUrl} onClose={() => setViewerUrl(null)} />
+      <ImageViewerModal images={viewerImages} initialIndex={0} onClose={() => setViewerUrl(null)} />
     </SafeAreaView>
   );
 }

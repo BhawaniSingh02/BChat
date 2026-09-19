@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MessageInput from '../../components/chat/MessageInput'
 import { uploadApi } from '../../api/upload'
+import type { Message } from '../../types'
 
 vi.mock('../../api/upload')
 
@@ -92,7 +93,10 @@ describe('MessageInput', () => {
     expect(screen.getByTestId('file-input')).toBeInTheDocument()
   })
 
-  it('calls onSend with fileUrl and messageType after successful image upload', async () => {
+  it('calls onSend with empty content (not the filename) for an uncaptioned image upload', async () => {
+    // Images send empty content when uncaptioned rather than echoing the filename — this is
+    // what lets MediaGrid's grouping logic (messageListShared.ts) tell "no caption" apart from
+    // "real caption" exactly, instead of fuzzy-matching against the upload URL's filename.
     vi.mocked(uploadApi.uploadFile).mockResolvedValue({
       url: 'https://cdn.example.com/photo.jpg',
       messageType: 'IMAGE',
@@ -107,7 +111,31 @@ describe('MessageInput', () => {
 
     await waitFor(() => {
       expect(onSend).toHaveBeenCalledWith(
-        'photo.jpg',
+        '',
+        'https://cdn.example.com/photo.jpg',
+        'IMAGE',
+        undefined
+      )
+    })
+  })
+
+  it('calls onSend with the typed caption for an image upload with a caption', async () => {
+    vi.mocked(uploadApi.uploadFile).mockResolvedValue({
+      url: 'https://cdn.example.com/photo.jpg',
+      messageType: 'IMAGE',
+      bytes: 500,
+    })
+
+    render(<MessageInput onSend={onSend} />)
+    await userEvent.type(screen.getByLabelText('Message input'), 'Look at this!')
+    const fileInput = screen.getByTestId('file-input')
+    const file = new File(['x'.repeat(100)], 'photo.jpg', { type: 'image/jpeg' })
+
+    await userEvent.upload(fileInput, file)
+
+    await waitFor(() => {
+      expect(onSend).toHaveBeenCalledWith(
+        'Look at this!',
         'https://cdn.example.com/photo.jpg',
         'IMAGE',
         undefined
@@ -188,5 +216,23 @@ describe('MessageInput', () => {
     await act(async () => {
       resolveUpload({ url: 'https://cdn.example.com/x.jpg', messageType: 'IMAGE', bytes: 7 })
     })
+  })
+
+  // ── Reply preview ────────────────────────────────────────────────────────
+
+  it('shows "📷 Photo" (not blank) in the reply preview banner for an uncaptioned image reply target', () => {
+    const replyTo: Message = {
+      id: 'msg-1',
+      roomId: 'general',
+      sender: 'bob',
+      senderName: 'bob',
+      content: '', // uncaptioned image — MessageInput sends empty content for these
+      messageType: 'IMAGE',
+      fileUrl: 'https://res.cloudinary.com/demo/image/upload/photo.jpg',
+      readBy: [],
+      timestamp: '2026-03-28T10:00:00Z',
+    }
+    render(<MessageInput onSend={onSend} replyTo={replyTo} />)
+    expect(screen.getByTestId('reply-preview')).toHaveTextContent('📷 Photo')
   })
 })

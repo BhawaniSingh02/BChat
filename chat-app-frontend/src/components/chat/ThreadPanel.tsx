@@ -4,6 +4,7 @@ import { threadsApi } from '../../api/threads'
 import { uploadApi } from '../../api/upload'
 import MessageBubble from './MessageBubble'
 import { formatTime } from '../../utils/date'
+import { previewForMessage } from '../../utils/conversation'
 
 interface ThreadPanelProps {
   rootMessage: Message
@@ -105,7 +106,7 @@ export default function ThreadPanel({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{rootMessage.senderName}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 break-words line-clamp-3">{rootMessage.content}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 break-words line-clamp-3">{previewForMessage(rootMessage)}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">{formatTime(rootMessage.timestamp)}</p>
           </div>
         </div>

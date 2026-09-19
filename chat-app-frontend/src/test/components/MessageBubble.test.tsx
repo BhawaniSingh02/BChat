@@ -83,6 +83,32 @@ describe('MessageBubble', () => {
     expect(screen.getByRole('img', { name: 'shared' })).toBeInTheDocument()
   })
 
+  it('opens a full-screen lightbox when a lone image is tapped', () => {
+    const imageMsg: Message = {
+      ...baseMessage,
+      messageType: 'IMAGE',
+      fileUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+      content: '',
+    }
+    render(<MessageBubble message={imageMsg} isMine={false} />)
+    expect(screen.queryByTestId('image-lightbox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('img', { name: 'shared' }))
+    expect(screen.getByTestId('image-lightbox')).toBeInTheDocument()
+    expect(screen.getByTestId('lightbox-image')).toHaveAttribute('src', imageMsg.fileUrl)
+  })
+
+  it('does not open the lightbox when tapping the image in selection mode', () => {
+    const imageMsg: Message = {
+      ...baseMessage,
+      messageType: 'IMAGE',
+      fileUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+      content: '',
+    }
+    render(<MessageBubble message={imageMsg} isMine={false} selectionMode />)
+    fireEvent.click(screen.getByRole('img', { name: 'shared' }))
+    expect(screen.queryByTestId('image-lightbox')).not.toBeInTheDocument()
+  })
+
   it('renders video for VIDEO message type with trusted Cloudinary URL', () => {
     const videoMsg: Message = {
       ...baseMessage,
@@ -176,15 +202,55 @@ describe('MessageBubble', () => {
     expect(screen.getByRole('img', { name: 'shared' })).toBeInTheDocument()
   })
 
-  it('renders download link for FILE message type with trusted Cloudinary URL', () => {
-    const fileMsg: Message = {
-      ...baseMessage,
-      messageType: 'FILE',
-      fileUrl: 'https://res.cloudinary.com/demo/raw/upload/doc.pdf',
-      content: '',
-    }
-    render(<MessageBubble message={fileMsg} isMine={false} />)
-    expect(screen.getByText('📎 Download file')).toBeInTheDocument()
+  describe('FILE messages (file card)', () => {
+    it('renders a file card with the filename and type badge for a trusted Cloudinary URL', () => {
+      const fileMsg: Message = {
+        ...baseMessage,
+        messageType: 'FILE',
+        fileUrl: 'https://res.cloudinary.com/demo/raw/upload/doc.pdf',
+        content: '',
+      }
+      render(<MessageBubble message={fileMsg} isMine={false} />)
+      const card = screen.getByTestId('file-card')
+      expect(card).toBeInTheDocument()
+      expect(card).toHaveAttribute('href', fileMsg.fileUrl)
+      expect(screen.getByText('doc.pdf')).toBeInTheDocument()
+      expect(screen.getByText('PDF')).toBeInTheDocument()
+    })
+
+    it('decodes a URL-encoded filename and shows a generic badge for an unrecognized extension', () => {
+      const fileMsg: Message = {
+        ...baseMessage,
+        messageType: 'FILE',
+        fileUrl: 'https://res.cloudinary.com/demo/raw/upload/My%20Report%20Final.xlsx',
+        content: '',
+      }
+      render(<MessageBubble message={fileMsg} isMine={false} />)
+      expect(screen.getByText('My Report Final.xlsx')).toBeInTheDocument()
+      expect(screen.getByText('FILE')).toBeInTheDocument()
+    })
+
+    it('falls back to "file" instead of a blank name for a URL with no filename segment', () => {
+      const fileMsg: Message = {
+        ...baseMessage,
+        messageType: 'FILE',
+        fileUrl: 'https://res.cloudinary.com/demo/raw/upload/',
+        content: '',
+      }
+      render(<MessageBubble message={fileMsg} isMine={false} />)
+      expect(screen.getByText('file')).toBeInTheDocument()
+    })
+
+    it('does not render a file card for FILE message type with untrusted URL', () => {
+      const fileMsg: Message = {
+        ...baseMessage,
+        messageType: 'FILE',
+        fileUrl: 'https://evil.com/tracker.pdf',
+        content: '',
+      }
+      render(<MessageBubble message={fileMsg} isMine={false} />)
+      expect(screen.queryByTestId('file-card')).not.toBeInTheDocument()
+    })
   })
 
   // ── Edit mode (triggered by isEditing prop) ────────────────────────────────

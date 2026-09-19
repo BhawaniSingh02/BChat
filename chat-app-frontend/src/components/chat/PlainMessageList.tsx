@@ -3,7 +3,7 @@ import type { Message } from '../../types'
 import type { DropdownAction } from './MessageBubble'
 import { useUserCacheStore } from '../../store/userCacheStore'
 import { useScrollAnchoring } from '../../hooks/useScrollAnchoring'
-import { TypingIndicator, MessageRow, type MessageRowCallbacks } from './messageListShared'
+import { TypingIndicator, MessageRow, MediaGroupRow, buildRenderUnits, lastMessageOfUnit, type MessageRowCallbacks } from './messageListShared'
 
 export interface MessageListProps {
   messages: Message[]
@@ -77,6 +77,8 @@ export default function PlainMessageList({
     editingMessageId, onEditMessage, onDropdownAction, isAdmin, pinnedMessageIds, onCallBack, highlightedMessageId,
   }
 
+  const renderUnits = buildRenderUnits(messages)
+
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-0 chat-bg" data-testid="message-list" data-list-variant="plain">
       <div ref={topSentinelRef} data-testid="load-older-sentinel" />
@@ -85,9 +87,14 @@ export default function PlainMessageList({
           Loading older messages…
         </div>
       )}
-      {messages.map((message, index) => (
-        <MessageRow key={message.id} message={message} prevMessage={messages[index - 1]} callbacks={callbacks} />
-      ))}
+      {renderUnits.map((unit, index) => {
+        const prevMessage = index > 0 ? lastMessageOfUnit(renderUnits[index - 1]) : undefined
+        return unit.type === 'imageGroup' ? (
+          <MediaGroupRow key={unit.messages[0].id} messages={unit.messages} prevMessage={prevMessage} callbacks={callbacks} />
+        ) : (
+          <MessageRow key={unit.message.id} message={unit.message} prevMessage={prevMessage} callbacks={callbacks} />
+        )
+      })}
       <TypingIndicator users={typingUsers} />
       <div ref={bottomRef} />
     </div>

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Message, MessageType } from '../../types'
 import { uploadApi } from '../../api/upload'
+import { previewForMessage } from '../../utils/conversation'
 import VoiceRecorder from './VoiceRecorder'
 
 const ACCEPTED_TYPES = [
@@ -93,7 +94,15 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
 
   const handleFileUploadComplete = useCallback((url: string, messageType: MessageType, filename: string) => {
     const caption = value.trim()
-    onSend(caption || filename, url, messageType, replyTo)
+    // For images specifically, send an empty content when there's no caption rather than
+    // echoing the filename — this is what lets the grouping logic (messageListShared.ts)
+    // tell "no caption" apart from "real caption" exactly (content === ''), instead of fuzzy-
+    // matching against Cloudinary's randomized upload filename. It also fixes the DM sidebar
+    // and push-notification previews, which already have a "📷 Photo" fallback for blank
+    // content that was previously unreachable for images. FILE/VIDEO keep the filename
+    // fallback — they have no caption UI of their own, so the filename is still the useful label.
+    const content = messageType === 'IMAGE' ? caption : (caption || filename)
+    onSend(content, url, messageType, replyTo)
     setValue('')
     onCancelReply?.()
     setPendingFile(null)
@@ -187,7 +196,7 @@ export default function MessageInput({ onSend, onTyping, disabled, placeholder, 
         <div className="flex items-start gap-2 mb-2 bg-white/80 dark:bg-[#202c33] rounded-xl px-3 py-2 border-l-4 border-emerald-500" data-testid="reply-preview">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-emerald-700">{replyTo.senderName}</p>
-            <p className="text-xs text-gray-500 truncate">{replyTo.content}</p>
+            <p className="text-xs text-gray-500 truncate">{previewForMessage(replyTo)}</p>
           </div>
           <button
             onClick={onCancelReply}

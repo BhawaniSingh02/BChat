@@ -6,6 +6,11 @@ import { Message } from '../types';
 import { fonts, ThemeTokens } from '../theme/tokens';
 import { formatDuration } from './VoiceRecorder';
 
+// Fixed 4:3 frame for every image bubble — matches the web app's aspect-ratio framing so
+// photos read consistently across platforms instead of each rendering at its own intrinsic size.
+const IMAGE_WIDTH = 240;
+const IMAGE_HEIGHT = 180;
+
 /** Shared-image bubble: shows a placeholder + spinner until the image finishes loading. */
 function ChatImage({ uri, tokens }: { uri: string; tokens: ThemeTokens }) {
   const [loaded, setLoaded] = useState(false);
@@ -13,7 +18,7 @@ function ChatImage({ uri, tokens }: { uri: string; tokens: ThemeTokens }) {
 
   if (errored) {
     return (
-      <View style={{ width: 200, height: 200, borderRadius: 12, backgroundColor: tokens.surface2, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT, borderRadius: 12, backgroundColor: tokens.surface2, alignItems: 'center', justifyContent: 'center' }}>
         <Feather name="image" size={20} color={tokens.textMuted} />
         <Text style={{ color: tokens.textMuted, fontSize: 11, marginTop: 4 }}>Couldn't load image</Text>
       </View>
@@ -21,7 +26,7 @@ function ChatImage({ uri, tokens }: { uri: string; tokens: ThemeTokens }) {
   }
 
   return (
-    <View style={{ width: 200, height: 200, borderRadius: 12, backgroundColor: tokens.surface2, overflow: 'hidden' }}>
+    <View style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT, borderRadius: 12, backgroundColor: tokens.surface2, overflow: 'hidden' }}>
       {!loaded ? (
         <View style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={tokens.textMuted} />
@@ -29,7 +34,7 @@ function ChatImage({ uri, tokens }: { uri: string; tokens: ThemeTokens }) {
       ) : null}
       <Image
         source={{ uri }}
-        style={{ width: 200, height: 200, opacity: loaded ? 1 : 0 }}
+        style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT, opacity: loaded ? 1 : 0 }}
         resizeMode="cover"
         onLoad={() => setLoaded(true)}
         onError={() => setErrored(true)}
@@ -39,9 +44,25 @@ function ChatImage({ uri, tokens }: { uri: string; tokens: ThemeTokens }) {
 }
 
 function fileNameFromUrl(url: string): string {
-  const last = url.split('/').pop() ?? 'file';
-  return decodeURIComponent(last.split('?')[0]);
+  const last = url.split('/').pop() || '';
+  const base = last.split('?')[0];
+  return base ? decodeURIComponent(base) : 'file';
 }
+
+function fileExtension(filename: string): string {
+  const idx = filename.lastIndexOf('.');
+  return idx >= 0 ? filename.slice(idx + 1).toLowerCase() : '';
+}
+
+// File-type badge colors — kept constant across light/dark theme (like the web app's
+// file card), since a colored type badge is a brand/category cue, not a themed surface.
+const FILE_TYPE_STYLES: Record<string, { label: string; bg: string; fg: string }> = {
+  pdf: { label: 'PDF', bg: '#FEE2E2', fg: '#DC2626' },
+  doc: { label: 'DOC', bg: '#DBEAFE', fg: '#2563EB' },
+  docx: { label: 'DOC', bg: '#DBEAFE', fg: '#2563EB' },
+  txt: { label: 'TXT', bg: '#E5E7EB', fg: '#4B5563' },
+};
+const DEFAULT_FILE_STYLE = { label: 'FILE', bg: '#E5E7EB', fg: '#4B5563' };
 
 // Only one voice message should play at a time — starting a new one pauses
 // whatever was previously playing, matching normal chat-app expectations.
@@ -349,26 +370,41 @@ export default function MessageBubbleContent({ item, mine, tokens, onPressImage,
     );
   } else if (item.messageType === 'FILE' && item.fileUrl) {
     const filename = fileNameFromUrl(item.fileUrl);
+    const fileStyle = FILE_TYPE_STYLES[fileExtension(filename)] ?? DEFAULT_FILE_STYLE;
     content = (
       <TouchableOpacity
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          backgroundColor: mine ? 'rgba(255,255,255,0.14)' : tokens.surface2,
+          borderRadius: 12,
+          paddingVertical: 8,
+          paddingHorizontal: 10,
+          minWidth: 190,
+        }}
         onPress={() => onPressFile(item)}
       >
         <View
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 9,
-            backgroundColor: mine ? 'rgba(255,255,255,0.2)' : tokens.accent,
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: fileStyle.bg,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Feather name="file-text" size={15} color={tokens.onAccent} />
+          <Feather name="file-text" size={16} color={fileStyle.fg} />
         </View>
-        <Text style={{ color: textColor, fontSize: 13.5, flexShrink: 1 }} numberOfLines={1}>
-          {filename}
-        </Text>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: textColor, fontSize: 13.5 }} numberOfLines={1}>
+            {filename}
+          </Text>
+          <Text style={{ color: mine ? 'rgba(255,255,255,0.75)' : tokens.textMuted, fontSize: 11, marginTop: 1 }}>
+            {fileStyle.label}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   } else {

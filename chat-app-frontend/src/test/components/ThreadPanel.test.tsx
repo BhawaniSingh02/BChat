@@ -87,6 +87,24 @@ describe('ThreadPanel', () => {
     expect(screen.getByText('Alice')).toBeDefined()
   })
 
+  it('shows "📷 Photo" (not blank) in the root message preview for an uncaptioned image thread root', () => {
+    const imageRootMessage: Message = {
+      ...rootMessage,
+      content: '', // uncaptioned image — MessageInput sends empty content for these
+      messageType: 'IMAGE',
+      fileUrl: 'https://res.cloudinary.com/demo/image/upload/photo.jpg',
+    }
+    render(
+      <ThreadPanel
+        rootMessage={imageRootMessage}
+        currentUsername="alice"
+        onClose={vi.fn()}
+        onSendReply={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('📷 Photo')).toBeDefined()
+  })
+
   it('shows thread header with Thread title', () => {
     render(
       <ThreadPanel

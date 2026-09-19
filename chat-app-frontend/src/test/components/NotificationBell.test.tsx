@@ -125,6 +125,35 @@ describe('NotificationBell', () => {
     expect(onClickNotification).toHaveBeenCalledWith(notif)
   })
 
+  it('shows "📷 Photo" (not blank) for an uncaptioned image notification', () => {
+    const imageNotif: NotificationItem = {
+      id: '1',
+      message: {
+        id: 'msg-1',
+        roomId: 'general',
+        sender: 'alice',
+        senderName: 'Alice',
+        content: '', // uncaptioned image — MessageInput sends empty content for these
+        messageType: 'IMAGE',
+        fileUrl: 'https://res.cloudinary.com/demo/image/upload/photo.jpg',
+        readBy: [],
+        timestamp: '2025-01-01T10:00:00Z',
+      },
+      conversationLabel: '#general',
+      read: false,
+      at: '2025-01-01T10:00:00Z',
+    }
+    render(
+      <NotificationBell
+        notifications={[imageNotif]}
+        onMarkAllRead={vi.fn()}
+        onClickNotification={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByTestId('notification-bell-btn'))
+    expect(screen.getByTestId('notification-item')).toHaveTextContent('📷 Photo')
+  })
+
   it('shows 99+ for very high unread counts', () => {
     const notifications = Array.from({ length: 105 }, (_, i) => makeNotification(String(i), false))
     render(

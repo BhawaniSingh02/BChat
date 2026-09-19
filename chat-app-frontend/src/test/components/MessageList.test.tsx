@@ -108,6 +108,47 @@ describe('MessageList', () => {
     expect(window.HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled()
   })
 
+  describe('consecutive-image grouping', () => {
+    const makeImage = (id: string, minutesOffset: number): Message => ({
+      id,
+      roomId: 'general',
+      sender: 'alice',
+      senderName: 'alice',
+      content: '', // MessageInput sends empty content for an uncaptioned image — the exact "no caption" signal
+      messageType: 'IMAGE',
+      fileUrl: `https://res.cloudinary.com/demo/image/upload/photo${id}.jpg`,
+      readBy: [],
+      timestamp: new Date(new Date('2026-03-28T10:00:00Z').getTime() + minutesOffset * 60_000).toISOString(),
+    })
+
+    it('renders a compact media grid instead of separate bubbles for a burst of images', () => {
+      const messages = [makeImage('1', 0), makeImage('2', 1), makeImage('3', 2)]
+      render(<MessageList messages={messages} currentUsername="alice" typingUsers={[]} />)
+      expect(screen.getByTestId('media-grid')).toBeInTheDocument()
+      expect(screen.getAllByTestId('media-grid-tile')).toHaveLength(3)
+      expect(screen.queryByTestId('message-bubble')).not.toBeInTheDocument()
+    })
+
+    it('renders a lone image as a normal message bubble, not a grid', () => {
+      const messages = [makeImage('1', 0)]
+      render(<MessageList messages={messages} currentUsername="alice" typingUsers={[]} />)
+      expect(screen.getByTestId('message-bubble')).toBeInTheDocument()
+      expect(screen.queryByTestId('media-grid')).not.toBeInTheDocument()
+    })
+
+    it('gives every tile a msg-{id} DOM anchor, including non-first tiles, so reply-quote/pinned/search jumps can still find a grouped image', () => {
+      const messages = [makeImage('1', 0), makeImage('2', 1), makeImage('3', 2), makeImage('4', 3)]
+      render(<MessageList messages={messages} currentUsername="alice" typingUsers={[]} />)
+      // The regression: MediaGrid tiles previously had no id at all, so
+      // document.getElementById('msg-${id}') — what reply-quote taps, pinned-message taps, and
+      // search-result jumps all use to scroll — silently returned null for every grouped image.
+      expect(document.getElementById('msg-1')).not.toBeNull()
+      expect(document.getElementById('msg-2')).not.toBeNull()
+      expect(document.getElementById('msg-3')).not.toBeNull()
+      expect(document.getElementById('msg-4')).not.toBeNull()
+    })
+  })
+
   describe('virtualization threshold', () => {
     const manyMessages = (count: number): Message[] =>
       Array.from({ length: count }, (_, i) => ({

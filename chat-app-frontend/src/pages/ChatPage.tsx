@@ -24,6 +24,7 @@ import BrandLogo from '../components/ui/BrandLogo'
 import NotificationToaster from '../components/ui/NotificationToaster'
 import { ensureNotificationPermission } from '../utils/browserNotify'
 import { registerServiceWorker, subscribeToPush, initPushNavigationBridge } from '../utils/push'
+import { previewForMessage } from '../utils/conversation'
 import { useUserCacheStore } from '../store/userCacheStore'
 import { Link } from 'react-router-dom'
 
@@ -360,7 +361,9 @@ export default function ChatPage() {
     if (activeRoomId) sendMessage(
       activeRoomId, content, fileUrl, messageType,
       replyTo?.id,
-      replyTo ? replyTo.content.substring(0, 80) : undefined,
+      // previewForMessage falls back to a media-type label ("📷 Photo" etc.) for an
+      // uncaptioned image/file/video/audio, instead of showing a blank quote snippet.
+      replyTo ? previewForMessage(replyTo).slice(0, 80) : undefined,
       replyTo?.senderName,
       undefined,
       durationSeconds,
@@ -380,7 +383,7 @@ export default function ChatPage() {
     if (activeDMId) sendDM(
       activeDMId, content, fileUrl, messageType,
       replyTo?.id,
-      replyTo ? replyTo.content.substring(0, 80) : undefined,
+      replyTo ? previewForMessage(replyTo).slice(0, 80) : undefined,
       replyTo?.senderName,
       undefined,
       durationSeconds,

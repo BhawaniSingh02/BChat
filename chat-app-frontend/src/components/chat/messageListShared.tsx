@@ -1,5 +1,6 @@
 import type { Message } from '../../types'
-import MessageBubble, { type DropdownAction } from './MessageBubble'
+import MessageBubble, { type DropdownAction, isTrustedUrl } from './MessageBubble'
+import MediaGrid from './MediaGrid'
 import { formatDate, isSameDay } from '../../utils/date'
 
 export function DateDivider({ date }: { date: string }) {
@@ -36,6 +37,73 @@ export function TypingIndicator({ users }: { users: string[] }) {
 
 export function withinGroup(a: string, b: string): boolean {
   return Math.abs(new Date(a).getTime() - new Date(b).getTime()) < 5 * 60 * 1000
+}
+
+function isGroupableImage(message: Message): boolean {
+  return (
+    message.messageType === 'IMAGE' &&
+    isTrustedUrl(message.fileUrl) &&
+    !message.replyToId &&
+    !message.forwardedFrom &&
+    !message.deleted &&
+    // MessageInput sends an empty content string for an image with no caption (see
+    // handleFileUploadComplete) — this is an exact signal, not a heuristic. Earlier versions of
+    // this check fuzzy-matched content against the upload URL's filename, which was unreliable:
+    // Cloudinary uploads with unique_filename:true, so the stored filename almost never matches
+    // the original one echoed into content, making that comparison a near-permanent false
+    // positive (grouping essentially never fired). Fixing the root cause on the send side made
+    // the check here trivial.
+    !message.content?.trim()
+  )
+}
+
+// Sanity cap on a single grouped run — the grid itself only ever shows MAX_VISIBLE_TILES
+// (see MediaGrid.tsx), this just bounds the underlying array for a pathological huge batch.
+const MAX_GROUP_RUN = 50
+
+export type RenderUnit =
+  | { type: 'single'; message: Message }
+  | { type: 'imageGroup'; messages: Message[] }
+
+/**
+ * Collapses consecutive groupable IMAGE messages (same sender, within the existing
+ * same-sender/5-minute/same-day window used for bubble corner-rounding, no caption/reply/
+ * forward) into a single imageGroup render unit, so a burst of photos renders as one compact
+ * grid instead of one full bubble per photo. `messages` must be oldest-first (chronological).
+ */
+export function buildRenderUnits(messages: Message[]): RenderUnit[] {
+  const units: RenderUnit[] = []
+  let i = 0
+  while (i < messages.length) {
+    const message = messages[i]
+    if (isGroupableImage(message)) {
+      const run = [message]
+      let j = i + 1
+      while (
+        j < messages.length &&
+        run.length < MAX_GROUP_RUN &&
+        isGroupableImage(messages[j]) &&
+        messages[j].sender === message.sender &&
+        withinGroup(messages[j - 1].timestamp, messages[j].timestamp) &&
+        isSameDay(messages[j - 1].timestamp, messages[j].timestamp)
+      ) {
+        run.push(messages[j])
+        j++
+      }
+      if (run.length >= 2) {
+        units.push({ type: 'imageGroup', messages: run })
+        i = j
+        continue
+      }
+    }
+    units.push({ type: 'single', message })
+    i++
+  }
+  return units
+}
+
+export function lastMessageOfUnit(unit: RenderUnit): Message {
+  return unit.type === 'single' ? unit.message : unit.messages[unit.messages.length - 1]
 }
 
 export interface MessageRowCallbacks {
@@ -101,6 +169,34 @@ export function MessageRow({
             highlighted={highlightedMessageId === message.id}
           />
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** One media-group row: optional date divider + the compact image grid, grouped with its neighbor when applicable. */
+export function MediaGroupRow({
+  messages, prevMessage, callbacks,
+}: {
+  messages: Message[]
+  prevMessage: Message | undefined
+  callbacks: MessageRowCallbacks
+}) {
+  const { currentUsername } = callbacks
+  const first = messages[0]
+
+  const showDateDivider = !prevMessage || !isSameDay(prevMessage.timestamp, first.timestamp)
+  const isGrouped = !!prevMessage
+    && prevMessage.sender === first.sender
+    && withinGroup(prevMessage.timestamp, first.timestamp)
+    && !showDateDivider
+  const isMine = first.sender === currentUsername
+
+  return (
+    <div className={isGrouped ? 'mb-0.5' : 'mb-2'} data-testid="media-group-row">
+      {showDateDivider && <DateDivider date={first.timestamp} />}
+      <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-0.5' : 'mt-3'}`}>
+        <MediaGrid messages={messages} isMine={isMine} isGrouped={isGrouped} callbacks={callbacks} />
       </div>
     </div>
   )
