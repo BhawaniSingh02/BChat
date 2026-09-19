@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "33457341730",
+    "project_id": "baaat-d00dc",
+    "storage_bucket": "baaat-d00dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:33457341730:android:6901768ec691cb8e74917b",
+        "android_client_info": {
+          "package_name": "com.baaatapp.baaat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi8dHweMQg6rLv1Eny9jupFoAwC9Uv3KQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

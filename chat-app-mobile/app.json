@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Baaat",
+    "slug": "baaat",
+    "owner": "baaat-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.baaatapp.baaat"
+    },
+    "android": {
+      "package": "com.baaatapp.baaat",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-splash-screen",
+      "expo-secure-store",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Baaat to access your photos.",
+          "savePhotosPermission": "Allow Baaat to save photos you receive to your gallery.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sounds/message_chime.wav"]
+        }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Allow Baaat to access your camera to make video calls.",
+          "microphonePermission": "Allow Baaat to access your microphone to make calls."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Baaat to access your camera to take photos to send in chat.",
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ed032c70-0cae-4c37-9d4a-2c34fc4e8327"
+      }
+    }
+  }
+}
